@@ -1,49 +1,53 @@
-// ── GET /api/audit/report/[id] ────────────────────────────────────────────────
-// Equivalent to @router.get("/report/{audit_id}") in audit.py
-
+// app/api/audit/report/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { getDb } from "@/lib/db";
-import { serializeAuditFull } from "@/lib/audit-helpers";
-import { ObjectId } from "mongodb";
-import type { AuditDocument } from "@/types";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 interface RouteContext {
   params: { id: string };
 }
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const { user, error } = await verifyAuth(req);
-  if (error) return error;
-
-  const { id: auditId } = params;
-
-  // ── Validate ObjectId ─────────────────────────────────────────────────────
-  let oid: ObjectId;
   try {
-    oid = new ObjectId(auditId);
-  } catch {
-    return NextResponse.json({ detail: "Invalid audit ID" }, { status: 400 });
-  }
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+    }
 
-  try {
-    const db     = await getDb();
-    const userId = new ObjectId(user._id.toString());
+    const { id: auditId } = params;
 
-    const audit = await db.collection<AuditDocument>("audits").findOne(
-      {
-        _id:     oid as unknown as string,
-        user_id: userId as unknown as string,
+    const audit = await prisma.audit.findFirst({
+      where: {
+        id: auditId,
+        userId: session.user.id,
       },
-      { projection: { pdf_base64: 0 } }   // strip heavy field, keep thinking_chain
-    );
+      include: {
+        findings: true,
+      },
+    });
 
     if (!audit) {
       return NextResponse.json({ detail: "Audit not found" }, { status: 404 });
     }
 
-    return NextResponse.json(serializeAuditFull(audit));
+    // Parse findings from JSON if needed
+    const findings = audit.findings || JSON.parse(audit.report || '[]');
+
+    return NextResponse.json({
+      id: audit.id,
+      contract_name: audit.contractName,
+      contract_code: audit.contractCode,
+      chain: audit.chain,
+      status: audit.status,
+      risk_score: audit.score,
+      summary: audit.summary,
+      findings: findings,
+      created_at: audit.createdAt,
+      completed_at: audit.completedAt,
+      is_deep_audit: audit.contractCode?.includes("deep") || false,
+    });
   } catch (err) {
     console.error("❌ /api/audit/report/[id] error:", err);
     return NextResponse.json(

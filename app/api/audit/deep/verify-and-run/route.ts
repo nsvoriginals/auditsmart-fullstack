@@ -1,24 +1,27 @@
-// ── POST /api/audit/deep/verify-and-run ───────────────────────────────────────
-// Equivalent to @router.post("/deep/verify-and-run") in audit.py
-// Step 2: verify Razorpay signature → run Claude Opus audit → return full report
-
+// app/api/audit/deep/verify-and-run/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { getDb } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import {
   validateContract,
   verifyRazorpaySignature,
-  serializeAuditFull,
 } from "@/lib/audit-helpers";
 import { runAuditPipeline } from "@/lib/pipeline";
-import { ObjectId } from "mongodb";
 
 export async function POST(req: NextRequest) {
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const { user, error } = await verifyAuth(req);
-  if (error) return error;
-
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { detail: "Unauthorized. Please log in." },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
     const body = await req.json();
     const {
       razorpay_order_id,
@@ -26,17 +29,17 @@ export async function POST(req: NextRequest) {
       razorpay_signature,
       contract_code,
       contract_name = "Contract",
-      chain         = "ethereum",
+      chain = "ethereum",
     } = body as {
-      razorpay_order_id?:   string;
+      razorpay_order_id?: string;
       razorpay_payment_id?: string;
-      razorpay_signature?:  string;
-      contract_code?:       string;
-      contract_name?:       string;
-      chain?:               string;
+      razorpay_signature?: string;
+      contract_code?: string;
+      contract_name?: string;
+      chain?: string;
     };
 
-    // ── Validate required fields ──────────────────────────────────────────
+    // Validate required fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json(
         { detail: "razorpay_order_id, razorpay_payment_id and razorpay_signature are required" },
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Verify Razorpay signature ─────────────────────────────────────────
+    // Verify Razorpay signature
     const isValid = verifyRazorpaySignature(
       razorpay_order_id,
       razorpay_payment_id,
@@ -63,7 +66,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Validate contract code ────────────────────────────────────────────
+    // Validate contract code
     let code: string;
     try {
       code = validateContract(contract_code);
@@ -72,25 +75,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ detail: err.message }, { status: err.status });
     }
 
-    const db     = await getDb();
-    const userId = new ObjectId(user._id.toString());
-
-    // ── Save payment record first (before running expensive audit) ────────
-    await db.collection("payments").insertOne({
-      user_id:             userId,
-      audit_type:          "deep_audit",
-      razorpay_order_id,
-      razorpay_payment_id,
-      amount:              165000,
-      currency:            "INR",
-      status:              "verified",
-      created_at:          new Date(),
+    // Update payment record status
+    await prisma.payment.update({
+      where: { razorpayOrderId: razorpay_order_id },
+      data: { status: "paid" }
     });
 
     console.log(`💰 Deep Audit payment verified: ${razorpay_payment_id}`);
     console.log(`🚀 Starting Claude Opus audit for: ${contract_name}`);
 
-    // ── Run Claude Opus audit ─────────────────────────────────────────────
+    // Run Claude Opus audit
     let result;
     try {
       result = await runAuditPipeline({
@@ -106,54 +100,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Save audit document ───────────────────────────────────────────────
-    const auditDoc = {
-      user_id:             userId,
-      contract_name,
-      chain,
-      contract_code_hash:  hashCode(code),
-      risk_level:          result.risk_level          ?? "unknown",
-      risk_score:          result.risk_score           ?? 0,
-      total_findings:      result.total_findings       ?? 0,
-      raw_findings_count:  result.raw_findings_count   ?? 0,
-      critical_count:      result.critical_count       ?? 0,
-      high_count:          result.high_count           ?? 0,
-      medium_count:        result.medium_count         ?? 0,
-      low_count:           result.low_count            ?? 0,
-      info_count:          result.info_count           ?? 0,
-      findings:            result.findings             ?? [],
-      summary:             result.summary              ?? "",
-      agents_used:         result.agents_used          ?? [],
-      scan_duration_ms:    result.scan_duration_ms     ?? 0,
-      pdf_base64:          result.pdf_base64           ?? "",
-      pdf_available:       result.pdf_available        ?? false,
-      plan_used:           "deep_audit",
-      has_fix_suggestions: result.has_fix_suggestions  ?? false,
-      deployment_verdict:  result.deployment_verdict   ?? "",
-      thinking_chain:      result.thinking_chain,          // Deep Audit exclusive 🧠
-      is_deep_audit:       true,
-      version:             "3.0",
-      created_at:          new Date(),
-    };
+    // Create audit record
+    const audit = await prisma.audit.create({
+      data: {
+        userId: userId,
+        contractName: contract_name,
+        contractCode: code,
+        chain: chain.toUpperCase(),
+        status: "COMPLETED",
+        score: result.risk_score || 0,
+        summary: result.summary || "",
+        report: JSON.stringify(result.findings || []),
+        completedAt: new Date(),
+        findings: {
+          create: (result.findings || []).map((finding: any) => ({
+            agentType: finding.agent_type || "SECURITY",
+            title: finding.title || "",
+            description: finding.description || "",
+            severity: finding.severity?.toUpperCase() || "MEDIUM",
+            lineNumber: finding.line_number,
+            codeSnippet: finding.code_snippet,
+            recommendation: finding.recommendation,
+          }))
+        }
+      },
+    });
 
-    const insertResult = await db.collection("audits").insertOne(auditDoc);
+    // Link payment to audit
+    await prisma.payment.update({
+      where: { razorpayOrderId: razorpay_order_id },
+      data: { 
+        status: "completed",
+        // Add audit reference if you have a field for it
+      }
+    });
 
-    // ── Link payment → audit ──────────────────────────────────────────────
-    await db.collection("payments").updateOne(
-      { razorpay_payment_id },
-      { $set: { audit_id: insertResult.insertedId.toString() } }
-    );
-
-    const saved    = { ...auditDoc, _id: insertResult.insertedId };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = serializeAuditFull(saved as any);
-    response["pdf_available"]       = result.pdf_available       ?? false;
-    response["has_fix_suggestions"] = result.has_fix_suggestions ?? false;
-    response["deployment_verdict"]  = result.deployment_verdict  ?? "";
-    response["is_deep_audit"]       = true;
-    response["thinking_chain"]      = result.thinking_chain;   // Show to user
-
-    return NextResponse.json(response);
+    return NextResponse.json({
+      audit_id: audit.id,
+      risk_level: result.risk_level,
+      risk_score: result.risk_score,
+      total_findings: result.total_findings,
+      summary: result.summary,
+      pdf_available: result.pdf_available,
+      has_fix_suggestions: result.has_fix_suggestions,
+      deployment_verdict: result.deployment_verdict,
+      thinking_chain: result.thinking_chain,
+      is_deep_audit: true,
+    });
   } catch (err) {
     console.error("❌ /api/audit/deep/verify-and-run error:", err);
     return NextResponse.json(
@@ -161,12 +154,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function hashCode(s: string): number {
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) {
-    hash = (Math.imul(31, hash) + s.charCodeAt(i)) | 0;
-  }
-  return hash;
 }

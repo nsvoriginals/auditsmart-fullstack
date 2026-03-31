@@ -1,10 +1,22 @@
+// app/dashboard/scan/page.tsx
 "use client";
-// src/app/dashboard/scan/page.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Spinner, SeverityBadge, RiskRing, CopyButton, Toast } from "@/components/ui";
+import { 
+  Shield, 
+  AlertTriangle, 
+  CheckCircle, 
+  ChevronDown, 
+  ChevronUp,
+  Copy,
+  Download,
+  Loader2,
+  Zap,
+  Brain,
+  Sparkles
+} from "lucide-react";
 
 interface Finding {
   type: string;
@@ -13,11 +25,11 @@ interface Finding {
   recommendation?: string;
   line?: string | number;
   function?: string;
-  confidence?: string;
 }
 
 interface AuditResult {
   id: string;
+  contract_name: string;
   risk_level: string;
   risk_score: number;
   total_findings: number;
@@ -34,7 +46,7 @@ interface AuditResult {
   plan_used: string;
 }
 
-const SAMPLE = `// SPDX-License-Identifier: MIT
+const SAMPLE_CONTRACT = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 contract VulnerableVault {
@@ -45,115 +57,188 @@ contract VulnerableVault {
     }
 
     function withdraw(uint256 amount) external {
-        require(balances[msg.sender] >= amount, "Insufficient");
-        (bool ok,) = msg.sender.call{value: amount}("");
-        require(ok);
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
         balances[msg.sender] -= amount;
     }
 }`;
 
-const VERDICT_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  "SAFE":           { color: "#4ade80", bg: "rgba(74,222,128,0.08)",   border: "rgba(74,222,128,0.25)" },
-  "CAUTION":        { color: "#facc15", bg: "rgba(250,204,21,0.08)",   border: "rgba(250,204,21,0.25)" },
-  "DO NOT DEPLOY":  { color: "#f87171", bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.3)" },
+const getRiskColor = (level: string) => {
+  switch (level?.toLowerCase()) {
+    case "critical": return { text: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" };
+    case "high": return { text: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
+    case "medium": return { text: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20" };
+    case "low": return { text: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" };
+    default: return { text: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20" };
+  }
+};
+
+const getSeverityBadge = (severity: string) => {
+  const colors = {
+    critical: "bg-red-500/20 text-red-400",
+    high: "bg-orange-500/20 text-orange-400",
+    medium: "bg-yellow-500/20 text-yellow-400",
+    low: "bg-blue-500/20 text-blue-400",
+    info: "bg-gray-500/20 text-gray-400",
+  };
+  return colors[severity?.toLowerCase() as keyof typeof colors] || colors.info;
 };
 
 export default function ScanPage() {
-  const { data: session } = useSession();
-  const [code, setCode]         = useState("");
-  const [name, setName]         = useState("");
-  const [chain, setChain]       = useState("ethereum");
+  const { data: session, update } = useSession();
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [chain, setChain] = useState("ethereum");
   const [scanning, setScanning] = useState(false);
-  const [result, setResult]     = useState<AuditResult | null>(null);
-  const [error, setError]       = useState("");
-  const [toast, setToast]       = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [result, setResult] = useState<AuditResult | null>(null);
+  const [error, setError] = useState("");
+  const [expandedFinding, setExpandedFinding] = useState<number | null>(null);
+  const [auditsLeft, setAuditsLeft] = useState<number | null>(null);
+  const [userPlan, setUserPlan] = useState<string>("free");
 
-  const auditsLeft = session?.user?.free_audits_remaining ?? 0;
+  // Fetch user limits
+  useEffect(() => {
+    fetchUserLimits();
+  }, []);
+
+  const fetchUserLimits = async () => {
+    try {
+      const response = await fetch("/api/user/limits");
+      const data = await response.json();
+      if (response.ok) {
+        setAuditsLeft(data.remaining);
+        setUserPlan(data.plan?.toLowerCase() || "free");
+      }
+    } catch (err) {
+      console.error("Failed to fetch limits:", err);
+    }
+  };
 
   const runScan = async () => {
-    if (!code.trim()) { setError("Paste your Solidity contract code first."); return; }
-    if (auditsLeft <= 0 && session?.user?.plan !== "enterprise") {
+    if (!code.trim()) {
+      setError("Please paste your Solidity contract code first.");
+      return;
+    }
+
+    if (userPlan === "free" && auditsLeft !== null && auditsLeft <= 0) {
       setError("You've reached your audit limit. Upgrade your plan to continue.");
       return;
     }
+
     setError("");
     setResult(null);
     setScanning(true);
 
     try {
-      const res = await fetch("/api/audit/scan", {
-        method:  "POST",
+      const response = await fetch("/api/audit/scan", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ contract_code: code, contract_name: name || "Contract", chain }),
+        body: JSON.stringify({ 
+          contract_code: code, 
+          contract_name: name || "Smart Contract", 
+          chain 
+        }),
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.detail ?? data.message ?? "Scan failed."); setScanning(false); return; }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.detail || "Scan failed.");
+      }
+
       setResult(data);
-      setToast({ msg: "Audit complete!", type: "success" });
-    } catch {
-      setError("Network error. Please try again.");
+      // Refresh user limits after successful scan
+      await fetchUserLimits();
+      await update(); // Update session to reflect new usage
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+    } finally {
+      setScanning(false);
     }
-    setScanning(false);
   };
 
   const downloadPdf = async () => {
     if (!result?.id) return;
-    const res  = await fetch(`/api/audit/report/${result.id}/pdf`);
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href = url; a.download = `AuditSmart_${result.id.slice(0,8)}.pdf`; a.click();
-    URL.revokeObjectURL(url);
-    setToast({ msg: "PDF downloaded", type: "success" });
+    try {
+      const response = await fetch(`/api/audit/report/${result.id}/pdf`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Audit_${result.contract_name}_${result.id.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF download failed:", err);
+    }
   };
 
-  const verdict = result?.deployment_verdict?.toUpperCase() ?? "";
-  const verdictStyle = VERDICT_STYLE[verdict] ?? {};
+  const copyFindings = () => {
+    if (!result?.findings) return;
+    const text = JSON.stringify(result.findings, null, 2);
+    navigator.clipboard.writeText(text);
+  };
+
+  const verdict = result?.deployment_verdict?.toUpperCase() || "";
+  const riskInfo = result ? getRiskColor(result.risk_level) : null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div>
-        <h1 className="font-display text-3xl mb-1" style={{ color: "var(--frost)" }}>Scan Contract</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+        <h1 className="font-display text-3xl font-bold" style={{ color: "var(--frost)" }}>
+          Scan Contract
+        </h1>
+        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
           Paste Solidity source code and run an AI-powered security audit.
         </p>
       </div>
 
       {/* Quota warning */}
-      {auditsLeft <= 1 && auditsLeft > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
-          style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)", color: "#facc15" }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          {auditsLeft} audit remaining. <Link href="/pricing" style={{ textDecoration: "underline" }}>Upgrade for more</Link>
-        </div>
-      )}
-      {auditsLeft === 0 && (
-        <div className="flex items-center justify-between gap-4 px-5 py-4 rounded-lg"
-          style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)" }}>
-          <div>
-            <p className="text-sm font-medium" style={{ color: "#f87171" }}>Audit limit reached</p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>Upgrade your plan to run more audits.</p>
-          </div>
-          <Link href="/pricing" className="btn btn-rose btn-sm" style={{ flexShrink: 0 }}>Upgrade Plan</Link>
+      {userPlan === "free" && auditsLeft !== null && auditsLeft <= 1 && auditsLeft > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm" style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)" }}>
+          <AlertTriangle className="w-4 h-4 text-yellow-500" />
+          <span className="text-yellow-500">{auditsLeft} audit{auditsLeft !== 1 ? 's' : ''} remaining this month.</span>
+          <Link href="/dashboard/pricing" className="text-yellow-500 underline text-sm ml-auto">Upgrade</Link>
         </div>
       )}
 
-      {/* Form */}
-      <div className="card p-6 space-y-5">
+      {userPlan === "free" && auditsLeft === 0 && (
+        <div className="flex items-center justify-between gap-4 px-5 py-4 rounded-lg" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)" }}>
+          <div>
+            <p className="text-sm font-medium text-red-400">Audit limit reached</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>Upgrade your plan to run more audits.</p>
+          </div>
+          <Link href="/dashboard/pricing" className="px-4 py-1.5 rounded-md bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white text-sm hover:opacity-90 transition-all">
+            Upgrade Plan
+          </Link>
+        </div>
+      )}
+
+      {/* Form Card */}
+      <div className="card p-6 space-y-5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="label">Contract Name</label>
-            <input className="input" placeholder="MyToken" value={name} onChange={e => setName(e.target.value)} />
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Contract Name</label>
+            <input 
+              className="w-full px-3 py-2 rounded-md border" 
+              style={{ background: "var(--bg-input)", borderColor: "var(--border)", color: "var(--text-primary)" }}
+              placeholder="MyToken" 
+              value={name} 
+              onChange={e => setName(e.target.value)} 
+            />
           </div>
           <div>
-            <label className="label">Chain</label>
-            <select className="input" value={chain} onChange={e => setChain(e.target.value)}
-              style={{ appearance: "none", cursor: "pointer" }}>
-              {["ethereum","polygon","arbitrum","optimism","bsc","avalanche","base"].map(c => (
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Chain</label>
+            <select 
+              className="w-full px-3 py-2 rounded-md border cursor-pointer"
+              style={{ background: "var(--bg-input)", borderColor: "var(--border)", color: "var(--text-primary)" }}
+              value={chain} 
+              onChange={e => setChain(e.target.value)}
+            >
+              {["ethereum", "polygon", "arbitrum", "optimism", "bsc", "avalanche", "base"].map(c => (
                 <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
               ))}
             </select>
@@ -162,15 +247,25 @@ export default function ScanPage() {
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="label mb-0">Solidity Source Code</label>
-            <button onClick={() => setCode(SAMPLE)} className="text-xs" style={{ color: "var(--plum-light)" }}>
+            <label className="block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Solidity Source Code</label>
+            <button 
+              onClick={() => setCode(SAMPLE_CONTRACT)} 
+              className="text-xs hover:underline transition-all"
+              style={{ color: "var(--plum-light)" }}
+            >
               Load sample
             </button>
           </div>
           <textarea
-            className="textarea input-mono"
-            style={{ minHeight: 280, fontFamily: "var(--font-mono)", fontSize: "0.78rem" }}
-            placeholder={"// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract MyContract { ... }"}
+            className="w-full p-3 rounded-md border font-mono text-sm"
+            style={{ 
+              background: "var(--bg-input)", 
+              borderColor: "var(--border)", 
+              color: "var(--text-primary)",
+              minHeight: 280,
+              fontFamily: "monospace"
+            }}
+            placeholder="// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract MyContract { ... }"
             value={code}
             onChange={e => setCode(e.target.value)}
           />
@@ -180,8 +275,7 @@ export default function ScanPage() {
         </div>
 
         {error && (
-          <div className="px-4 py-3 rounded-md text-sm"
-            style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.25)", color: "#f87171" }}>
+          <div className="px-4 py-3 rounded-md text-sm bg-red-500/10 border border-red-500/20 text-red-500">
             {error}
           </div>
         )}
@@ -189,105 +283,117 @@ export default function ScanPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={runScan}
-            disabled={scanning || auditsLeft === 0}
-            className="btn btn-primary btn-lg"
-            style={{ minWidth: 160 }}
+            disabled={scanning || (userPlan === "free" && auditsLeft === 0)}
+            className="px-6 py-2.5 rounded-md bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {scanning ? (
-              <><Spinner size={16} /> Scanning…</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> Scanning...</>
             ) : (
-              <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>Run Audit</>
+              <><Shield className="w-4 h-4" /> Run Audit</>
             )}
           </button>
           {scanning && (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Analyzing with {session?.user?.plan === "enterprise" ? "Claude Sonnet" : session?.user?.plan === "pro" ? "Claude Haiku" : "Groq + Gemini"}…
+              Analyzing with {userPlan === "enterprise" ? "Claude Sonnet" : userPlan === "pro" ? "Claude Haiku" : "Groq + Gemini"}...
             </p>
           )}
         </div>
       </div>
 
-      {/* ── RESULTS ───────────────────────────────────────────────────────── */}
+      {/* Results Section */}
       {result && (
-        <div className="space-y-5 animate-scale-in">
-          {/* Summary row */}
-          <div className="card p-6">
+        <div className="space-y-5 animate-in fade-in duration-300">
+          {/* Summary Card */}
+          <div className="card p-6" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
             <div className="flex flex-wrap items-start gap-6">
-              <RiskRing score={result.risk_score} size={88} />
+              {/* Risk Ring */}
+              <div className="relative flex-shrink-0">
+                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center ${riskInfo?.border}`}>
+                  <span className="text-2xl font-bold" style={{ color: riskInfo?.text?.replace('text-', '') }}>
+                    {result.risk_score}
+                  </span>
+                </div>
+              </div>
+              
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-3 mb-3">
-                  <h2 className="font-display text-2xl" style={{ color: "var(--frost)" }}>
-                    {result.contract_name ?? name || "Contract"}
+                  <h2 className="font-display text-2xl font-bold" style={{ color: "var(--frost)" }}>
+                    {result.contract_name}
                   </h2>
                   {verdict && (
-                    <span className="badge text-xs px-3 py-1"
-                      style={{ background: verdictStyle.bg, color: verdictStyle.color, border: `1px solid ${verdictStyle.border}`, borderRadius: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
+                    <span className="text-xs px-3 py-1 rounded-md font-mono" style={{ 
+                      background: `rgba(${verdict === "SAFE" ? "74,222,128" : verdict === "CAUTION" ? "250,204,21" : "248,113,113"}, 0.1)`,
+                      color: verdict === "SAFE" ? "#4ade80" : verdict === "CAUTION" ? "#facc15" : "#f87171",
+                      border: `1px solid rgba(${verdict === "SAFE" ? "74,222,128" : verdict === "CAUTION" ? "250,204,21" : "248,113,113"}, 0.25)`
+                    }}>
                       {verdict}
                     </span>
                   )}
                 </div>
-                <p className="text-sm mb-4 line-clamp-2 prose-audit">{result.summary}</p>
+                <p className="text-sm mb-4" style={{ color: "var(--text-primary)" }}>{result.summary}</p>
                 <div className="flex flex-wrap gap-3 text-xs font-mono">
-                  {[
-                    { label: "Critical", val: result.critical_count, color: "#f87171" },
-                    { label: "High",     val: result.high_count,     color: "#fb923c" },
-                    { label: "Medium",   val: result.medium_count,   color: "#facc15" },
-                    { label: "Low",      val: result.low_count,      color: "#60a5fa" },
-                    { label: "Info",     val: result.info_count,     color: "var(--text-muted)" },
-                  ].map(b => (
-                    <span key={b.label} style={{ color: b.color }}>
-                      {b.val} {b.label}
-                    </span>
-                  ))}
-                  <span style={{ color: "var(--text-muted)" }}>
-                    · {(result.scan_duration_ms / 1000).toFixed(1)}s
-                  </span>
+                  <span style={{ color: "#f87171" }}>{result.critical_count} Critical</span>
+                  <span style={{ color: "#fb923c" }}>{result.high_count} High</span>
+                  <span style={{ color: "#facc15" }}>{result.medium_count} Medium</span>
+                  <span style={{ color: "#60a5fa" }}>{result.low_count} Low</span>
+                  <span style={{ color: "var(--text-muted)" }}>{result.info_count} Info</span>
+                  <span style={{ color: "var(--text-muted)" }}>· {(result.scan_duration_ms / 1000).toFixed(1)}s</span>
                 </div>
               </div>
+              
               <div className="flex gap-2">
                 {result.pdf_available && (
-                  <button onClick={downloadPdf} className="btn btn-ghost btn-sm" title="Download PDF">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    PDF
+                  <button onClick={downloadPdf} className="p-2 rounded-md hover:bg-[var(--bg-hover)] transition-colors" title="Download PDF">
+                    <Download className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
                   </button>
                 )}
-                <CopyButton text={JSON.stringify(result.findings, null, 2)} />
+                <button onClick={copyFindings} className="p-2 rounded-md hover:bg-[var(--bg-hover)] transition-colors" title="Copy findings">
+                  <Copy className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Findings list */}
+          {/* Findings List */}
           {result.findings.length > 0 && (
-            <div className="card overflow-hidden">
-              <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
-                <h3 className="section-title mb-0">Findings ({result.total_findings})</h3>
+            <div className="card overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
+              <div className="px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
+                <h3 className="font-semibold" style={{ color: "var(--frost)" }}>
+                  Findings ({result.total_findings})
+                </h3>
               </div>
               <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                {result.findings.map((f, i) => (
-                  <div key={i} className="transition-colors" style={{ borderColor: "var(--border)" }}>
+                {result.findings.map((finding, idx) => (
+                  <div key={idx}>
                     <button
-                      onClick={() => setExpanded(expanded === i ? null : i)}
-                      className="w-full flex items-start gap-4 px-6 py-4 text-left"
-                      onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                      onClick={() => setExpandedFinding(expandedFinding === idx ? null : idx)}
+                      className="w-full flex items-start gap-4 px-6 py-4 text-left hover:bg-[var(--bg-hover)] transition-colors"
                     >
-                      <SeverityBadge severity={f.severity} />
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${getSeverityBadge(finding.severity)}`}>
+                        {finding.severity?.toUpperCase()}
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{f.type}</p>
-                        {f.function && <p className="text-xs mt-0.5 font-mono" style={{ color: "var(--text-muted)" }}>{f.function}{f.line ? ` · line ${f.line}` : ""}</p>}
+                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{finding.type}</p>
+                        {finding.function && (
+                          <p className="text-xs mt-0.5 font-mono" style={{ color: "var(--text-muted)" }}>
+                            {finding.function}{finding.line ? ` · line ${finding.line}` : ""}
+                          </p>
+                        )}
                       </div>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                        style={{ flexShrink: 0, color: "var(--text-muted)", transform: expanded === i ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
-                        <polyline points="6 9 12 15 18 9"/>
-                      </svg>
+                      {expandedFinding === idx ? (
+                        <ChevronUp className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+                      )}
                     </button>
-                    {expanded === i && (
-                      <div className="px-6 pb-5 space-y-3 animate-fade-in" style={{ borderTop: "1px solid var(--border)" }}>
-                        <p className="text-sm prose-audit pt-3">{f.description}</p>
-                        {f.recommendation && (
-                          <div className="p-3 rounded-md" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }}>
+                    
+                    {expandedFinding === idx && (
+                      <div className="px-6 pb-5 space-y-3" style={{ borderTop: "1px solid var(--border)" }}>
+                        <p className="text-sm pt-3" style={{ color: "var(--text-primary)" }}>{finding.description}</p>
+                        {finding.recommendation && (
+                          <div className="p-3 rounded-md" style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
                             <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Recommendation</p>
-                            <p className="text-sm prose-audit">{f.recommendation}</p>
+                            <p className="text-sm" style={{ color: "var(--text-primary)" }}>{finding.recommendation}</p>
                           </div>
                         )}
                       </div>
@@ -297,6 +403,29 @@ export default function ScanPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Test Mode Banner */}
+      {process.env.NEXT_PUBLIC_RAZORPAY_TEST_MODE === "true" && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+          <div className="bg-yellow-500/95 backdrop-blur-sm rounded-lg shadow-xl p-4 border border-yellow-400">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-900 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-yellow-900 text-sm">🧪 TEST MODE</h4>
+                <p className="text-xs text-yellow-800 mt-1">
+                  No real payments are processed. Use test cards:
+                </p>
+                <div className="mt-2 space-y-1 text-xs font-mono text-yellow-800">
+                  <p>4111 1111 1111 1111 — Visa (Success)</p>
+                  <p>4242 4242 4242 4242 — Visa (Success)</p>
+                  <p>5555 5555 5555 4444 — Mastercard (Success)</p>
+                  <p>CVV: Any 3 digits • Expiry: Any future date</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,90 +1,72 @@
-// ── GET /api/audit/report/[id]/pdf ───────────────────────────────────────────
-// Equivalent to @router.get("/report/{audit_id}/pdf") in audit.py
-// Returns raw PDF bytes with Content-Disposition: attachment
-
+// app/api/audit/report/[id]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { getDb } from "@/lib/db";
-import { ObjectId } from "mongodb";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { generatePDFReport } from "@/lib/pdf-generator";
 
-interface RouteContext {
-  params: { id: string };
-}
-
-export async function GET(req: NextRequest, { params }: RouteContext) {
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const { user, error } = await verifyAuth(req);
-  if (error) return error;
-
-  const { id: auditId } = params;
-
-  // ── Validate ObjectId ─────────────────────────────────────────────────────
-  let oid: ObjectId;
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    oid = new ObjectId(auditId);
-  } catch {
-    return NextResponse.json({ detail: "Invalid audit ID" }, { status: 400 });
-  }
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  try {
-    const db     = await getDb();
-    const userId = new ObjectId(user._id.toString());
-
-    // Only fetch fields we need — saves memory vs fetching entire doc
-    const audit = await db.collection("audits").findOne(
-      {
-        _id:     oid as unknown,
-        user_id: userId as unknown,
+    const audit = await prisma.audit.findFirst({
+      where: {
+        id: params.id,
+        userId: session.user.id,
       },
-      {
-        projection: {
-          pdf_base64:     1,
-          pdf_available:  1,
-          contract_name:  1,
-          is_deep_audit:  1,
+      include: {
+        findings: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
         },
-      }
-    );
-
-    if (!audit) {
-      return NextResponse.json({ detail: "Audit not found" }, { status: 404 });
-    }
-
-    if (!audit.pdf_available || !audit.pdf_base64) {
-      return NextResponse.json(
-        { detail: "PDF not available. Re-run the audit to generate a PDF." },
-        { status: 404 }
-      );
-    }
-
-    // ── Decode base64 → Buffer ────────────────────────────────────────────
-    let pdfBytes: Buffer;
-    try {
-      pdfBytes = Buffer.from(audit.pdf_base64 as string, "base64");
-    } catch {
-      return NextResponse.json(
-        { detail: "Failed to decode PDF data" },
-        { status: 500 }
-      );
-    }
-
-    // ── Build filename (mirrors Python: "DeepAudit_Report_..." / "AuditSmart_Report_...") ──
-    const prefix       = audit.is_deep_audit ? "DeepAudit" : "AuditSmart";
-    const contractName = (audit.contract_name as string) ?? "Contract";
-    const filename     = `${prefix}_Report_${contractName}_${auditId.slice(0, 8)}.pdf`;
-
-    return new NextResponse(pdfBytes, {
-      status: 200,
-      headers: {
-        "Content-Type":        "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Length":      String(pdfBytes.length),
       },
     });
-  } catch (err) {
-    console.error("❌ /api/audit/report/[id]/pdf error:", err);
+
+    if (!audit) {
+      return NextResponse.json({ error: "Audit not found" }, { status: 404 });
+    }
+
+    // Parse report data
+    const reportData = audit.report ? JSON.parse(audit.report) : {};
+
+    // Generate PDF
+    const pdfBuffer = await generatePDFReport({
+      auditId: audit.id,
+      contractName: audit.contractName,
+      contractCode: audit.contractCode,
+      summary: audit.summary || "",
+      riskScore: audit.score || 0,
+      riskLevel: reportData.risk_level || "Unknown",
+      findings: audit.findings,
+      criticalCount: reportData.critical_count || 0,
+      highCount: reportData.high_count || 0,
+      mediumCount: reportData.medium_count || 0,
+      lowCount: reportData.low_count || 0,
+      scanDuration: reportData.scan_duration_ms || 0,
+      deploymentVerdict: reportData.deployment_verdict || "",
+      thinkingChain: reportData.thinking_chain,
+      userName: audit.user?.name || session.user.name || "User",
+      userEmail: audit.user?.email || session.user.email || "",
+      createdAt: audit.createdAt,
+    });
+
+    return new NextResponse(pdfBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="Audit_Report_${audit.contractName.replace(/[^a-z0-9]/gi, "_")}_${audit.id.slice(0, 8)}.pdf"`,
+      },
+    });
+  } catch (error) {
+    console.error("PDF generation error:", error);
     return NextResponse.json(
-      { detail: "Internal server error" },
+      { error: "Failed to generate PDF" },
       { status: 500 }
     );
   }

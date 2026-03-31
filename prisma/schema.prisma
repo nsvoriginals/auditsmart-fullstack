@@ -1,29 +1,301 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
 }
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  provider  Provider
+enum UserRole {
+  FREE
+  PREMIUM
+  ENTERPRISE
+  ADMIN
 }
 
-enum Provider {
-  GOOGLE
-  GITHUB
- }
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum AuditStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum AgentType {
+  REENTRANCY_AGENT
+  OVERFLOW_AGENT
+  ACCESS_CONTROL_AGENT
+  LOGIC_AGENT
+  GAS_DOS_AGENT
+  DEFI_AGENT
+  BACKDOOR_AGENT
+  SIGNATURE_AGENT
+  SLITHER_AGENT
+  GEMINI_AGENT
+  CLAUDE_AGENT
+  SECURITY
+  GAS_OPTIMIZATION
+  COMPLIANCE
+}
+
+enum ChainType {
+  ETHEREUM
+  BSC
+  POLYGON
+  AVALANCHE
+  ARBITRUM
+  OPTIMISM
+  BASE
+}
+
+// User Model
+model User {
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  name               String?
+  image              String?
+  role               UserRole           @default(FREE)
+  emailVerified      DateTime?
+  razorpayCustomerId String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  
+  // Relations
+  accounts           Account[]
+  sessions           Session[]
+  subscription       Subscription?
+  audits             Audit[]
+  payments           Payment[]
+  monitoredContracts MonitoredContract[]
+  webhooks           Webhook[]
+  notifications      Notification[]
+  apiKeys            ApiKey[]
+  auditLogs          AuditLog[]
+  
+  // Usage tracking
+  totalAudits        Int                @default(0)
+  currentMonthAudits Int                @default(0)
+  lastAuditReset     DateTime           @default(now())
+  
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Subscription Model
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  plan                   UserRole           @default(FREE)
+  status                 SubscriptionStatus @default(ACTIVE)
+  razorpaySubscriptionId String?            @unique
+  currentPeriodStart     DateTime           @default(now())
+  currentPeriodEnd       DateTime
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Payment Model
+model Payment {
+  id                String   @id @default(cuid())
+  userId            String
+  razorpayOrderId   String   @unique
+  razorpayPaymentId String?
+  amount            Int      // in paise
+  currency          String   @default("INR")
+  status            String   // created, paid, failed
+  plan              UserRole
+  createdAt         DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Main Audit Model
+model Audit {
+  id              String       @id @default(cuid())
+  userId          String
+  contractName    String
+  contractAddress String?
+  contractCode    String?      @db.Text
+  chain           ChainType    @default(ETHEREUM)
+  status          AuditStatus  @default(PENDING)
+  score           Int?         // Overall security score 0-100
+  report          String?      @db.Text  // Full audit report as text
+  summary         String?      @db.Text  // Short summary of findings
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentReports        AgentReport[]
+  findings            Finding[]
+  monitoredContracts  MonitoredContract[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Individual Agent Reports
+model AgentReport {
+  id          String       @id @default(cuid())
+  auditId     String
+  agentType   AgentType
+  findings    String?      @db.Text  // JSON string of findings
+  summary     String?      @db.Text
+  status      AuditStatus  @default(PENDING)
+  startedAt   DateTime     @default(now())
+  completedAt DateTime?
+  error       String?      @db.Text
+  
+  audit Audit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  
+  @@index([auditId])
+  @@index([agentType])
+}
+
+// Individual Findings
+model Finding {
+  id             String         @id @default(cuid())
+  auditId        String
+  agentType      AgentType
+  title          String
+  description    String         @db.Text
+  severity       FindingSeverity
+  lineNumber     Int?
+  codeSnippet    String?        @db.Text
+  recommendation String?        @db.Text
+  createdAt      DateTime       @default(now())
+  
+  audit Audit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  
+  @@index([auditId])
+  @@index([severity])
+}
+
+// Contract Monitoring
+model MonitoredContract {
+  id          String    @id @default(cuid())
+  userId      String
+  auditId     String?
+  name        String
+  address     String
+  chain       ChainType @default(ETHEREUM)
+  isActive    Boolean   @default(true)
+  lastChecked DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audit Audit? @relation(fields: [auditId], references: [id])
+  
+  @@unique([userId, address, chain])
+  @@index([userId])
+  @@index([address])
+}
+
+// API Key for programmatic access
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  userId    String
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+  isActive  Boolean  @default(true)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([key])
+}
+
+// Webhook Configuration
+model Webhook {
+  id        String   @id @default(cuid())
+  userId    String
+  url       String
+  events    String[] // Array of event types
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Notification System
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String   // audit_completed, payment_success, etc.
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isRead])
+}
+
+// Audit Log
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String   // create_audit, update_subscription, etc.
+  details    String?  @db.Text
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

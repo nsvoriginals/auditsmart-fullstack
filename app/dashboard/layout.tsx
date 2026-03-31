@@ -1,19 +1,28 @@
-// src/app/dashboard/layout.tsx
-import { auth } from "@/auth";
+// app/dashboard/layout.tsx
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session) redirect("/login?callbackUrl=/dashboard");
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Use getServerSession with authOptions
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    redirect("/login");
+  }
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <Navbar />
-      <div className="flex" style={{ minHeight: `calc(100vh - var(--nav-height))` }}>
-        <Sidebar />
-        <main className="flex-1 overflow-auto p-6 lg:p-8">
+    <div className="flex h-screen">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
+        <Navbar />
+        <main className="flex-1 overflow-auto p-6">
           {children}
         </main>
       </div>

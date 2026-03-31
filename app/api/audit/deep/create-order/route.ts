@@ -1,87 +1,60 @@
-// ── POST /api/audit/deep/create-order ─────────────────────────────────────────
-// Equivalent to @router.post("/deep/create-order") in audit.py
-// Step 1 of Deep Audit: create a Razorpay order for ₹1,650 (~$20 USD)
-
+// app/api/payment/razorpay/create-order/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { validateContract, getRazorpayClient } from "@/lib/audit-helpers";
-import { config } from "@/lib/config";
-
-// ₹1650 in paise
-const DEEP_AUDIT_AMOUNT_PAISE = 165000;
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import Razorpay from 'razorpay';
+import { PLAN_PRICES_PAISE, PLAN_FEATURES, config } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const { user, error } = await verifyAuth(req);
-  if (error) return error;
-
   try {
-    const body = await req.json();
-    const {
-      contract_code,
-      contract_name = "Contract",
-      // chain is accepted but only used server-side later
-    } = body as {
-      contract_code?: string;
-      contract_name?: string;
-      chain?: string;
-    };
-
-    if (!contract_code) {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { detail: "contract_code is required" },
-        { status: 400 }
+        { detail: "Unauthorized. Please log in." },
+        { status: 401 }
       );
     }
 
-    // Validate contract early so user doesn't pay for invalid code
-    try {
-      validateContract(contract_code);
-    } catch (e: unknown) {
-      const err = e as { status: number; message: string };
-      return NextResponse.json({ detail: err.message }, { status: err.status });
-    }
+    const body = await req.json();
+    const { plan_type = "deep_audit" } = body;
 
-    // ── Get Razorpay client ───────────────────────────────────────────────
-    const client = getRazorpayClient();
-    if (!client) {
+    // Get Razorpay client
+    if (!config.RAZORPAY_KEY_ID || !config.RAZORPAY_KEY_SECRET) {
       return NextResponse.json(
         { detail: "Payment gateway not configured. Contact support." },
         { status: 500 }
       );
     }
 
-    // ── Create order ──────────────────────────────────────────────────────
+    const client = new Razorpay({
+      key_id: config.RAZORPAY_KEY_ID,
+      key_secret: config.RAZORPAY_KEY_SECRET,
+    });
+
+    const amount = PLAN_PRICES_PAISE[plan_type as keyof typeof PLAN_PRICES_PAISE] || 165000;
+
+    // Create order
     const order = await client.orders.create({
-      amount:   DEEP_AUDIT_AMOUNT_PAISE,
+      amount: amount,
       currency: "INR",
       notes: {
-        user_id:       user._id.toString(),
-        audit_type:    "deep_audit",
-        contract_name,
-        email:         user.email ?? "",
+        user_id: session.user.id,
+        plan_type: plan_type,
+        email: session.user.email || "",
       },
     });
 
     return NextResponse.json({
-      order_id:       order.id,
-      amount:         DEEP_AUDIT_AMOUNT_PAISE,
-      amount_display: "₹1,650 (~$20 USD)",
-      currency:       "INR",
-      key_id:         config.RAZORPAY_KEY_ID,
-      audit_type:     "deep_audit",
-      description:    "AuditSmart Deep Audit — Claude Opus + Extended Thinking",
-      features: [
-        "Claude Opus — most powerful AI model",
-        "Extended Thinking — see AI reasoning chain",
-        "Full exploit scenario for every critical/high finding",
-        "Production-ready patched code snippets",
-        "Deployment verdict: SAFE / CAUTION / DO NOT DEPLOY",
-        "Priority processing",
-      ],
+      order_id: order.id,
+      amount: amount,
+      currency: "INR",
+      key_id: config.RAZORPAY_KEY_ID,
+      plan_type: plan_type,
+      features: PLAN_FEATURES[plan_type as keyof typeof PLAN_FEATURES] || [],
     });
   } catch (err) {
-    console.error("❌ /api/audit/deep/create-order error:", err);
+    console.error("❌ /api/payment/razorpay/create-order error:", err);
     return NextResponse.json(
       { detail: `Payment error: ${String(err)}` },
       { status: 500 }

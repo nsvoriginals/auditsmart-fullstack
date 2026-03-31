@@ -1,139 +1,251 @@
-// ── POST /api/audit/scan ───────────────────────────────────────────────────────
-// Equivalent to @router.post("/scan") in audit.py
-//
-// free       → Groq + Gemini
-// pro        → Groq + Claude Haiku
-// enterprise → Groq + Claude Sonnet
-
+// app/api/audit/scan/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { getDb } from "@/lib/db";
-import { validateContract, serializeAudit } from "@/lib/audit-helpers";
-import { runAuditPipeline } from "@/lib/pipeline";   // your existing pipeline adapter
-import { ObjectId } from "mongodb";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { runAuditPipeline } from "@/lib/agents/pipeline";
+
+// Map agent names to valid database values
+function mapAgentType(agentName: string): string {
+  const mapping: Record<string, string> = {
+    'reentrancy_agent': 'REENTRANCY_AGENT',
+    'overflow_agent': 'OVERFLOW_AGENT',
+    'access_control_agent': 'ACCESS_CONTROL_AGENT',
+    'logic_agent': 'LOGIC_AGENT',
+    'gas_dos_agent': 'GAS_DOS_AGENT',
+    'defi_agent': 'DEFI_AGENT',
+    'backdoor_agent': 'BACKDOOR_AGENT',
+    'signature_agent': 'SIGNATURE_AGENT',
+    'slither_agent': 'SLITHER_AGENT',
+    'gemini_agent': 'GEMINI_AGENT',
+    'claude_pro': 'CLAUDE_AGENT',
+    'claude_enterprise': 'CLAUDE_AGENT',
+    'claude_deep_audit': 'CLAUDE_AGENT',
+    'claude_free': 'CLAUDE_AGENT',
+    'security': 'SECURITY',
+  };
+  
+  const mapped = mapping[agentName?.toLowerCase()];
+  return mapped || 'SECURITY';
+}
+
+// Map severity to valid enum values
+function mapSeverity(severity: string): string {
+  const severityMap: Record<string, string> = {
+    'critical': 'CRITICAL',
+    'high': 'HIGH',
+    'medium': 'MEDIUM',
+    'low': 'LOW',
+    'info': 'INFO',
+  };
+  
+  const mapped = severityMap[severity?.toLowerCase()];
+  return mapped || 'INFO';
+}
+
+// Filter out low-quality findings
+function isValidFinding(finding: any): boolean {
+  // Skip findings that are just "no issues found"
+  const skipPatterns = [
+    'no vulnerabilities found',
+    'no issues found',
+    'no gas griefing',
+    'no selfdestruct',
+    'no delegatecall',
+    'no quorum',
+    'no migration functions',
+    'not directly related',
+    'does not utilize',
+    'does not contain',
+    'no operation',
+    'no arithmetic',
+  ];
+  
+  const description = finding.description?.toLowerCase() || '';
+  const title = finding.title?.toLowerCase() || '';
+  
+  for (const pattern of skipPatterns) {
+    if (description.includes(pattern) || title.includes(pattern)) {
+      return false;
+    }
+  }
+  
+  // Only keep CRITICAL, HIGH, and MEDIUM findings (skip LOW and INFO)
+  const severity = finding.severity?.toLowerCase();
+  return severity === 'critical' || severity === 'high' || severity === 'medium';
+}
 
 export async function POST(req: NextRequest) {
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const { user, error } = await verifyAuth(req);
-  if (error) return error;
-
   try {
-    const body = await req.json();
-    const {
-      contract_code,
-      contract_name = "Contract",
-      chain         = "ethereum",
-    } = body as {
-      contract_code?: string;
-      contract_name?: string;
-      chain?: string;
-    };
-
-    if (!contract_code) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { detail: "contract_code is required" },
+        { error: "Unauthorized. Please log in." },
+        { status: 401 }
+      );
+    }
+    
+    console.log("🔑 API Keys check:");
+    console.log("GROQ_API_KEY:", process.env.GROQ_API_KEY ? "✅ Present" : "❌ Missing");
+    console.log("GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "✅ Present" : "❌ Missing");
+    console.log("ANTHROPIC_API_KEY:", process.env.ANTHROPIC_API_KEY ? "✅ Present" : "❌ Missing");
+    
+    const userId = session.user.id;
+    const body = await req.json();
+    const { 
+      contract_code, 
+      contract_name = "Smart Contract", 
+      chain = "ethereum" 
+    } = body;
+
+    if (!contract_code || contract_code.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Contract code is required" },
         { status: 400 }
       );
     }
 
-    // ── Quota check (mirrors FastAPI quota logic) ─────────────────────────
-    const plan       = user.plan ?? "free";
-    const auditsLeft = user.free_audits_remaining ?? 0;
+    // Get user's subscription
+    let subscription = await prisma.subscription.findUnique({
+      where: { userId },
+    });
 
-    if (auditsLeft <= 0 && plan !== "enterprise") {
-      return NextResponse.json(
-        {
-          error:       "Audit limit reached",
-          message:     `Your ${plan} plan limit is reached. Upgrade to continue.`,
-          upgrade_url: "/pricing",
+    // If no subscription exists, create one for free tier
+    if (!subscription) {
+      console.log("Creating free subscription for user:", userId);
+      subscription = await prisma.subscription.create({
+        data: {
+          userId: userId,
+          plan: "FREE",
+          status: "ACTIVE",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         },
-        { status: 402 }
-      );
+      });
     }
 
-    // ── Validate contract ─────────────────────────────────────────────────
-    let code: string;
-    try {
-      code = validateContract(contract_code);
-    } catch (e: unknown) {
-      const err = e as { status: number; message: string };
-      return NextResponse.json({ detail: err.message }, { status: err.status });
+    const plan = subscription?.plan?.toLowerCase() || "free";
+
+    // Check free plan limits
+    if (plan === "free") {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const monthlyAudits = await prisma.audit.count({
+        where: {
+          userId,
+          createdAt: { gte: startOfMonth }
+        }
+      });
+
+      console.log(`Free plan usage: ${monthlyAudits}/3 audits this month`);
+
+      if (monthlyAudits >= 3) {
+        return NextResponse.json(
+          { 
+            error: "Free plan limit reached (3 audits/month). Please upgrade to continue.",
+            limitReached: true,
+            currentUsage: monthlyAudits,
+            limit: 3
+          },
+          { status: 403 }
+        );
+      }
     }
 
-    // ── Run pipeline ──────────────────────────────────────────────────────
-    let result;
-    try {
-      result = await runAuditPipeline({ contract_code: code, contract_name, plan });
-    } catch (e) {
-      console.error("❌ Audit pipeline error:", e);
-      return NextResponse.json(
-        { detail: `Audit pipeline error: ${String(e)}` },
-        { status: 500 }
-      );
+    // Create audit record
+    const audit = await prisma.audit.create({
+      data: {
+        userId,
+        contractName: contract_name,
+        contractCode: contract_code.slice(0, 10000),
+        chain: chain.toUpperCase(),
+        status: "PROCESSING",
+        score: 0,
+      }
+    });
+
+    console.log(`Audit created: ${audit.id}`);
+
+    // Run the audit pipeline
+    const result = await runAuditPipeline(contract_code, contract_name, plan);
+
+    // Update audit with results
+    const updatedAudit = await prisma.audit.update({
+      where: { id: audit.id },
+      data: {
+        status: "COMPLETED",
+        score: result.risk_score,
+        summary: result.summary,
+        report: JSON.stringify({
+          risk_level: result.risk_level,
+          risk_score: result.risk_score,
+          total_findings: result.total_findings,
+          critical_count: result.critical_count,
+          high_count: result.high_count,
+          medium_count: result.medium_count,
+          low_count: result.low_count,
+          info_count: result.info_count,
+          findings: result.findings,
+          deployment_verdict: result.deployment_verdict,
+          scan_duration_ms: result.scan_duration_ms,
+          plan_used: result.plan_used,
+          pdf_available: result.pdf_available,
+        }),
+        completedAt: new Date(),
+      }
+    });
+
+    // Create individual findings - with filtering and mapping
+    if (result.findings && result.findings.length > 0) {
+      // Filter and map findings
+      const validFindings = result.findings
+        .filter(isValidFinding)
+        .map((finding: any) => ({
+          auditId: audit.id,
+          agentType: mapAgentType(finding.source),
+          title: finding.type || "Unknown Issue",
+          description: finding.description || "",
+          severity: mapSeverity(finding.severity),
+          lineNumber: finding.line ? parseInt(finding.line) : null,
+          codeSnippet: finding.code_snippet || null,
+          recommendation: finding.recommendation || null,
+        }));
+
+      console.log(`Findings: ${result.findings.length} raw → ${validFindings.length} valid`);
+
+      if (validFindings.length > 0) {
+        await prisma.finding.createMany({
+          data: validFindings
+        });
+      }
     }
 
-    // ── Save audit ────────────────────────────────────────────────────────
-    const db       = await getDb();
-    const userId   = new ObjectId(user._id.toString());
-    const auditDoc = {
-      user_id:             userId,
-      contract_name,
-      chain,
-      contract_code_hash:  hashCode(code),
-      risk_level:          result.risk_level          ?? "unknown",
-      risk_score:          result.risk_score           ?? 0,
-      total_findings:      result.total_findings       ?? 0,
-      raw_findings_count:  result.raw_findings_count   ?? 0,
-      critical_count:      result.critical_count       ?? 0,
-      high_count:          result.high_count           ?? 0,
-      medium_count:        result.medium_count         ?? 0,
-      low_count:           result.low_count            ?? 0,
-      info_count:          result.info_count           ?? 0,
-      findings:            result.findings             ?? [],
-      summary:             result.summary              ?? "",
-      agents_used:         result.agents_used          ?? [],
-      scan_duration_ms:    result.scan_duration_ms     ?? 0,
-      pdf_base64:          result.pdf_base64           ?? "",
-      pdf_available:       result.pdf_available        ?? false,
-      plan_used:           plan,
-      has_fix_suggestions: result.has_fix_suggestions  ?? false,
-      deployment_verdict:  result.deployment_verdict   ?? "",
-      thinking_chain:      result.thinking_chain,
-      is_deep_audit:       false,
-      version:             "3.0",
-      created_at:          new Date(),
-    };
+    // Return response in the format expected by the frontend
+    return NextResponse.json({
+      id: audit.id,
+      contract_name: contract_name,
+      risk_level: result.risk_level,
+      risk_score: result.risk_score,
+      total_findings: result.total_findings,
+      critical_count: result.critical_count,
+      high_count: result.high_count,
+      medium_count: result.medium_count,
+      low_count: result.low_count,
+      info_count: result.info_count,
+      findings: result.findings?.filter(isValidFinding) || [],
+      summary: result.summary,
+      deployment_verdict: result.deployment_verdict,
+      scan_duration_ms: result.scan_duration_ms,
+      pdf_available: result.pdf_available,
+      plan_used: result.plan_used,
+    });
 
-    const insertResult = await db.collection("audits").insertOne(auditDoc);
-
-    // ── Deduct quota ──────────────────────────────────────────────────────
-    await db.collection("users").updateOne(
-      { _id: userId },
-      { $inc: { free_audits_remaining: -1 } }
-    );
-
-    const saved     = { ...auditDoc, _id: insertResult.insertedId };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response  = serializeAudit(saved as any);
-    response["pdf_available"]       = result.pdf_available       ?? false;
-    response["has_fix_suggestions"] = result.has_fix_suggestions ?? false;
-    response["deployment_verdict"]  = result.deployment_verdict  ?? "";
-
-    return NextResponse.json(response);
-  } catch (err) {
-    console.error("❌ /api/audit/scan error:", err);
+  } catch (error) {
+    console.error("Scan error:", error);
     return NextResponse.json(
-      { detail: "Internal server error" },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
     );
   }
-}
-
-/** Simple Java-style hash — mirrors Python's hash() for logging purposes only. */
-function hashCode(s: string): number {
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) {
-    hash = (Math.imul(31, hash) + s.charCodeAt(i)) | 0;
-  }
-  return hash;
 }

@@ -1,58 +1,60 @@
-// ── POST /api/payment/razorpay/create-order ───────────────────────────────────
-// Equivalent to @router.post("/razorpay/create-order") in payment.py
-// Creates a subscription plan order (pro / enterprise)
-
+// app/api/payment/razorpay/create-order/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { getRazorpayClient } from "@/lib/audit-helpers";
-import { PLAN_PRICES_PAISE, PLAN_FEATURES, config } from "@/lib/config";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import Razorpay from "razorpay";
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
 
 export async function POST(req: NextRequest) {
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const { user, error } = await verifyAuth(req);
-  if (error) return error;
-
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
-    const { plan } = body as { plan?: string };
+    const { plan, amount } = body;
 
-    if (!plan || !(plan in PLAN_PRICES_PAISE)) {
-      return NextResponse.json(
-        { detail: "Invalid plan. Choose 'pro' or 'enterprise'." },
-        { status: 400 }
-      );
+    // Validate plan
+    const validPlans = ["pro", "enterprise", "deep_audit"];
+    if (!validPlans.includes(plan)) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const client = getRazorpayClient();
-    if (!client) {
-      return NextResponse.json(
-        { detail: "Payment gateway not configured" },
-        { status: 500 }
-      );
-    }
+    // ✅ FIX: Create a short receipt (max 40 characters)
+    // Format: {plan}_{userId.slice(0,8)}_{timestamp.slice(-8)}
+    const shortUserId = session.user.id.slice(-8);
+    const shortTimestamp = Date.now().toString().slice(-8);
+    const receipt = `${plan}_${shortUserId}_${shortTimestamp}`;
+    
+    console.log("Creating order with receipt:", receipt); // Should be ~25-35 chars
 
-    const order = await client.orders.create({
-      amount:   PLAN_PRICES_PAISE[plan],
+    // Create order
+    const order = await razorpay.orders.create({
+      amount: amount, // Already in paise
       currency: "INR",
+      receipt: receipt,
       notes: {
-        user_id: user._id.toString(),
-        plan,
-        email:   user.email ?? "",
+        userId: session.user.id,
+        plan: plan,
+        email: session.user.email || "",
       },
     });
 
     return NextResponse.json({
-      order_id:  order.id,
-      amount:    PLAN_PRICES_PAISE[plan],
-      currency:  "INR",
-      key_id:    config.RAZORPAY_KEY_ID,
-      plan,
-      features:  PLAN_FEATURES[plan as keyof typeof PLAN_FEATURES] ?? {},
+      order_id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      key_id: process.env.RAZORPAY_KEY_ID,
     });
-  } catch (err) {
-    console.error("❌ /api/payment/razorpay/create-order error:", err);
+  } catch (error) {
+    console.error("Create order error:", error);
     return NextResponse.json(
-      { detail: `Payment error: ${String(err)}` },
+      { error: error instanceof Error ? error.message : "Failed to create order" },
       { status: 500 }
     );
   }

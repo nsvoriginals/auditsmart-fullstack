@@ -1,80 +1,110 @@
 "use client";
-// src/components/layout/Navbar.tsx
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { PlanBadge } from "@/components/ui";
+import { Menu, X, ChevronDown } from "lucide-react";
+import { useState } from "react";
+
+const NAV_ITEMS = [
+  { name: "Features", href: "/#features" },
+  { name: "Pricing", href: "/pricing" },
+  { name: "Dashboard", href: "/dashboard" },
+  { name: "Documentation", href: "/docs" },
+];
 
 export function Navbar() {
-  const { data: session } = useSession();
   const pathname = usePathname();
-  const isLanding = pathname === "/";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="nav">
-      <div className="h-full max-w-7xl mx-auto px-6 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div style={{
-            width: 30, height: 30,
-            background: "linear-gradient(135deg, var(--plum), var(--rose))",
-            borderRadius: "var(--radius-sm)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-          </div>
-          <span style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "1.1rem",
-            color: "var(--frost)",
-            letterSpacing: "-0.02em",
-          }}>
-            Audit<span style={{ color: "var(--plum-light)" }}>Smart</span>
-          </span>
-        </Link>
+    <nav className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg-base)]/80 backdrop-blur-md">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <span className="font-display text-xl font-bold text-[var(--frost)]">
+              Audit<span className="text-[var(--plum-light)]">Smart</span>
+            </span>
+          </Link>
 
-        {/* Center Nav - Landing only */}
-        {isLanding && (
-          <div className="hidden md:flex items-center gap-6">
-            {["Features", "Pricing", "Docs"].map((item) => (
-              <Link
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="text-sm transition-colors"
-                style={{ color: "var(--text-secondary)" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "var(--frost)")}
-                onMouseLeave={e => (e.currentTarget.style.color = "var(--text-secondary)")}
-              >
-                {item}
-              </Link>
-            ))}
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-8">
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href || 
+                (item.href.startsWith("/#") && pathname === "/");
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`text-sm font-medium transition-colors hover:text-[var(--plum-light)] ${
+                    isActive ? "text-[var(--plum-light)]" : "text-[var(--text-secondary)]"
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Auth Buttons */}
+          <div className="hidden md:flex items-center gap-3">
+            <Link
+              href="/login"
+              className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/register"
+              className="px-4 py-2 text-sm font-medium bg-[var(--plum)] text-white rounded-md hover:bg-[var(--plum-light)] transition-all hover:translate-y-[-1px]"
+            >
+              Get Started
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <div className="md:hidden py-4 border-t border-[var(--border)]">
+            <div className="flex flex-col gap-3">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-md transition-colors"
+                >
+                  {item.name}
+                </Link>
+              ))}
+              <div className="flex flex-col gap-2 pt-3 border-t border-[var(--border)]">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-md transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 text-sm font-medium bg-[var(--plum)] text-white rounded-md text-center hover:bg-[var(--plum-light)] transition-colors"
+                >
+                  Get Started
+                </Link>
+              </div>
+            </div>
           </div>
         )}
-
-        {/* Right */}
-        <div className="flex items-center gap-3">
-          {session ? (
-            <>
-              <PlanBadge plan={session.user.plan ?? "free"} />
-              <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="btn btn-ghost btn-sm"
-                style={{ color: "var(--text-muted)" }}
-              >
-                Sign out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="btn btn-ghost btn-sm">Sign in</Link>
-              <Link href="/register" className="btn btn-primary btn-sm">Start free</Link>
-            </>
-          )}
-        </div>
       </div>
     </nav>
   );

@@ -1,9 +1,22 @@
+// app/dashboard/history/page.tsx
 "use client";
-// src/app/dashboard/history/page.tsx
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { RiskRing, SeverityBadge, SkeletonCard, EmptyState } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { 
+  Shield, 
+  AlertTriangle, 
+  Eye, 
+  Download, 
+  Plus, 
+  ChevronRight,
+  Calendar,
+  Hash,
+  TrendingUp,
+  Clock,
+  FileText
+} from "lucide-react";
 
 interface Audit {
   id: string;
@@ -23,131 +36,283 @@ interface Audit {
   created_at: string;
 }
 
-const VERDICT_COLOR: Record<string, string> = {
-  "safe": "#4ade80", "caution": "#facc15", "do not deploy": "#f87171",
-};
-
 export default function HistoryPage() {
-  const [audits, setAudits]   = useState<Audit[]>([]);
+  const router = useRouter();
+  const [audits, setAudits] = useState<Audit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/audit/history?limit=20").then(r => r.json()).then(d => {
-      setAudits(d.audits ?? []);
-      setLoading(false);
-    });
+    fetchAudits();
   }, []);
 
-  const downloadPdf = async (id: string, name: string) => {
-    const res  = await fetch(`/api/audit/report/${id}/pdf`);
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href = url; a.download = `AuditSmart_${name}_${id.slice(0,6)}.pdf`; a.click();
-    URL.revokeObjectURL(url);
+  const fetchAudits = async () => {
+    try {
+      const response = await fetch("/api/audit/history?limit=50");
+      const data = await response.json();
+      setAudits(data.audits ?? []);
+    } catch (error) {
+      console.error("Failed to fetch audits:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const downloadPdf = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking download
+    setDownloadingId(id);
+    
+    try {
+      const response = await fetch(`/api/audit/report/${id}/pdf`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Audit_Report_${name.replace(/[^a-z0-9]/gi, "_")}_${id.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("PDF download failed:", error);
+      alert("Failed to download PDF. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const viewAudit = (id: string) => {
+    router.push(`/dashboard/audit/results/${id}`);
+  };
+
+  const getRiskColor = (level: string, score: number) => {
+    if (level === "critical" || score >= 70) return { bg: "bg-red-500/10", text: "text-red-500", border: "border-red-500/20", light: "bg-red-500/5" };
+    if (level === "high" || score >= 50) return { bg: "bg-orange-500/10", text: "text-orange-500", border: "border-orange-500/20", light: "bg-orange-500/5" };
+    if (level === "medium" || score >= 30) return { bg: "bg-yellow-500/10", text: "text-yellow-500", border: "border-yellow-500/20", light: "bg-yellow-500/5" };
+    return { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/20", light: "bg-green-500/5" };
+  };
+
+  const getVerdictColor = (verdict: string) => {
+    const v = verdict?.toLowerCase() || "";
+    if (v.includes("safe")) return { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/20" };
+    if (v.includes("caution")) return { bg: "bg-yellow-500/10", text: "text-yellow-500", border: "border-yellow-500/20" };
+    if (v.includes("not") || v.includes("do not")) return { bg: "bg-red-500/10", text: "text-red-500", border: "border-red-500/20" };
+    return { bg: "bg-gray-500/10", text: "text-gray-500", border: "border-gray-500/20" };
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="h-8 w-48 bg-[var(--bg-input)] rounded animate-pulse mb-2" />
+            <div className="h-4 w-64 bg-[var(--bg-input)] rounded animate-pulse" />
+          </div>
+          <div className="h-10 w-32 bg-[var(--bg-input)] rounded animate-pulse" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-20 bg-[var(--bg-card)] rounded-lg border border-[var(--border)] animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-display text-3xl mb-1" style={{ color: "var(--frost)" }}>Audit History</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-            All your past smart contract security audits.
+          <h1 className="text-3xl font-bold text-[var(--frost)]">Audit History</h1>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            View and manage all your past smart contract security audits
           </p>
         </div>
-        <Link href="/dashboard/scan" className="btn btn-primary btn-md">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+        <Link
+          href="/dashboard/audit"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white hover:opacity-90 transition-all"
+        >
+          <Plus className="w-4 h-4" />
           New Audit
         </Link>
       </div>
 
-      {loading ? (
-        <div className="space-y-3">{Array(5).fill(0).map((_, i) => <SkeletonCard key={i} />)}</div>
-      ) : audits.length === 0 ? (
-        <div className="card">
-          <EmptyState
-            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>}
-            title="No audits yet"
-            sub="Run your first smart contract audit to see results here."
-            action={<Link href="/dashboard/scan" className="btn btn-primary btn-sm">Start scanning</Link>}
-          />
+      {/* Stats Summary */}
+      {audits.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-[var(--bg-card)] rounded-lg border border-[var(--border)] p-3 text-center">
+            <div className="text-2xl font-bold text-[var(--frost)]">{audits.length}</div>
+            <div className="text-xs text-[var(--text-muted)]">Total Audits</div>
+          </div>
+          <div className="bg-[var(--bg-card)] rounded-lg border border-[var(--border)] p-3 text-center">
+            <div className="text-2xl font-bold text-red-500">
+              {audits.reduce((sum, a) => sum + (a.critical_count || 0), 0)}
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">Critical Issues</div>
+          </div>
+          <div className="bg-[var(--bg-card)] rounded-lg border border-[var(--border)] p-3 text-center">
+            <div className="text-2xl font-bold text-[var(--frost)]">
+              {Math.round(audits.reduce((sum, a) => sum + (a.risk_score || 0), 0) / (audits.length || 1))}
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">Avg Risk Score</div>
+          </div>
+          <div className="bg-[var(--bg-card)] rounded-lg border border-[var(--border)] p-3 text-center">
+            <div className="text-2xl font-bold text-[var(--frost)]">
+              {audits.filter(a => a.pdf_available).length}
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">PDF Reports</div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit List */}
+      {audits.length === 0 ? (
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-12 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--plum)]/10 flex items-center justify-center">
+            <FileText className="w-8 h-8 text-[var(--plum-light)]" />
+          </div>
+          <h3 className="text-lg font-semibold text-[var(--frost)] mb-2">No audits yet</h3>
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
+            Run your first smart contract audit to see results here
+          </p>
+          <Link
+            href="/dashboard/audit"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white hover:opacity-90 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Start Your First Audit
+          </Link>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          {/* Table header */}
-          <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 border-b text-xs uppercase tracking-wider"
-            style={{ borderColor: "var(--border)", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
-            <div className="col-span-4">Contract</div>
-            <div className="col-span-2">Risk</div>
-            <div className="col-span-2">Findings</div>
-            <div className="col-span-2">Verdict</div>
-            <div className="col-span-2 text-right">Actions</div>
-          </div>
-
-          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-            {audits.map((a) => {
-              const verdict = a.deployment_verdict?.toLowerCase() ?? "";
-              return (
-                <div key={a.id}
-                  className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center px-6 py-4 transition-colors"
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  {/* Contract info */}
-                  <div className="md:col-span-4 flex items-center gap-3">
-                    <RiskRing score={a.risk_score} size={40} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
-                        {a.contract_name}
-                      </p>
-                      <p className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
-                        {a.chain} · {new Date(a.created_at).toLocaleDateString()}
-                      </p>
+        <div className="space-y-3">
+          {audits.map((audit) => {
+            const riskStyle = getRiskColor(audit.risk_level, audit.risk_score);
+            const verdictStyle = getVerdictColor(audit.deployment_verdict);
+            
+            return (
+              <div
+                key={audit.id}
+                onClick={() => viewAudit(audit.id)}
+                className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-4 cursor-pointer transition-all hover:border-[var(--plum-light)] hover:shadow-lg hover:shadow-[var(--plum)]/5 group"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  {/* Left Section - Contract Info */}
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {/* Risk Ring */}
+                    <div className="relative flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center ${riskStyle.border} ${riskStyle.bg}`}>
+                        <span className={`text-sm font-bold ${riskStyle.text}`}>{audit.risk_score}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Contract Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="text-base font-semibold text-[var(--frost)] truncate">
+                          {audit.contract_name}
+                        </h3>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-muted)] font-mono">
+                          {audit.chain}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-[var(--text-muted)] flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(audit.created_at)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {Math.round(audit.scan_duration_ms / 1000)}s scan
+                        </span>
+                        <span className="flex items-center gap-1 capitalize">
+                          <TrendingUp className="w-3 h-3" />
+                          {audit.plan_used} plan
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Risk level */}
-                  <div className="md:col-span-2">
-                    <span className="text-xs font-mono capitalize" style={{ color: "var(--text-secondary)" }}>
-                      {a.risk_level}
-                    </span>
-                  </div>
-
-                  {/* Findings */}
-                  <div className="md:col-span-2 flex flex-wrap gap-1">
-                    {a.critical_count > 0 && <SeverityBadge severity="critical" />}
-                    {a.high_count > 0     && <SeverityBadge severity="high" />}
-                    <span className="text-xs" style={{ color: "var(--text-muted)", alignSelf: "center" }}>
-                      {a.total_findings} total
-                    </span>
-                  </div>
-
-                  {/* Verdict */}
-                  <div className="md:col-span-2">
-                    {verdict && (
-                      <span className="text-xs font-mono uppercase"
-                        style={{ color: VERDICT_COLOR[verdict] ?? "var(--text-muted)" }}>
-                        {a.deployment_verdict}
+                  {/* Right Section - Stats & Actions */}
+                  <div className="flex items-center justify-between lg:justify-end gap-4">
+                    {/* Finding Stats */}
+                    <div className="flex items-center gap-2">
+                      {audit.critical_count > 0 && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-red-500/10 text-red-500">
+                          {audit.critical_count}C
+                        </span>
+                      )}
+                      {audit.high_count > 0 && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-orange-500/10 text-orange-500">
+                          {audit.high_count}H
+                        </span>
+                      )}
+                      {audit.medium_count > 0 && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500">
+                          {audit.medium_count}M
+                        </span>
+                      )}
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {audit.total_findings} total
                       </span>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Actions */}
-                  <div className="md:col-span-2 flex items-center justify-end gap-2">
-                    <Link href={`/dashboard/history/${a.id}`} className="btn btn-ghost btn-sm">View</Link>
-                    {a.pdf_available && (
-                      <button onClick={() => downloadPdf(a.id, a.contract_name)} className="btn btn-ghost btn-sm" title="Download PDF">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                      </button>
+                    {/* Verdict Badge */}
+                    {audit.deployment_verdict && (
+                      <div className={`hidden sm:block px-2 py-1 rounded-md text-xs font-medium ${verdictStyle.bg} ${verdictStyle.text} border ${verdictStyle.border}`}>
+                        {audit.deployment_verdict}
+                      </div>
                     )}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1">
+                      {audit.pdf_available && (
+                        <button
+                          onClick={(e) => downloadPdf(audit.id, audit.contract_name, e)}
+                          disabled={downloadingId === audit.id}
+                          className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all"
+                          title="Download PDF"
+                        >
+                          {downloadingId === audit.id ? (
+                            <div className="w-4 h-4 border-2 border-[var(--plum-light)] border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          viewAudit(audit.id);
+                        }}
+                        className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--plum-light)] hover:bg-[var(--plum)]/10 transition-all group-hover:bg-[var(--plum)]/5"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--plum-light)] transition-colors" />
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

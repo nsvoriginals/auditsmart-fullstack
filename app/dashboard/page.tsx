@@ -1,189 +1,417 @@
 "use client";
-// src/app/dashboard/page.tsx — Overview
+// app/dashboard/page.tsx — Dashboard Overview
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { RiskRing, SkeletonCard, PlanBadge } from "@/components/ui";
+import { 
+  Shield, 
+  AlertTriangle, 
+  TrendingUp, 
+  Clock, 
+  Plus, 
+  Eye, 
+  Star,
+  Zap,
+  Brain,
+  Sparkles
+} from "lucide-react";
 
-interface Stats {
-  total_audits: number;
-  critical_findings: number;
-  high_findings: number;
-  medium_findings: number;
-  low_findings: number;
-  total_vulnerabilities: number;
-  avg_risk_score: number;
-  avg_scan_duration_ms: number;
-  free_audits_remaining: number;
-  plan: string;
+// Types for dashboard data
+interface DashboardStats {
+  stats: {
+    totalAudits: number;
+    completedAudits: number;
+    pendingAudits: number;
+    averageScore: number;
+    remainingAudits: number | null;
+    currentMonthAudits: number;
+  };
+  recentAudits: Array<{
+    id: string;
+    contractName: string;
+    status: string;
+    score: number;
+    createdAt: string;
+  }>;
+  subscription: {
+    plan: string;
+    status: string;
+    currentPeriodEnd: string;
+  };
 }
 
-interface RecentAudit {
-  id: string;
-  contract_name: string;
-  risk_level: string;
-  risk_score: number;
-  total_findings: number;
-  critical_count: number;
-  plan_used: string;
-  created_at: string;
-}
+// Helper to get risk level from score
+const getRiskLevel = (score: number) => {
+  if (score >= 80) return { text: "Critical", color: "text-red-500 bg-red-500/10", border: "border-red-500/20" };
+  if (score >= 60) return { text: "High", color: "text-orange-500 bg-orange-500/10", border: "border-orange-500/20" };
+  if (score >= 35) return { text: "Medium", color: "text-yellow-500 bg-yellow-500/10", border: "border-yellow-500/20" };
+  if (score >= 10) return { text: "Low", color: "text-blue-500 bg-blue-500/10", border: "border-blue-500/20" };
+  return { text: "Good", color: "text-green-500 bg-green-500/10", border: "border-green-500/20" };
+};
 
-const RISK_COLOR: Record<string, string> = {
-  critical: "#f87171", high: "#fb923c", medium: "#facc15",
-  low: "#4ade80", safe: "#4ade80", unknown: "var(--text-muted)",
+// Helper to get status badge
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "COMPLETED":
+      return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-green-500/10 text-green-400">✓ Complete</span>;
+    case "PROCESSING":
+      return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-yellow-500/10 text-yellow-400">⟳ Processing</span>;
+    case "FAILED":
+      return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-500/10 text-red-400">✗ Failed</span>;
+    default:
+      return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-gray-500/10 text-gray-400">○ Pending</span>;
+  }
 };
 
 export default function DashboardOverview() {
   const { data: session } = useSession();
-  const [stats, setStats]   = useState<Stats | null>(null);
-  const [recent, setRecent] = useState<RecentAudit[]>([]);
+  const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/dashboard/stats").then(r => r.json()),
-      fetch("/api/audit/history?limit=5").then(r => r.json()),
-    ]).then(([s, h]) => {
-      setStats(s);
-      setRecent(h.audits ?? []);
-      setLoading(false);
-    });
+    fetchDashboardData();
   }, []);
 
-  const STAT_CARDS = [
-    { label: "Total Audits",    value: stats?.total_audits ?? 0,           sub: "all time" },
-    { label: "Vulnerabilities", value: stats?.total_vulnerabilities ?? 0,  sub: "found" },
-    { label: "Critical Findings", value: stats?.critical_findings ?? 0,    sub: "high priority", accent: true },
-    { label: "Avg Risk Score", value: stats?.avg_risk_score ?? 0,           sub: "/ 100" },
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch("/api/dashboard/stats");
+      const result = await response.json();
+      
+      if (!response.ok) throw new Error(result.error);
+      
+      setData(result);
+    } catch (err) {
+      console.error("Error fetching dashboard:", err);
+      setError(err instanceof Error ? err.message : "Failed to load dashboard");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stats = data?.stats;
+  const recentAudits = data?.recentAudits || [];
+  const subscription = data?.subscription;
+  const averageScore = stats?.averageScore || 0;
+  const riskInfo = getRiskLevel(averageScore);
+  
+  // Get plan icon and color
+  const getPlanInfo = (plan: string) => {
+    switch (plan?.toLowerCase()) {
+      case "pro":
+        return { icon: Zap, color: "from-blue-500 to-blue-600", bgColor: "bg-blue-500/10", textColor: "text-blue-400" };
+      case "enterprise":
+        return { icon: Brain, color: "from-purple-500 to-purple-600", bgColor: "bg-purple-500/10", textColor: "text-purple-400" };
+      case "deep_audit":
+        return { icon: Sparkles, color: "from-amber-500 to-amber-600", bgColor: "bg-amber-500/10", textColor: "text-amber-400" };
+      default:
+        return { icon: Shield, color: "from-green-500 to-green-600", bgColor: "bg-green-500/10", textColor: "text-green-400" };
+    }
+  };
+
+  const planInfo = getPlanInfo(subscription?.plan || "FREE");
+
+  // Stat cards configuration
+  const statCards = [
+    { 
+      label: "Total Audits", 
+      value: stats?.totalAudits || 0, 
+      sub: "all time",
+      icon: Shield,
+      color: "text-[var(--plum-light)]"
+    },
+    { 
+      label: "Completed", 
+      value: stats?.completedAudits || 0, 
+      sub: "successful audits",
+      icon: TrendingUp,
+      color: "text-green-400"
+    },
+    { 
+      label: "Pending", 
+      value: stats?.pendingAudits || 0, 
+      sub: "in progress",
+      icon: Clock,
+      color: "text-yellow-400"
+    },
+    { 
+      label: "Avg Score", 
+      value: averageScore.toFixed(1), 
+      sub: "/ 100",
+      icon: AlertTriangle,
+      color: riskInfo.color.split(' ')[0]
+    },
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl mb-1" style={{ color: "var(--frost)" }}>
-            Welcome back, {session?.user?.name?.split(" ")[0] ?? "—"}
+          <h1 className="font-display text-3xl font-bold" style={{ color: "var(--frost)" }}>
+            Welcome back, {session?.user?.name?.split(" ")[0] || "there"}!
           </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-            Here&apos;s your security overview.
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+            Here's your security audit overview and recent activity.
           </p>
         </div>
+        
         <div className="flex items-center gap-3">
-          <PlanBadge plan={session?.user?.plan ?? "free"} />
-          <Link href="/dashboard/scan" className="btn btn-primary btn-md">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+          {/* Plan Badge */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${planInfo.bgColor}`}>
+            <planInfo.icon className={`w-4 h-4 ${planInfo.textColor}`} />
+            <span className={`text-sm font-medium capitalize ${planInfo.textColor}`}>
+              {subscription?.plan?.toLowerCase() || "free"}
+            </span>
+          </div>
+          
+          {/* New Audit Button */}
+          <Link 
+            href="/dashboard/audit" 
+            className="btn btn-primary flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white hover:opacity-90 transition-all"
+          >
+            <Plus className="w-4 h-4" />
             New Audit
           </Link>
         </div>
       </div>
 
-      {/* Stat grid */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
-          Array(4).fill(0).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          STAT_CARDS.map((s) => (
-            <div key={s.label} className={`stat-card ${s.accent && (stats?.critical_findings ?? 0) > 0 ? "border-red-900/30" : ""}`}>
-              <span className="stat-label">{s.label}</span>
-              <span className="stat-value" style={{ color: s.accent && (stats?.critical_findings ?? 0) > 0 ? "#f87171" : "var(--frost)" }}>
-                {typeof s.value === "number" && s.label.includes("Score") ? s.value.toFixed(1) : s.value}
-              </span>
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{s.sub}</span>
+          Array(4).fill(0).map((_, i) => (
+            <div key={i} className="card p-5 animate-pulse">
+              <div className="h-4 bg-[var(--bg-input)] rounded w-24 mb-3"></div>
+              <div className="h-8 bg-[var(--bg-input)] rounded w-16 mb-2"></div>
+              <div className="h-3 bg-[var(--bg-input)] rounded w-20"></div>
             </div>
           ))
+        ) : (
+          statCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.label} className="card p-5 hover:border-[var(--plum-light)]/50 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2 rounded-lg bg-[var(--plum)]/10`}>
+                    <Icon className={`w-4 h-4 ${card.color}`} />
+                  </div>
+                  {card.label === "Avg Score" && averageScore > 0 && (
+                    <div className={`text-xs px-2 py-0.5 rounded-full ${riskInfo.color}`}>
+                      {riskInfo.text}
+                    </div>
+                  )}
+                </div>
+                <div className="stat-value text-2xl font-bold" style={{ color: "var(--frost)" }}>
+                  {card.value}
+                </div>
+                <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                  {card.sub}
+                </div>
+                {card.label === "Avg Score" && averageScore > 0 && (
+                  <div className="mt-2 w-full bg-[var(--bg-input)] rounded-full h-1.5">
+                    <div 
+                      className="h-1.5 rounded-full transition-all bg-gradient-to-r from-green-500 to-[var(--plum-light)]"
+                      style={{ width: `${averageScore}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Two column section */}
+      {/* Two Column Layout */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recent audits */}
+        {/* Recent Audits - Left Column */}
         <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="section-title mb-0">Recent Audits</h2>
-            <Link href="/dashboard/history" className="text-xs" style={{ color: "var(--plum-light)" }}>View all →</Link>
+            <h2 className="section-title text-lg font-semibold" style={{ color: "var(--frost)" }}>
+              Recent Audits
+            </h2>
+            <Link 
+              href="/dashboard/history" 
+              className="text-xs hover:underline transition-all"
+              style={{ color: "var(--plum-light)" }}
+            >
+              View all →
+            </Link>
           </div>
+          
           {loading ? (
-            <div className="space-y-3">{Array(3).fill(0).map((_, i) => <SkeletonCard key={i} />)}</div>
-          ) : recent.length === 0 ? (
+            <div className="space-y-3">
+              {Array(3).fill(0).map((_, i) => (
+                <div key={i} className="p-3 rounded-lg animate-pulse">
+                  <div className="h-5 bg-[var(--bg-input)] rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-[var(--bg-input)] rounded w-48"></div>
+                </div>
+              ))}
+            </div>
+          ) : recentAudits.length === 0 ? (
             <div className="py-12 text-center">
-              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>No audits yet.</p>
-              <Link href="/dashboard/scan" className="btn btn-primary btn-sm mt-4">Run your first audit</Link>
+              <Shield className="w-12 h-12 mx-auto mb-3 opacity-30" style={{ color: "var(--text-muted)" }} />
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>No audits yet.</p>
+              <Link 
+                href="/dashboard/audit" 
+                className="inline-block mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white text-sm hover:opacity-90 transition-all"
+              >
+                Run your first audit
+              </Link>
             </div>
           ) : (
             <div className="space-y-2">
-              {recent.map((a) => (
-                <Link key={a.id} href={`/dashboard/history/${a.id}`}
-                  className="flex items-center gap-4 p-3 rounded-lg transition-colors cursor-pointer"
-                  style={{ borderRadius: "var(--radius-sm)" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  <RiskRing score={a.risk_score ?? 0} size={44} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>{a.contract_name}</p>
-                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {a.total_findings} findings · {new Date(a.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {a.critical_count > 0 && (
-                      <span className="badge badge-critical">{a.critical_count} CRIT</span>
-                    )}
-                    <span className="text-xs font-mono capitalize" style={{ color: RISK_COLOR[a.risk_level] ?? "var(--text-muted)" }}>
-                      {a.risk_level}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+              {recentAudits.map((audit) => {
+                const auditRisk = getRiskLevel(audit.score);
+                return (
+                  <Link
+                    key={audit.id}
+                    href={`/dashboard/audit/results/${audit.id}`}
+                    className="flex items-center gap-4 p-3 rounded-lg transition-all cursor-pointer hover:bg-[var(--bg-hover)]"
+                  >
+                    {/* Risk Ring (simplified) */}
+                    <div className="relative flex-shrink-0">
+                      <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${auditRisk.border}`}>
+                        <span className="text-xs font-medium" style={{ color: auditRisk.color.split(' ')[0] }}>
+                          {audit.score}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Audit Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                          {audit.contractName}
+                        </p>
+                        {getStatusBadge(audit.status)}
+                      </div>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {new Date(audit.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    
+                    {/* Risk Level */}
+                    <div className={`text-xs font-medium capitalize px-2 py-1 rounded-full ${auditRisk.color}`}>
+                      {auditRisk.text}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Sidebar panel */}
+        {/* Right Column - Plan & Quick Actions */}
         <div className="space-y-4">
-          {/* Quota card */}
+          {/* Plan & Quota Card */}
           <div className="card p-5">
-            <h3 className="section-title text-base mb-3">Plan & Quota</h3>
+            <h3 className="text-base font-semibold mb-3" style={{ color: "var(--frost)" }}>
+              Plan & Usage
+            </h3>
+            
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Audits remaining</span>
-              <span className="font-mono text-sm font-medium" style={{ color: "var(--frost)" }}>
-                {session?.user?.free_audits_remaining ?? 0}
+              <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                Audits this month
+              </span>
+              <span className="text-sm font-medium" style={{ color: "var(--frost)" }}>
+                {stats?.currentMonthAudits || 0}
+                {subscription?.plan === "FREE" && <span className="text-xs text-[var(--text-muted)]"> / 3</span>}
               </span>
             </div>
-            <div style={{ height: 6, background: "var(--bg-hover)", borderRadius: 3, overflow: "hidden", marginBottom: 16 }}>
-              <div style={{
-                height: "100%",
-                width: `${Math.min(100, ((session?.user?.free_audits_remaining ?? 0) / 20) * 100)}%`,
-                background: "linear-gradient(90deg, var(--plum), var(--rose))",
-                borderRadius: 3,
-              }} />
+            
+            {/* Progress Bar */}
+            <div className="h-2 rounded-full overflow-hidden mb-4" style={{ background: "var(--bg-hover)" }}>
+              <div 
+                className="h-full rounded-full transition-all bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)]"
+                style={{ 
+                  width: subscription?.plan === "FREE" 
+                    ? `${Math.min(100, ((stats?.currentMonthAudits || 0) / 3) * 100)}%` 
+                    : `${Math.min(100, ((stats?.currentMonthAudits || 0) / 100) * 100)}%`
+                }}
+              />
             </div>
-            {session?.user?.plan === "free" && (
-              <Link href="/pricing" className="btn btn-outline btn-sm w-full">
+            
+            {/* Remaining */}
+            {subscription?.plan === "FREE" && stats?.remainingAudits !== null && (
+              <div className="mb-4 p-3 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    Remaining free audits
+                  </span>
+                  <span className="text-lg font-bold" style={{ color: "var(--frost)" }}>
+                    {stats.remainingAudits}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Upgrade Button */}
+            {subscription?.plan === "FREE" && (
+              <Link 
+                href="/dashboard/pricing" 
+                className="w-full py-2 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white text-sm font-medium text-center hover:opacity-90 transition-all block"
+              >
                 Upgrade for more audits
               </Link>
             )}
+            
+            {/* Subscription Info */}
+            {subscription?.plan !== "FREE" && subscription?.currentPeriodEnd && (
+              <div className="mt-3 text-xs text-center" style={{ color: "var(--text-muted)" }}>
+                Renews on {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+              </div>
+            )}
           </div>
 
-          {/* Quick actions */}
+          {/* Quick Actions Card */}
           <div className="card p-5">
-            <h3 className="section-title text-base mb-3">Quick Actions</h3>
+            <h3 className="text-base font-semibold mb-3" style={{ color: "var(--frost)" }}>
+              Quick Actions
+            </h3>
             <div className="space-y-2">
-              <Link href="/dashboard/scan" className="btn btn-ghost btn-sm w-full" style={{ justifyContent: "flex-start" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
-                Scan a contract
+              <Link 
+                href="/dashboard/audit" 
+                className="flex items-center gap-3 w-full p-2 rounded-lg transition-all hover:bg-[var(--bg-hover)]"
+              >
+                <div className="p-1.5 rounded-md bg-[var(--plum)]/10">
+                  <Shield className="w-4 h-4 text-[var(--plum-light)]" />
+                </div>
+                <span className="text-sm" style={{ color: "var(--text-primary)" }}>New Security Audit</span>
               </Link>
-              <Link href="/dashboard/monitor" className="btn btn-ghost btn-sm w-full" style={{ justifyContent: "flex-start" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                Monitor address
+              
+              <Link 
+                href="/dashboard/history" 
+                className="flex items-center gap-3 w-full p-2 rounded-lg transition-all hover:bg-[var(--bg-hover)]"
+              >
+                <div className="p-1.5 rounded-md bg-[var(--plum)]/10">
+                  <Eye className="w-4 h-4 text-[var(--plum-light)]" />
+                </div>
+                <span className="text-sm" style={{ color: "var(--text-primary)" }}>View Audit History</span>
               </Link>
-              <Link href="/pricing" className="btn btn-ghost btn-sm w-full" style={{ justifyContent: "flex-start" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                View pricing
+              
+              <Link 
+                href="/dashboard/pricing" 
+                className="flex items-center gap-3 w-full p-2 rounded-lg transition-all hover:bg-[var(--bg-hover)]"
+              >
+                <div className="p-1.5 rounded-md bg-[var(--plum)]/10">
+                  <Star className="w-4 h-4 text-[var(--plum-light)]" />
+                </div>
+                <span className="text-sm" style={{ color: "var(--text-primary)" }}>Upgrade Plan</span>
               </Link>
+            </div>
+          </div>
+          
+          {/* Security Tip */}
+          <div className="card p-4" style={{ background: "linear-gradient(135deg, rgba(97,45,83,0.1) 0%, rgba(97,45,83,0.05) 100%)" }}>
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-[var(--plum-light)] flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium mb-1" style={{ color: "var(--frost)" }}>Security Tip</h4>
+                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                  Regular audits are crucial for contract security. Run audits after every major update.
+                </p>
+              </div>
             </div>
           </div>
         </div>

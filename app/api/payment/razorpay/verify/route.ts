@@ -1,68 +1,118 @@
-// ── POST /api/payment/razorpay/verify ─────────────────────────────────────────
-// Verifies Razorpay signature then calls activateSubscription() which:
-//  • Upserts the subscription document
-//  • Updates user (plan, quota, is_premium, expires_at)
-//  • Records payment
-// After this the frontend should call `update()` from useSession() so the
-// NextAuth JWT token refreshes with the new plan.
-
+// app/api/payment/razorpay/verify/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
-import { verifyRazorpaySignature } from "@/lib/audit-helpers";
-import { activateSubscription } from "@/lib/subscription";
-import { PLAN_PRICES_PAISE, PLAN_FEATURES } from "@/lib/config";
-import type { SubscriptionPlan } from "@/types";
-
-const VALID_PLANS: SubscriptionPlan[] = ["pro", "enterprise"];
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
-  const { user, error } = await verifyAuth(req);
-  if (error) return error;
-
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
       plan,
-    } = body as {
-      razorpay_order_id?:   string;
-      razorpay_payment_id?: string;
-      razorpay_signature?:  string;
-      plan?:                string;
-    };
+    } = body;
 
-    if (!plan || !VALID_PLANS.includes(plan as SubscriptionPlan))
-      return NextResponse.json({ detail: "Invalid plan. Choose 'pro' or 'enterprise'." }, { status: 400 });
+    // Verify signature
+    const bodyData = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .update(bodyData)
+      .digest("hex");
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature)
-      return NextResponse.json({ detail: "Missing Razorpay payment fields" }, { status: 400 });
+    const isValid = expectedSignature === razorpay_signature;
 
-    // ── Verify signature ───────────────────────────────────────────────────
-    if (!verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature))
-      return NextResponse.json({ detail: "Invalid payment signature" }, { status: 400 });
+    if (!isValid) {
+      return NextResponse.json(
+        { error: "Invalid payment signature" },
+        { status: 400 }
+      );
+    }
 
-    // ── Activate subscription ──────────────────────────────────────────────
-    await activateSubscription({
-      userId:              user._id.toString(),
-      plan:                plan as SubscriptionPlan,
-      razorpay_order_id,
-      razorpay_payment_id,
-      amount_paise:        PLAN_PRICES_PAISE[plan] ?? 0,
+    // Map plan to UserRole
+    let userRole = "FREE";
+    let amount = 0;
+    
+    if (plan === "pro") {
+      userRole = "PREMIUM";
+      amount = 299900;
+    } else if (plan === "enterprise") {
+      userRole = "ENTERPRISE";
+      amount = 499900;
+    } else if (plan === "deep_audit") {
+      userRole = "PREMIUM";
+      amount = 165000;
+    }
+
+    // Update subscription
+    const subscription = await prisma.subscription.upsert({
+      where: { userId: session.user.id },
+      update: {
+        plan: userRole as any,
+        status: "ACTIVE",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        razorpaySubscriptionId: razorpay_order_id,
+      },
+      create: {
+        userId: session.user.id,
+        plan: userRole as any,
+        status: "ACTIVE",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        razorpaySubscriptionId: razorpay_order_id,
+      },
     });
 
+    // Update user's role
+    const updatedUser = await prisma.user.update({
+      where: { id: session.user.id },
+      data: { role: userRole as any },
+    });
+
+    // Record payment
+    await prisma.payment.create({
+      data: {
+        userId: session.user.id,
+        razorpayOrderId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id,
+        amount: amount,
+        currency: "INR",
+        status: "completed",
+        plan: userRole as any,
+      },
+    });
+
+    // ✅ Return updated user data for session refresh
     return NextResponse.json({
-      status:   "success",
-      plan,
-      is_premium: true,
-      message:  "Subscription activated. Please refresh your session.",
-      features: PLAN_FEATURES[plan as keyof typeof PLAN_FEATURES] ?? {},
-      // Tell the frontend to call update() on the NextAuth session
-      refresh_session: true,
+      success: true,
+      message: `Successfully upgraded to ${userRole} plan`,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+      subscription: {
+        plan: subscription.plan,
+        status: subscription.status,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+      },
     });
-  } catch (err) {
-    console.error("❌ /api/payment/razorpay/verify:", err);
-    return NextResponse.json({ detail: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    console.error("Payment verification error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -1,141 +1,266 @@
+// components/layout/Sidebar.tsx
 "use client";
-// src/components/layout/Sidebar.tsx
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { PlanBadge } from "@/components/ui";
+import { useState, useEffect } from "react";
+import { 
+  LayoutDashboard, 
+  FileCode, 
+  Eye, 
+  History, 
+  CreditCard, 
+  Star, 
+  LogOut,
+  Shield,
+  Zap,
+  TrendingUp,
+  Menu,
+  X
+} from "lucide-react";
 
 const NAV_ITEMS = [
   {
     label: "Overview",
     href: "/dashboard",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-    ),
+    icon: LayoutDashboard,
   },
   {
     label: "Scan Contract",
     href: "/dashboard/scan",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
-      </svg>
-    ),
+    icon: FileCode,
   },
   {
     label: "Monitor",
     href: "/dashboard/monitor",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-      </svg>
-    ),
+    icon: Eye,
   },
   {
     label: "Audit History",
     href: "/dashboard/history",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-      </svg>
-    ),
+    icon: History,
   },
   {
     label: "Billing",
     href: "/dashboard/billing",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-      </svg>
-    ),
+    icon: CreditCard,
   },
 ];
 
-export function Sidebar() {
-  const pathname  = usePathname();
-  const { data: session } = useSession();
+interface UserLimits {
+  plan: string;
+  auditsThisMonth: number;
+  remainingAudits: number | null;
+  limit: number | null;
+}
 
-  return (
-    <aside className="sidebar flex flex-col">
-      {/* User info */}
+export function Sidebar() {
+  const pathname = usePathname();
+  const { data: session, update } = useSession();
+  const [userLimits, setUserLimits] = useState<UserLimits | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    fetchUserLimits();
+  }, [session]);
+
+  const fetchUserLimits = async () => {
+    try {
+      const response = await fetch("/api/user/limits");
+      const data = await response.json();
+      if (response.ok) {
+        setUserLimits(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch limits:", error);
+    }
+  };
+
+  const getPlanColor = (plan: string) => {
+    switch (plan?.toLowerCase()) {
+      case "premium":
+        return "from-blue-500 to-blue-600";
+      case "enterprise":
+        return "from-purple-500 to-purple-600";
+      case "free":
+      default:
+        return "from-green-500 to-green-600";
+    }
+  };
+
+  const getPlanIcon = (plan: string) => {
+    switch (plan?.toLowerCase()) {
+      case "premium":
+        return Zap;
+      case "enterprise":
+        return TrendingUp;
+      default:
+        return Shield;
+    }
+  };
+
+  const plan = session?.user?.role || userLimits?.plan || "FREE";
+  const PlanIcon = getPlanIcon(plan);
+  const planColor = getPlanColor(plan);
+  
+  const usagePercentage = userLimits?.limit 
+    ? (userLimits.auditsThisMonth / userLimits.limit) * 100 
+    : 0;
+  
+  const remainingText = userLimits?.remainingAudits === null 
+    ? "Unlimited" 
+    : `${userLimits?.remainingAudits || 0} left`;
+
+  const SidebarContent = () => (
+    <aside className="sidebar flex flex-col h-full">
+      {/* Logo */}
+      <div className="p-5 border-b" style={{ borderColor: "var(--border)" }}>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] flex items-center justify-center">
+            <Shield className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-display text-xl font-bold" style={{ color: "var(--frost)" }}>
+            Audit<span className="text-[var(--plum-light)]">Smart</span>
+          </span>
+        </Link>
+      </div>
+
+      {/* User Profile */}
       <div className="p-4 border-b" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center gap-3">
-          <div style={{
-            width: 36, height: 36,
-            background: "linear-gradient(135deg, var(--plum), var(--rose))",
-            borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "0.875rem", fontWeight: 600, color: "white",
-            flexShrink: 0,
-          }}>
-            {session?.user?.name?.[0]?.toUpperCase() ?? "U"}
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] flex items-center justify-center text-white font-semibold text-sm">
+              {session?.user?.name?.[0]?.toUpperCase() ?? session?.user?.email?.[0]?.toUpperCase() ?? "U"}
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--bg-card)]" />
           </div>
-          <div className="min-w-0">
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
-              {session?.user?.name ?? "User"}
+              {session?.user?.name ?? session?.user?.email?.split("@")[0] ?? "User"}
             </p>
-            <PlanBadge plan={session?.user?.plan ?? "free"} />
+            <div className="flex items-center gap-1 mt-0.5">
+              <PlanIcon className="w-3 h-3" style={{ color: "var(--plum-light)" }} />
+              <span className="text-xs font-medium capitalize" style={{ color: "var(--plum-light)" }}>
+                {plan.toLowerCase()}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 py-3">
-        <p className="section-sub px-4 pt-2 pb-1">Navigation</p>
+      {/* Navigation */}
+      <nav className="flex-1 py-4 overflow-y-auto">
+        <p className="text-xs font-medium px-4 pb-2 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Navigation
+        </p>
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          const Icon = item.icon;
+          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(item.href));
           return (
-            <Link key={item.href} href={item.href} className={`sidebar-item ${active ? "active" : ""}`}>
-              {item.icon}
-              {item.label}
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`sidebar-item group ${
+                isActive ? "active" : ""
+              }`}
+            >
+              <Icon className={`w-4 h-4 transition-colors ${
+                isActive ? "text-[var(--plum-light)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"
+              }`} />
+              <span>{item.label}</span>
             </Link>
           );
         })}
 
-        <div className="divider mx-4" />
+        <div className="divider mx-4 my-3" />
 
-        <p className="section-sub px-4 pb-1">Account</p>
-        <Link href="/pricing" className="sidebar-item">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
-          Upgrade Plan
+        <p className="text-xs font-medium px-4 pb-2 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Account
+        </p>
+        <Link
+          href="/dashboard/pricing"
+          className="sidebar-item group"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <Star className="w-4 h-4 text-[var(--text-muted)] group-hover:text-yellow-500" />
+          <span>Upgrade Plan</span>
+          {plan === "FREE" && (
+            <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-500">
+              Pro
+            </span>
+          )}
         </Link>
       </nav>
 
-      {/* Quota indicator */}
+      {/* Usage Stats */}
       <div className="p-4 border-t" style={{ borderColor: "var(--border)" }}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>Audits remaining</span>
-          <span className="text-xs font-mono font-medium" style={{ color: "var(--text-primary)" }}>
-            {session?.user?.free_audits_remaining ?? 0}
-          </span>
-        </div>
-        <div style={{ height: 4, background: "var(--bg-hover)", borderRadius: 2, overflow: "hidden" }}>
-          <div style={{
-            height: "100%",
-            width: `${Math.min(100, ((session?.user?.free_audits_remaining ?? 0) / 20) * 100)}%`,
-            background: "linear-gradient(90deg, var(--plum), var(--rose))",
-            borderRadius: 2,
-            transition: "width 0.5s var(--ease-out)",
-          }} />
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Monthly Usage</span>
+            <span className="text-xs font-medium" style={{ color: "var(--frost)" }}>
+              {userLimits?.auditsThisMonth || 0} / {userLimits?.limit || 3} audits
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, usagePercentage)}%`,
+                background: `linear-gradient(90deg, var(--plum), var(--plum-light))`,
+              }}
+            />
+          </div>
+          <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
+            {remainingText} this month
+          </p>
         </div>
 
         <button
           onClick={() => signOut({ callbackUrl: "/" })}
-          className="btn btn-ghost btn-sm w-full mt-3"
-          style={{ color: "var(--text-muted)", justifyContent: "flex-start", gap: 8 }}
+          className="btn btn-ghost btn-sm w-full mt-2 flex items-center justify-center gap-2"
+          style={{ color: "var(--text-muted)" }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
+          <LogOut className="w-3.5 h-3.5" />
           Sign out
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)]"
+      >
+        {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </button>
+
+      {/* Mobile Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-40 w-72 transform transition-transform duration-300 ease-in-out md:hidden ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{ background: "var(--bg-card)" }}
+      >
+        <SidebarContent />
+      </div>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block w-64 flex-shrink-0">
+        <SidebarContent />
+      </div>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+    </>
   );
 }
