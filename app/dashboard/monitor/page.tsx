@@ -2,32 +2,71 @@
 // src/app/dashboard/monitor/page.tsx — Contract Monitor
 
 import React, { useState, useEffect, useRef } from "react";
-import { Toast } from "@/components/ui";
+import Link from "next/link";
+import {
+  Play,
+  Square,
+  Activity,
+  AlertTriangle,
+  Info,
+  AlertCircle,
+  Eye,
+  ExternalLink,
+  Trash2,
+  Clock,
+  Hash,
+  Link as LinkIcon
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface MonitorEvent {
-  id:        string;
-  type:      "transaction" | "event" | "alert" | "upgrade";
-  severity:  "info" | "warning" | "critical";
-  message:   string;
+  id: string;
+  type: "transaction" | "event" | "alert" | "upgrade";
+  severity: "info" | "warning" | "critical";
+  message: string;
   timestamp: string;
-  txHash?:   string;
+  txHash?: string;
   blockNum?: number;
 }
 
-const SEVERITY_ICON: Record<string, React.ReactNode> = {
-  info:     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
-  warning:  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  critical: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+const SEVERITY_CONFIG = {
+  info: {
+    icon: Info,
+    label: "Info",
+    className: "bg-gray-500/10 text-gray-400 border-gray-500/20"
+  },
+  warning: {
+    icon: AlertTriangle,
+    label: "Warning",
+    className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+  },
+  critical: {
+    icon: AlertCircle,
+    label: "Critical",
+    className: "bg-red-500/10 text-red-500 border-red-500/20"
+  }
 };
 
-const SEVERITY_COLOR: Record<string, string> = {
-  info: "#60a5fa", warning: "#facc15", critical: "#f87171",
+const TYPE_CONFIG = {
+  transaction: { label: "Transaction", icon: Activity },
+  event: { label: "Event", icon: Eye },
+  alert: { label: "Alert", icon: AlertTriangle },
+  upgrade: { label: "Upgrade", icon: LinkIcon }
 };
 
-// ── Fake event generator for demo ────────────────────────────────────────────
+// Fake event generator for demo
 function generateFakeEvent(): MonitorEvent {
-  const types: MonitorEvent["type"][] = ["transaction","event","alert","upgrade"];
-  const sevs: MonitorEvent["severity"][] = ["info","info","info","warning","critical"];
+  const types: MonitorEvent["type"][] = ["transaction", "event", "alert", "upgrade"];
+  const severities: MonitorEvent["severity"][] = ["info", "info", "info", "warning", "critical"];
   const messages = [
     "Large ETH transfer detected: 50 ETH",
     "Suspicious reentrancy pattern in call trace",
@@ -35,215 +74,350 @@ function generateFakeEvent(): MonitorEvent {
     "Proxy implementation upgraded",
     "Flash loan interaction detected",
     "Contract balance decreased by >10%",
-    "New approved spender: 0xdEAD...cafe",
-    "Pause function called by 0x1234...5678",
+    "New approved spender detected",
+    "Pause function called",
     "Oracle price deviation > 5%",
     "Gas limit anomaly in transaction",
+    "Multiple failed transaction attempts",
+    "Admin function called from new address"
   ];
-  const sev  = sevs[Math.floor(Math.random() * sevs.length)];
+  
+  const severity = severities[Math.floor(Math.random() * severities.length)];
   const type = types[Math.floor(Math.random() * types.length)];
+  
   return {
-    id:        Math.random().toString(36).slice(2),
-    type, severity: sev,
-    message:   messages[Math.floor(Math.random() * messages.length)],
+    id: Math.random().toString(36).slice(2),
+    type,
+    severity: severity as MonitorEvent["severity"],
+    message: messages[Math.floor(Math.random() * messages.length)],
     timestamp: new Date().toISOString(),
-    txHash:    `0x${Math.random().toString(16).slice(2).padEnd(64,"0")}`,
-    blockNum:  Math.floor(19000000 + Math.random() * 100000),
+    txHash: `0x${Math.random().toString(16).slice(2).padEnd(64, "0")}`,
+    blockNum: Math.floor(19000000 + Math.random() * 100000),
   };
 }
 
 export default function MonitorPage() {
-  const [address, setAddress]   = useState("");
-  const [chain, setChain]       = useState("ethereum");
-  const [active, setActive]     = useState(false);
-  const [events, setEvents]     = useState<MonitorEvent[]>([]);
-  const [toast, setToast]       = useState<{ msg: string; type: "success"|"error"|"info" }|null>(null);
+  const [address, setAddress] = useState("");
+  const [chain, setChain] = useState("ethereum");
+  const [active, setActive] = useState(false);
+  const [events, setEvents] = useState<MonitorEvent[]>([]);
+  const [error, setError] = useState("");
   const [alertCount, setAlertCount] = useState({ total: 0, critical: 0, warning: 0 });
-  const intervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
-  const feedRef     = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const isValidAddress = /^0x[0-9a-fA-F]{40}$/.test(address.trim());
 
   const startMonitor = () => {
-    if (!isValidAddress) { setToast({ msg: "Enter a valid EVM contract address (0x…)", type: "error" }); return; }
+    if (!isValidAddress) {
+      setError("Enter a valid EVM contract address (0x...)");
+      return;
+    }
+    setError("");
     setEvents([]);
     setAlertCount({ total: 0, critical: 0, warning: 0 });
     setActive(true);
-    setToast({ msg: `Monitoring ${address.slice(0,6)}…${address.slice(-4)} on ${chain}`, type: "success" });
   };
 
   const stopMonitor = () => {
     setActive(false);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    setToast({ msg: "Monitoring stopped", type: "info" });
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const clearEvents = () => {
+    setEvents([]);
+    setAlertCount({ total: 0, critical: 0, warning: 0 });
   };
 
   useEffect(() => {
     if (!active) return;
 
-    // Seed a couple immediate events
     const seed = [generateFakeEvent(), generateFakeEvent()];
     setEvents(seed);
 
     intervalRef.current = setInterval(() => {
-      if (Math.random() > 0.35) {   // ~65% chance each tick
+      if (Math.random() > 0.35) {
         const ev = generateFakeEvent();
         setEvents(prev => [ev, ...prev].slice(0, 100));
         setAlertCount(c => ({
-          total:    c.total + 1,
+          total: c.total + 1,
           critical: c.critical + (ev.severity === "critical" ? 1 : 0),
-          warning:  c.warning  + (ev.severity === "warning"  ? 1 : 0),
+          warning: c.warning + (ev.severity === "warning" ? 1 : 0),
         }));
       }
     }, 2800);
 
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [active]);
 
-  // Auto-scroll feed
   useEffect(() => {
-    if (feedRef.current && events.length > 0) {
-      feedRef.current.scrollTop = 0;
+    if (scrollRef.current && events.length > 0) {
+      scrollRef.current.scrollTop = 0;
     }
   }, [events.length]);
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+  const formatAddress = (addr: string) => {
+    if (!addr) return "";
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
+  return (
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="font-display text-3xl mb-1" style={{ color: "var(--frost)" }}>Contract Monitor</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+        <h1 className="text-3xl font-bold text-foreground">Contract Monitor</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Enter any deployed contract address to watch for suspicious activity in real time.
         </p>
       </div>
 
-      {/* Input card */}
-      <div className="card p-6">
-        <div className="grid sm:grid-cols-3 gap-4 mb-4">
-          <div className="sm:col-span-2">
-            <label className="label">Contract Address</label>
-            <input
-              className="input input-mono"
-              placeholder="0x742d35Cc6634C0532925a3b8D4C9C5f2..."
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              disabled={active}
-            />
+      {/* Configuration Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Monitoring Configuration</CardTitle>
+          <CardDescription>
+            Configure the contract address and network to monitor
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="sm:col-span-2 space-y-2">
+              <Label htmlFor="contract-address">Contract Address</Label>
+              <Input
+                id="contract-address"
+                placeholder="0x742d35Cc6634C0532925a3b8D4C9C5f2..."
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                disabled={active}
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="network">Network</Label>
+              <Select value={chain} onValueChange={setChain} disabled={active}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select network" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["ethereum", "polygon", "arbitrum", "optimism", "bsc", "base"].map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <label className="label">Network</label>
-            <select className="input" value={chain} onChange={e => setChain(e.target.value)} disabled={active}
-              style={{ appearance: "none" }}>
-              {["ethereum","polygon","arbitrum","optimism","bsc","base"].map(c => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          {!active ? (
-            <button onClick={startMonitor} className="btn btn-primary btn-md" style={{ minWidth: 160 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4V8z" fill="currentColor"/>
-              </svg>
-              Start Monitoring
-            </button>
-          ) : (
-            <button onClick={stopMonitor} className="btn btn-danger btn-md" style={{ minWidth: 160 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" fill="currentColor"/>
-              </svg>
-              Stop Monitoring
-            </button>
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
-          {active && (
-            <div className="flex items-center gap-2 text-sm" style={{ color: "#4ade80" }}>
-              <span className="w-2 h-2 rounded-full bg-green-500" style={{ animation: "pulse 1.5s ease-in-out infinite" }} />
-              Live · {chain.charAt(0).toUpperCase()+chain.slice(1)}
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Stats row — only when active */}
-      {(active || events.length > 0) && (
-        <div className="grid grid-cols-3 gap-4 animate-scale-in">
-          {[
-            { label: "Events Captured", value: alertCount.total, color: "var(--frost)" },
-            { label: "Warnings",        value: alertCount.warning, color: "#facc15" },
-            { label: "Critical Alerts", value: alertCount.critical, color: "#f87171" },
-          ].map(s => (
-            <div key={s.label} className="stat-card text-center">
-              <span className="stat-label">{s.label}</span>
-              <span className="stat-value" style={{ fontSize: "1.75rem", color: s.color }}>{s.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Live feed */}
-      {events.length > 0 && (
-        <div className="card overflow-hidden animate-scale-in">
-          <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
-            <h3 className="section-title mb-0">Live Feed</h3>
-            <div className="flex items-center gap-2">
-              {active && <span className="text-xs font-mono" style={{ color: "#4ade80" }}>● LIVE</span>}
-              <button onClick={() => setEvents([])} className="btn btn-ghost btn-sm" style={{ fontSize: "0.75rem" }}>Clear</button>
-            </div>
-          </div>
-
-          <div ref={feedRef} className="scroll-y" style={{ maxHeight: 480 }}>
-            {events.map((ev) => (
-              <div key={ev.id}
-                className="flex items-start gap-4 px-6 py-3.5 border-b transition-colors animate-fade-in"
-                style={{ borderColor: "var(--border)", borderLeft: `3px solid ${SEVERITY_COLOR[ev.severity]}` }}
-                onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-              >
-                <div className="mt-0.5 flex-shrink-0">{SEVERITY_ICON[ev.severity]}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-mono uppercase tracking-wider" style={{ color: SEVERITY_COLOR[ev.severity] }}>
-                      {ev.severity}
-                    </span>
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      · {ev.type} · block {ev.blockNum?.toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="text-sm" style={{ color: "var(--text-primary)" }}>{ev.message}</p>
-                  {ev.txHash && (
-                    <p className="text-xs mt-1 font-mono truncate" style={{ color: "var(--text-muted)" }}>
-                      tx: {ev.txHash}
-                    </p>
-                  )}
+          <div className="flex items-center gap-3">
+            {!active ? (
+              <Button onClick={startMonitor} size="lg">
+                <Play className="mr-2 h-4 w-4" />
+                Start Monitoring
+              </Button>
+            ) : (
+              <Button onClick={stopMonitor} size="lg" variant="destructive">
+                <Square className="mr-2 h-4 w-4" />
+                Stop Monitoring
+              </Button>
+            )}
+            
+            {active && (
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                 </div>
-                <time className="text-xs flex-shrink-0" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                  {new Date(ev.timestamp).toLocaleTimeString()}
-                </time>
+                <span className="text-sm text-green-600 dark:text-green-400">
+                  Live · {chain.charAt(0).toUpperCase() + chain.slice(1)}
+                </span>
               </div>
-            ))}
+            )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Cards */}
+      {(active || events.length > 0) && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Events Captured
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {alertCount.total}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-yellow-600 dark:text-yellow-400">
+                Warnings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                {alertCount.warning}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400">
+                Critical Alerts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {alertCount.critical}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Live Feed */}
+      {events.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Live Feed</CardTitle>
+                <CardDescription>
+                  Real-time monitoring events for {address ? formatAddress(address) : "contract"}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                {active && (
+                  <Badge variant="outline" className="border-green-500/50 text-green-600 dark:text-green-400">
+                    <Activity className="mr-1 h-3 w-3" />
+                    LIVE
+                  </Badge>
+                )}
+                <Button variant="ghost" size="sm" onClick={clearEvents}>
+                  <Trash2 className="mr-2 h-3 w-3" />
+                  Clear
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[500px] pr-4" ref={scrollRef}>
+              <div className="space-y-3">
+                {events.map((event) => {
+                  const severity = SEVERITY_CONFIG[event.severity];
+                  const SeverityIcon = severity.icon;
+                  const typeConfig = TYPE_CONFIG[event.type];
+                  const TypeIcon = typeConfig?.icon || Activity;
+                  
+                  return (
+                    <div
+                      key={event.id}
+                      className={cn(
+                        "p-4 rounded-lg border transition-all hover:bg-accent/50",
+                        event.severity === "critical" && "border-red-500/30 bg-red-500/5",
+                        event.severity === "warning" && "border-yellow-500/30 bg-yellow-500/5",
+                        event.severity === "info" && "border-gray-500/30"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "p-1.5 rounded-md",
+                          event.severity === "critical" && "bg-red-500/10",
+                          event.severity === "warning" && "bg-yellow-500/10",
+                          event.severity === "info" && "bg-gray-500/10"
+                        )}>
+                          <SeverityIcon className={cn(
+                            "h-4 w-4",
+                            event.severity === "critical" && "text-red-500",
+                            event.severity === "warning" && "text-yellow-500",
+                            event.severity === "info" && "text-gray-400"
+                          )} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <Badge variant="outline" className={severity.className}>
+                              {severity.label}
+                            </Badge>
+                            <Badge variant="secondary" className="gap-1">
+                              <TypeIcon className="h-3 w-3" />
+                              {typeConfig?.label}
+                            </Badge>
+                            {event.blockNum && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Hash className="h-3 w-3" />
+                                Block {event.blockNum.toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <p className="text-sm text-foreground mb-2">
+                            {event.message}
+                          </p>
+                          
+                          {event.txHash && (
+                            <div className="flex items-center gap-1">
+                              <LinkIcon className="h-3 w-3 text-muted-foreground" />
+                              <code className="text-xs text-muted-foreground font-mono">
+                                {event.txHash.slice(0, 10)}...{event.txHash.slice(-8)}
+                              </code>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                          <Clock className="h-3 w-3" />
+                          {new Date(event.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty State */}
       {!active && events.length === 0 && (
-        <div className="card py-16 text-center">
-          <div className="feature-icon mx-auto mb-4 w-12 h-12">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-            </svg>
-          </div>
-          <p className="text-base mb-1" style={{ color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>
-            Paste an address to begin monitoring
-          </p>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Real-time alerts for large transfers, ownership changes, and exploit patterns.
-          </p>
-        </div>
+        <Card className="py-16 text-center">
+          <CardContent>
+            <div className="flex flex-col items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Eye className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Start Monitoring
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Enter a contract address above to begin real-time monitoring for large transfers, 
+                ownership changes, and exploit patterns.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

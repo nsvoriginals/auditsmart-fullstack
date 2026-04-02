@@ -1,54 +1,100 @@
-import NextAuth, { AuthOptions, DefaultSession } from "next-auth"
+// app/api/auth/authOptions.ts
+import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
-import {z} from "zod"
-import { prisma } from "@/lib/prisma"
-import { Provider } from '@prisma/client'
-
-const userSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  image: z.string(),
-})
-
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export const authOptions: AuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? ''
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
     GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID ?? '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? ''
-    })
-  ],
-  callbacks: {
-    async signIn(params) {
-      try {
-        const provider = params.account?.provider?.toUpperCase() as Provider;
-        await prisma.user.upsert({
-          where: { email: params.user.email ?? '' },
-          update: {
-            name: params.user.name,
-            image: params.user.image,
-            provider: provider
-          },
-          create: {
-            email: params.user.email ?? '',
-            name: params.user.name,
-            image: params.user.image,
-            provider: provider
-          }
+      clientId: process.env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+    }),
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email:    { label: "Email",    type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
         });
-      } catch (error) {
-        console.log(error)
+
+        if (!user || !user.password) return null;
+
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) return null;
+
+        return {
+          id:    user.id,
+          email: user.email,
+          name:  user.name,
+          image: user.image,
+          role:  user.role,
+        };
+      },
+    }),
+  ],
+
+  callbacks: {
+    async signIn({ user, account }) {
+      // OAuth sign-in: upsert user into DB
+      if (account?.provider && account.provider !== "credentials") {
+        try {
+          await prisma.user.upsert({
+            where: { email: user.email ?? "" },
+            update: {
+              name:  user.name,
+              image: user.image,
+            },
+            create: {
+              email: user.email ?? "",
+              name:  user.name,
+              image: user.image,
+              // role defaults to FREE per schema
+            },
+          });
+        } catch (error) {
+          console.error("signIn upsert error:", error);
+          return false;
+        }
       }
-      return true
-    }
-   }
-}   
+      return true;
+    },
 
-const handler = NextAuth(authOptions)
+    async jwt({ token, user }) {
+      // Persist role + id on the token at first sign-in
+      if (user) {
+        token.id   = user.id;
+        token.role = (user as any).role ?? "FREE";
+      }
+      return token;
+    },
 
-export { handler as GET, handler as POST }
+    async session({ session, token }) {
+      // Expose id + role on the client-side session
+      if (session.user) {
+        (session.user as any).id   = token.id as string;
+        (session.user as any).role = token.role as string;
+      }
+      return session;
+    },
+  },
+
+  pages: {
+    signIn: "/login",
+    error:  "/login",
+  },
+
+  session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
+};

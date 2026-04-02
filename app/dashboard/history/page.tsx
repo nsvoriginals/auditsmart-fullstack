@@ -146,7 +146,7 @@ export default function HistoryPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/audit"
+          href="/dashboard/scan"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white hover:opacity-90 transition-all"
         >
           <Plus className="w-4 h-4" />

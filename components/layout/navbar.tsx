@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { name: "Features", href: "/#features" },
@@ -17,13 +20,13 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg-base)]/80 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="font-display text-xl font-bold text-[var(--frost)]">
-              Audit<span className="text-[var(--plum-light)]">Smart</span>
+            <span className="text-xl font-bold text-foreground">
+              Audit<span className="text-primary">Smart</span>
             </span>
           </Link>
 
@@ -37,9 +40,10 @@ export function Navbar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`text-sm font-medium transition-colors hover:text-[var(--plum-light)] ${
-                    isActive ? "text-[var(--plum-light)]" : "text-[var(--text-secondary)]"
-                  }`}
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )}
                 >
                   {item.name}
                 </Link>
@@ -47,26 +51,25 @@ export function Navbar() {
             })}
           </div>
 
-          {/* Auth Buttons */}
+          {/* Auth Buttons & Theme Toggle */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/login"
-              className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="px-4 py-2 text-sm font-medium bg-[var(--plum)] text-white rounded-md hover:bg-[var(--plum-light)] transition-all hover:translate-y-[-1px]"
-            >
-              Get Started
-            </Link>
+            <ThemeToggle />
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/login">
+                Sign In
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/register">
+                Get Started
+              </Link>
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+            className="md:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -74,33 +77,32 @@ export function Navbar() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-[var(--border)]">
+          <div className="md:hidden py-4 border-t">
             <div className="flex flex-col gap-3">
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-md transition-colors"
+                  className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
                 >
                   {item.name}
                 </Link>
               ))}
-              <div className="flex flex-col gap-2 pt-3 border-t border-[var(--border)]">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-md transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2 text-sm font-medium bg-[var(--plum)] text-white rounded-md text-center hover:bg-[var(--plum-light)] transition-colors"
-                >
-                  Get Started
-                </Link>
+              <div className="flex items-center justify-between pt-3 border-t">
+                <ThemeToggle />
+                <div className="flex gap-2">
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                      Sign In
+                    </Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                      Get Started
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

@@ -20,7 +20,6 @@ const config: Config = {
 
     extend: {
       colors: {
-        // shadcn/base colors
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -36,7 +35,6 @@ const config: Config = {
           foreground: "hsl(var(--secondary-foreground))",
         },
 
-        // your custom colors
         plum: { DEFAULT: '#612D53', dark: '#4a2140', light: '#7a3868' },
         rose: { DEFAULT: '#853953', light: '#a04868' },
         obsidian: { DEFAULT: '#2C2C2C', 80: '#444444', 60: '#666666' },
@@ -70,29 +68,30 @@ const config: Config = {
       },
 
       keyframes: {
+        // ✅ opacity must be a string in Tailwind keyframes types
         fadeIn: {
-          from: { opacity: 0 },
-          to: { opacity: 1 },
+          from: { opacity: '0' },
+          to:   { opacity: '1' },
         },
         scaleIn: {
-          from: { transform: 'scale(0.96)', opacity: 0 },
-          to: { transform: 'scale(1)', opacity: 1 },
+          from: { transform: 'scale(0.96)', opacity: '0' },
+          to:   { transform: 'scale(1)',    opacity: '1' },
         },
         slideUp: {
-          from: { transform: 'translateY(16px)', opacity: 0 },
-          to: { transform: 'translateY(0)', opacity: 1 },
+          from: { transform: 'translateY(16px)', opacity: '0' },
+          to:   { transform: 'translateY(0)',    opacity: '1' },
         },
         'pulse-plum': {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(97, 45, 83, 0.4)' },
-          '50%': { boxShadow: '0 0 0 8px rgba(97, 45, 83, 0)' },
+          '50%':      { boxShadow: '0 0 0 8px rgba(97, 45, 83, 0)' },
         },
         shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
+          '0%':   { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
         scanLine: {
-          '0%': { top: '0%', opacity: 0.8 },
-          '100%': { top: '100%', opacity: 0 },
+          '0%':   { top: '0%',   opacity: '0.8' },
+          '100%': { top: '100%', opacity: '0' },
         },
       },
     },

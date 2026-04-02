@@ -35,6 +35,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // Parse report data
     const reportData = audit.report ? JSON.parse(audit.report) : {};
 
+    // Calculate counts from findings
+    const criticalCount = audit.findings.filter(f => f.severity === "CRITICAL").length;
+    const highCount = audit.findings.filter(f => f.severity === "HIGH").length;
+    const mediumCount = audit.findings.filter(f => f.severity === "MEDIUM").length;
+    const lowCount = audit.findings.filter(f => f.severity === "LOW").length;
+    const infoCount = audit.findings.filter(f => f.severity === "INFO").length;
+
     // Generate PDF
     const pdfBuffer = await generatePDFReport({
       auditId: audit.id,
@@ -44,19 +51,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       riskScore: audit.score || 0,
       riskLevel: reportData.risk_level || "Unknown",
       findings: audit.findings,
-      criticalCount: reportData.critical_count || 0,
-      highCount: reportData.high_count || 0,
-      mediumCount: reportData.medium_count || 0,
-      lowCount: reportData.low_count || 0,
+      criticalCount: reportData.critical_count || criticalCount,
+      highCount: reportData.high_count || highCount,
+      mediumCount: reportData.medium_count || mediumCount,
+      lowCount: reportData.low_count || lowCount,
+      infoCount: infoCount,
       scanDuration: reportData.scan_duration_ms || 0,
       deploymentVerdict: reportData.deployment_verdict || "",
       thinkingChain: reportData.thinking_chain,
       userName: audit.user?.name || session.user.name || "User",
       userEmail: audit.user?.email || session.user.email || "",
       createdAt: audit.createdAt,
+      agentsUsed: reportData.agents_used,
     });
 
-    return new NextResponse(pdfBuffer, {
+    // Convert Buffer to Uint8Array for NextResponse
+    const uint8Array = new Uint8Array(pdfBuffer);
+    
+    return new NextResponse(uint8Array, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

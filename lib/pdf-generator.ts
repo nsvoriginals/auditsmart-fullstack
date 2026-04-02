@@ -14,7 +14,7 @@ interface PDFData {
   highCount: number;
   mediumCount: number;
   lowCount: number;
-  infoCount: number;
+  infoCount?: number;
   scanDuration: number;
   deploymentVerdict: string;
   thinkingChain?: string;
@@ -23,6 +23,12 @@ interface PDFData {
   createdAt: Date;
   agentsUsed?: string[];
 }
+
+// Type for RGB color values
+type RGBColor = [number, number, number];
+
+// Helper function to convert RGB color for jsPDF
+const toColor = (color: RGBColor): RGBColor => [color[0], color[1], color[2]];
 
 export async function generatePDFReport(data: PDFData): Promise<Buffer> {
   return new Promise((resolve) => {
@@ -35,34 +41,36 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
-    // Modern Color Palette
+    // Modern Color Palette as RGB tuples
     const colors = {
-      primary: [97, 45, 83],      // Deep Plum
-      primaryLight: [133, 57, 83], // Light Plum
-      secondary: [237, 100, 166],  // Rose
-      accent: [255, 193, 7],       // Amber
-      critical: [220, 38, 38],     // Red
-      high: [249, 115, 22],        // Orange
-      medium: [234, 179, 8],       // Yellow
-      low: [59, 130, 246],         // Blue
-      info: [107, 114, 128],       // Gray
-      success: [34, 197, 94],      // Green
-      dark: [31, 41, 55],          // Dark slate
-      light: [243, 244, 246],      // Light gray
-      white: [255, 255, 255],
+      primary: [97, 45, 83] as RGBColor,
+      primaryLight: [133, 57, 83] as RGBColor,
+      secondary: [237, 100, 166] as RGBColor,
+      accent: [255, 193, 7] as RGBColor,
+      critical: [220, 38, 38] as RGBColor,
+      high: [249, 115, 22] as RGBColor,
+      medium: [234, 179, 8] as RGBColor,
+      low: [59, 130, 246] as RGBColor,
+      info: [107, 114, 128] as RGBColor,
+      success: [34, 197, 94] as RGBColor,
+      dark: [31, 41, 55] as RGBColor,
+      light: [243, 244, 246] as RGBColor,
+      white: [255, 255, 255] as RGBColor,
     };
     
     // Helper: Add colored text
-    const addColoredText = (text: string, x: number, y: number, color: number[], fontSize = 10, fontStyle = "normal") => {
+    const addColoredText = (text: string, x: number, y: number, color: RGBColor, fontSize = 10, fontStyle = "normal") => {
       doc.setFontSize(fontSize);
       doc.setFont("helvetica", fontStyle);
-      doc.setTextColor(color[0], color[1], color[2]);
+      const [r, g, b] = toColor(color);
+      doc.setTextColor(r, g, b);
       doc.text(text, x, y);
     };
     
     // Helper: Add horizontal line
-    const addLine = (y: number, color: number[] = colors.primary, lineWidth = 0.5) => {
-      doc.setDrawColor(color[0], color[1], color[2]);
+    const addLine = (y: number, color: RGBColor = colors.primary, lineWidth = 0.5) => {
+      const [r, g, b] = toColor(color);
+      doc.setDrawColor(r, g, b);
       doc.setLineWidth(lineWidth);
       doc.line(20, y, pageWidth - 20, y);
     };
@@ -72,11 +80,13 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     // ============================================
     // HEADER WITH GRADIENT EFFECT
     // ============================================
-    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    const [pR, pG, pB] = toColor(colors.primary);
+    doc.setFillColor(pR, pG, pB);
     doc.rect(0, 0, pageWidth, 50, "F");
     
     // Decorative accent bar
-    doc.setFillColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+    const [sR, sG, sB] = toColor(colors.secondary);
+    doc.setFillColor(sR, sG, sB);
     doc.rect(0, 45, pageWidth, 5, "F");
     
     // Logo and Title
@@ -91,7 +101,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     doc.text("AI-Powered Smart Contract Security Audit", 20, 38);
     
     // Report badge
-    doc.setFillColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+    doc.setFillColor(sR, sG, sB);
     doc.roundedRect(pageWidth - 55, 15, 40, 20, 3, 3, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
@@ -103,9 +113,10 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     // REPORT METADATA CARD
     // ============================================
     // Card background
-    doc.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
+    const [lR, lG, lB] = toColor(colors.light);
+    doc.setFillColor(lR, lG, lB);
     doc.roundedRect(20, yPos, pageWidth - 40, 35, 5, 5, "F");
-    doc.setDrawColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setDrawColor(pR, pG, pB);
     doc.setLineWidth(0.5);
     doc.roundedRect(20, yPos, pageWidth - 40, 35, 5, 5, "D");
     
@@ -118,6 +129,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     
     let metaX = 30;
     let metaY = yPos + 10;
+    const [dR, dG, dB] = toColor(colors.dark);
     for (const [label, value] of metadata) {
       addColoredText(label + ":", metaX, metaY, colors.dark, 9, "bold");
       addColoredText(value, metaX + 30, metaY, colors.dark, 9, "normal");
@@ -129,22 +141,23 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     // ============================================
     // CONTRACT INFO CARD
     // ============================================
-    doc.setFillColor(colors.white[0], colors.white[1], colors.white[2]);
+    const [wR, wG, wB] = toColor(colors.white);
+    doc.setFillColor(wR, wG, wB);
     doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "F");
-    doc.setDrawColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setDrawColor(pR, pG, pB);
     doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "D");
     
-    addColoredText("📄 CONTRACT INFORMATION", 30, yPos + 8, colors.primary, 11, "bold");
+    addColoredText("CONTRACT INFORMATION", 30, yPos + 8, colors.primary, 11, "bold");
     addColoredText(data.contractName, 30, yPos + 18, colors.dark, 10, "bold");
     
     yPos += 35;
     
     // Contract code preview
     if (data.contractCode) {
-      doc.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
+      doc.setFillColor(lR, lG, lB);
       doc.roundedRect(20, yPos, pageWidth - 40, 50, 5, 5, "F");
       
-      addColoredText("💻 CONTRACT CODE PREVIEW", 30, yPos + 8, colors.primary, 10, "bold");
+      addColoredText("CONTRACT CODE PREVIEW", 30, yPos + 8, colors.primary, 10, "bold");
       
       const codePreview = data.contractCode.slice(0, 500);
       const codeLines = codePreview.split("\n").slice(0, 8);
@@ -160,12 +173,12 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     // ============================================
     // RISK SCORE GAUGE SECTION
     // ============================================
-    doc.setFillColor(colors.white[0], colors.white[1], colors.white[2]);
+    doc.setFillColor(wR, wG, wB);
     doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "F");
-    doc.setDrawColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setDrawColor(pR, pG, pB);
     doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "D");
     
-    addColoredText("🎯 RISK ASSESSMENT", 30, yPos + 8, colors.primary, 11, "bold");
+    addColoredText("RISK ASSESSMENT", 30, yPos + 8, colors.primary, 11, "bold");
     
     // Risk score circle
     const centerX = 55;
@@ -187,12 +200,13 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    const [scR, scG, scB] = toColor(scoreColor);
+    doc.setTextColor(scR, scG, scB);
     doc.text(`${riskPercent}`, centerX, centerY + 3, { align: "center" });
     
     // Risk level badge
     const riskBadgeX = centerX + 20;
-    doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    doc.setFillColor(scR, scG, scB);
     doc.roundedRect(riskBadgeX, centerY - 6, 40, 10, 3, 3, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(8);
@@ -204,7 +218,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
       { label: "High", value: data.highCount, color: colors.high },
       { label: "Medium", value: data.mediumCount, color: colors.medium },
       { label: "Low", value: data.lowCount, color: colors.low },
-      { label: "Info", value: data.infoCount, color: colors.info },
+      { label: "Info", value: data.infoCount || 0, color: colors.info },
     ];
     
     let statsX = pageWidth - 100;
@@ -220,12 +234,12 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     // ============================================
     // EXECUTIVE SUMMARY
     // ============================================
-    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setFillColor(pR, pG, pB);
     doc.roundedRect(20, yPos, pageWidth - 40, 8, 3, 3, "F");
-    addColoredText("📋 EXECUTIVE SUMMARY", 30, yPos + 5.5, colors.white, 10, "bold");
+    addColoredText("EXECUTIVE SUMMARY", 30, yPos + 5.5, colors.white, 10, "bold");
     
     yPos += 15;
-    doc.setFillColor(colors.white[0], colors.white[1], colors.white[2]);
+    doc.setFillColor(wR, wG, wB);
     doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "F");
     doc.setDrawColor(200, 200, 200);
     doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "D");
@@ -244,7 +258,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     // ============================================
     if (data.deploymentVerdict) {
       let verdictColor = colors.success;
-      let verdictBg = [220, 252, 231];
+      let verdictBg: RGBColor = [220, 252, 231];
       if (data.deploymentVerdict.includes("CAUTION")) {
         verdictColor = colors.medium;
         verdictBg = [254, 252, 232];
@@ -253,12 +267,14 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
         verdictBg = [254, 242, 242];
       }
       
-      doc.setFillColor(verdictBg[0], verdictBg[1], verdictBg[2]);
+      const [vbR, vbG, vbB] = toColor(verdictBg);
+      doc.setFillColor(vbR, vbG, vbB);
       doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "F");
-      doc.setDrawColor(verdictColor[0], verdictColor[1], verdictColor[2]);
+      const [vcR, vcG, vcB] = toColor(verdictColor);
+      doc.setDrawColor(vcR, vcG, vcB);
       doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "D");
       
-      addColoredText("⚠️ DEPLOYMENT VERDICT", 30, yPos + 8, verdictColor, 10, "bold");
+      addColoredText("DEPLOYMENT VERDICT", 30, yPos + 8, verdictColor, 10, "bold");
       addColoredText(data.deploymentVerdict, 30, yPos + 18, colors.dark, 11, "bold");
       
       yPos += 35;
@@ -268,9 +284,9 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     // FINDINGS TABLE
     // ============================================
     if (data.findings && data.findings.length > 0) {
-      doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+      doc.setFillColor(pR, pG, pB);
       doc.roundedRect(20, yPos, pageWidth - 40, 8, 3, 3, "F");
-      addColoredText(`🔍 SECURITY FINDINGS (${data.findings.length})`, 30, yPos + 5.5, colors.white, 10, "bold");
+      addColoredText(`SECURITY FINDINGS (${data.findings.length})`, 30, yPos + 5.5, colors.white, 10, "bold");
       
       yPos += 15;
       
@@ -287,7 +303,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
         body: tableData,
         theme: "striped",
         headStyles: {
-          fillColor: colors.primary,
+          fillColor: [pR, pG, pB],
           textColor: [255, 255, 255],
           fontSize: 9,
           fontStyle: "bold",
@@ -309,10 +325,16 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
           // Color code severity cells
           if (cellData.column.index === 1 && cellData.cell.raw) {
             const severity = String(cellData.cell.raw).toLowerCase();
-            if (severity === "critical") cellData.cell.styles.textColor = colors.critical;
-            else if (severity === "high") cellData.cell.styles.textColor = colors.high;
-            else if (severity === "medium") cellData.cell.styles.textColor = colors.medium;
-            else if (severity === "low") cellData.cell.styles.textColor = colors.low;
+            const [cR, cG, cB] = toColor(
+              severity === "critical" ? colors.critical :
+              severity === "high" ? colors.high :
+              severity === "medium" ? colors.medium :
+              severity === "low" ? colors.low :
+              colors.info
+            );
+            if (cellData.cell.styles) {
+              cellData.cell.styles.textColor = [cR, cG, cB];
+            }
           }
         },
       });
@@ -329,9 +351,10 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
         yPos = 20;
       }
       
-      doc.setFillColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+      const [sR2, sG2, sB2] = toColor(colors.secondary);
+      doc.setFillColor(sR2, sG2, sB2);
       doc.roundedRect(20, yPos, pageWidth - 40, 8, 3, 3, "F");
-      addColoredText("🧠 AI EXTENDED THINKING (Claude Opus)", 30, yPos + 5.5, colors.white, 9, "bold");
+      addColoredText("AI EXTENDED THINKING (Claude Opus)", 30, yPos + 5.5, colors.white, 9, "bold");
       
       yPos += 15;
       doc.setFillColor(245, 245, 250);
@@ -357,10 +380,10 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
         yPos = 20;
       }
       
-      doc.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
+      doc.setFillColor(lR, lG, lB);
       doc.roundedRect(20, yPos, pageWidth - 40, 20, 5, 5, "F");
       
-      addColoredText("🤖 AI AGENTS DEPLOYED", 30, yPos + 8, colors.primary, 9, "bold");
+      addColoredText("AI AGENTS DEPLOYED", 30, yPos + 8, colors.primary, 9, "bold");
       const agentsText = data.agentsUsed.slice(0, 8).join(" • ");
       addColoredText(agentsText, 30, yPos + 16, colors.dark, 7, "normal");
       

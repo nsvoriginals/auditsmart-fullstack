@@ -1,9 +1,20 @@
-// app/dashboard/audit/page.tsx (add limit checking)
 "use client";
+// app/dashboard/audit/page.tsx
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Loader2, AlertCircle, CheckCircle, Zap, Shield, Brain, Sparkles, AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const PLANS = [
   {
@@ -45,6 +56,15 @@ const PLANS = [
   },
 ];
 
+interface UserLimits {
+  plan: string;
+  auditsThisMonth: number;
+  limit: number | null;
+  remaining: number | null;
+  canAudit: boolean;
+  isUnlimited: boolean;
+}
+
 export default function AuditPage() {
   const router = useRouter();
   const [contractCode, setContractCode] = useState("");
@@ -53,19 +73,9 @@ export default function AuditPage() {
   const [isAuditing, setIsAuditing] = useState(false);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
-  
-  // Limit state
-  const [userLimits, setUserLimits] = useState<{
-    plan: string;
-    auditsThisMonth: number;
-    limit: number | null;
-    remaining: number | null;
-    canAudit: boolean;
-    isUnlimited: boolean;
-  } | null>(null);
+  const [userLimits, setUserLimits] = useState<UserLimits | null>(null);
   const [loadingLimits, setLoadingLimits] = useState(true);
 
-  // Fetch user limits on mount
   useEffect(() => {
     fetchUserLimits();
   }, []);
@@ -76,9 +86,8 @@ export default function AuditPage() {
       const data = await response.json();
       if (response.ok) {
         setUserLimits(data);
-        
-        // If free plan and no audits left, show warning
         if (data.plan === "FREE" && data.remaining === 0) {
+          // ✅ Plain string in JS — no HTML entities
           setError("You've reached your free audit limit this month. Please upgrade to continue.");
         }
       }
@@ -91,14 +100,14 @@ export default function AuditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!contractCode.trim()) {
       setError("Please enter your contract code");
       return;
     }
 
-    // Check if user can audit
     if (userLimits && !userLimits.canAudit) {
+      // ✅ Plain string in JS — no HTML entities
       setError(`You've reached your ${userLimits.plan} plan limit (${userLimits.limit} audits/month). Please upgrade to continue.`);
       return;
     }
@@ -131,14 +140,11 @@ export default function AuditPage() {
       }
 
       setProgress("Audit complete! Redirecting to results...");
-      
-      // Refresh limits after audit
       fetchUserLimits();
-      
+
       setTimeout(() => {
         router.push(`/dashboard/audit/results/${data.audit_id}`);
       }, 1500);
-
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run audit");
       setIsAuditing(false);
@@ -146,196 +152,201 @@ export default function AuditPage() {
     }
   };
 
-  // Show limit warning banner
   const showLimitWarning = userLimits && userLimits.plan === "FREE" && userLimits.remaining === 0;
+  const usagePercentage =
+    userLimits && userLimits.limit
+      ? (userLimits.auditsThisMonth / userLimits.limit) * 100
+      : 0;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--frost)]">Smart Contract Audit</h1>
-          <p className="text-[var(--text-secondary)] mt-2">
-            Paste your Solidity code below for a comprehensive security analysis
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Smart Contract Audit</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Paste your Solidity code below for a comprehensive security analysis
+        </p>
+      </div>
 
-        {/* Limit Warning Banner */}
-        {!loadingLimits && showLimitWarning && (
-          <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-yellow-500">Audit limit reached</h3>
-                <p className="text-sm text-[var(--text-secondary)] mt-1">
-                  You've used all {userLimits?.auditsThisMonth}/3 free audits this month.
-                  Upgrade your plan to continue auditing.
-                </p>
-                <button
-                  onClick={() => router.push("/dashboard/pricing")}
-                  className="mt-2 px-3 py-1.5 text-sm rounded-md bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white hover:opacity-90 transition-all"
-                >
-                  Upgrade Plan
-                </button>
-              </div>
+      {/* Limit Warning Banner */}
+      {!loadingLimits && showLimitWarning && (
+        <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-500">Audit limit reached</h3>
+              {/* ✅ &apos; is valid here — inside JSX text content */}
+              <p className="text-sm text-muted-foreground mt-1">
+                You&apos;ve used all {userLimits?.auditsThisMonth}/3 free audits this month.
+                Upgrade your plan to continue auditing.
+              </p>
+              <Button
+                variant="link"
+                className="px-0 mt-1 h-auto text-yellow-500"
+                onClick={() => router.push("/pricing")}
+              >
+                Upgrade Plan
+              </Button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Usage Info */}
-        {!loadingLimits && userLimits && userLimits.plan === "FREE" && userLimits.remaining > 0 && (
-          <div className="mb-6 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-            <p className="text-sm text-green-400">
-              ✅ Free plan: {userLimits.auditsThisMonth}/3 audits used this month. 
-              {userLimits.remaining} {userLimits.remaining === 1 ? 'audit' : 'audits'} remaining.
-            </p>
+      {/* Usage Info */}
+      {!loadingLimits && userLimits && userLimits.plan === "FREE" && (userLimits.remaining ?? 0) > 0 && (
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              <span className="text-sm text-green-600 dark:text-green-400">
+                Free plan: {userLimits.auditsThisMonth}/3 audits used. {userLimits.remaining} remaining.
+              </span>
+            </div>
+            <Progress value={usagePercentage} className="w-32 h-1.5" />
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <div className="lg:col-span-2 space-y-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Contract Name */}
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Form Section */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="rounded-lg border border-border bg-card p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Audit Configuration</h3>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-muted-foreground">
                   Contract Name (optional)
                 </label>
-                <input
-                  type="text"
+                <Input
+                  placeholder="MySmartContract"
                   value={contractName}
                   onChange={(e) => setContractName(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--plum-light)] transition-all"
-                  placeholder="MySmartContract"
+                  className="bg-background"
                 />
               </div>
 
-              {/* Contract Code */}
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-muted-foreground">
                   Solidity Code *
                 </label>
-                <textarea
+                <Textarea
                   value={contractCode}
                   onChange={(e) => setContractCode(e.target.value)}
-                  rows={15}
-                  className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--plum-light)] transition-all"
-                  placeholder={`pragma solidity ^0.8.0;
-
-contract MyContract {
-    // Your Solidity code here
-}`}
+                  rows={12}
+                  className="font-mono text-sm bg-background"
+                  placeholder={`pragma solidity ^0.8.0;\n\ncontract MyContract {\n    // Your Solidity code here\n}`}
                   required
-                  disabled={showLimitWarning}
+                  disabled={!!showLimitWarning}
                 />
               </div>
 
-              {/* Progress/Error Display */}
               {progress && (
-                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <div className="flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
-                    <span className="text-blue-400">{progress}</span>
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                    <span className="text-sm text-blue-400">{progress}</span>
                   </div>
                 </div>
               )}
 
               {error && (
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                    <span className="text-red-500">{error}</span>
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <span className="text-sm text-red-500">{error}</span>
                   </div>
                 </div>
               )}
 
-              {/* Submit Button */}
-              <button
+              <Button
                 type="submit"
-                disabled={isAuditing || !contractCode.trim() || showLimitWarning}
-                className="w-full py-3 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={isAuditing || !contractCode.trim() || !!showLimitWarning}
+                className="w-full bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] hover:opacity-90"
+                size="lg"
               >
                 {isAuditing ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Running Audit...
                   </>
                 ) : (
                   <>
-                    <Play className="w-5 h-5" />
+                    <Play className="mr-2 h-4 w-4" />
                     Run Security Audit
                   </>
                 )}
-              </button>
+              </Button>
             </form>
           </div>
+        </div>
 
-          {/* Plans Section - Same as before */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-[var(--frost)] mb-4">Select Plan</h3>
-            
+        {/* Plans Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">Select Plan</h3>
+
+          <RadioGroup value={selectedPlan} onValueChange={setSelectedPlan} className="space-y-3">
             {PLANS.map((plan) => {
               const Icon = plan.icon;
+              const isSelected = selectedPlan === plan.id;
+
               return (
                 <label
                   key={plan.id}
-                  className={`block cursor-pointer transition-all ${
-                    selectedPlan === plan.id
-                      ? "ring-2 ring-[var(--plum-light)]"
-                      : "hover:ring-1 hover:ring-[var(--border)]"
-                  }`}
+                  className={cn(
+                    "relative block cursor-pointer transition-all",
+                    isSelected && "ring-2 ring-[var(--plum-light)] rounded-lg"
+                  )}
                 >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value={plan.id}
-                    checked={selectedPlan === plan.id}
-                    onChange={() => setSelectedPlan(plan.id)}
-                    className="hidden"
-                  />
-                  <div className={`relative p-4 rounded-lg border border-[var(--border)] bg-gradient-to-br ${plan.color} ${
-                    selectedPlan === plan.id ? "border-[var(--plum-light)]" : ""
-                  }`}>
+                  <RadioGroupItem value={plan.id} className="sr-only" />
+                  <div
+                    className={cn(
+                      "p-4 rounded-lg border border-border bg-gradient-to-br",
+                      plan.color,
+                      isSelected && "border-[var(--plum-light)]"
+                    )}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-5 h-5 text-[var(--plum-light)]" />
+                        <div>
+                          <h4 className="font-semibold text-foreground">{plan.name}</h4>
+                          <p className="text-sm text-muted-foreground">{plan.description}</p>
+                        </div>
+                      </div>
+                      {isSelected && <CheckCircle className="w-5 h-5 text-[var(--plum-light)]" />}
+                    </div>
+
+                    <div className="text-2xl font-bold text-foreground mb-3">
+                      {plan.price}
+                      <span className="text-xs font-normal text-muted-foreground">/month</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {plan.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                          <span className="text-sm text-muted-foreground">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+
                     {plan.popular && (
                       <div className="absolute -top-2 right-4 px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full">
                         POPULAR
                       </div>
                     )}
-                    
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Icon className="w-5 h-5 text-[var(--plum-light)]" />
-                          <h4 className="font-semibold text-[var(--frost)]">{plan.name}</h4>
-                        </div>
-                        <p className="text-sm text-[var(--text-secondary)] mt-1">{plan.description}</p>
-                      </div>
-                      {selectedPlan === plan.id && (
-                        <CheckCircle className="w-5 h-5 text-[var(--plum-light)]" />
-                      )}
-                    </div>
-                    
-                    <div className="text-2xl font-bold text-[var(--frost)] mb-3">{plan.price}</div>
-                    
-                    <div className="space-y-2">
-                      {plan.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                          <span>{feature}</span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </label>
               );
             })}
+          </RadioGroup>
 
-            <div className="mt-4 p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-center">
-              <p className="text-xs text-[var(--text-secondary)]">
-                🔒 Your code is encrypted and never stored permanently. <br />
-                Free plan: 3 audits per month.
-              </p>
-            </div>
+          <div className="p-3 rounded-lg bg-card border border-border text-center">
+            <p className="text-xs text-muted-foreground">
+              Your code is encrypted and never stored permanently.
+              <br />
+              Free plan: 3 audits per month.
+            </p>
           </div>
         </div>
       </div>

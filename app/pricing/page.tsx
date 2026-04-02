@@ -6,17 +6,41 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
-import { Spinner, Toast } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { Check, X, Sparkles, Zap, Shield, Crown, ArrowRight, Loader2 } from "lucide-react";
 
-declare global { interface Window { Razorpay: new (options: Record<string, unknown>) => { open: () => void }; } }
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+// Extend the Session type locally
+interface ExtendedSession {
+  user: {
+    id: string;
+    email: string;
+    name?: string | null;
+    role?: string;
+    plan?: string;  // Add plan property
+    image?: string | null;
+  }
+}
 
 const PLANS = [
   {
-    id:       "free",
-    name:     "Free",
-    price:    "₹0",
-    period:   "forever",
-    tagline:  "Try before you commit",
+    id: "free",
+    name: "Free",
+    price: "₹0",
+    period: "forever",
+    description: "Try before you commit",
+    icon: Shield,
     features: [
       "3 audits included",
       "Groq LLaMA + Gemini analysis",
@@ -24,16 +48,17 @@ const PLANS = [
       "Community support",
     ],
     missing: ["Fix suggestions", "Exploit scenarios", "Claude AI models"],
-    cta:     "Start free",
+    cta: "Start free",
     ctaHref: "/register",
     featured: false,
   },
   {
-    id:       "pro",
-    name:     "Pro",
-    price:    "₹2,900",
-    period:   "/ month",
-    tagline:  "For active developers",
+    id: "pro",
+    name: "Pro",
+    price: "₹2,900",
+    period: "/month",
+    description: "For active developers",
+    icon: Zap,
     features: [
       "20 audits / month",
       "Groq + Claude Haiku",
@@ -43,15 +68,16 @@ const PLANS = [
       "Email support",
     ],
     missing: ["Exploit scenarios", "Claude Sonnet / Opus"],
-    cta:     "Upgrade to Pro",
+    cta: "Upgrade to Pro",
     featured: true,
   },
   {
-    id:       "enterprise",
-    name:     "Enterprise",
-    price:    "₹4,900",
-    period:   "/ month",
-    tagline:  "For teams shipping to mainnet",
+    id: "enterprise",
+    name: "Enterprise",
+    price: "₹4,900",
+    period: "/month",
+    description: "For teams shipping to mainnet",
+    icon: Crown,
     features: [
       "50 audits / month",
       "Groq + Claude Sonnet",
@@ -63,14 +89,14 @@ const PLANS = [
       "Priority support",
     ],
     missing: [],
-    cta:     "Upgrade to Enterprise",
+    cta: "Upgrade to Enterprise",
     featured: false,
   },
 ];
 
 const DEEP_AUDIT = {
-  price:    "₹1,650",
-  tagline:  "~$20 USD · Available on any plan",
+  price: "₹1,650",
+  tagline: "~$20 USD · Available on any plan",
   features: [
     "Claude Opus — most powerful AI",
     "Extended thinking — see full AI reasoning",
@@ -81,173 +107,334 @@ const DEEP_AUDIT = {
   ],
 };
 
+const FAQS = [
+  {
+    question: "Can I switch plans later?",
+    answer: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.",
+  },
+  {
+    question: "What payment methods do you accept?",
+    answer: "We accept all major credit cards, debit cards, UPI, and net banking via Razorpay.",
+  },
+  {
+    question: "Is there a long-term contract?",
+    answer: "No, all plans are month-to-month. You can cancel anytime with no hidden fees.",
+  },
+  {
+    question: "Do you offer team discounts?",
+    answer: "Yes, for Enterprise plans we offer volume discounts. Contact sales for a custom quote.",
+  },
+];
+
 export default function PricingPage() {
-  const { data: session } = useSession();
-  const router  = useRouter();
+  const { data: session } = useSession() as { data: ExtendedSession | null };
+  const router = useRouter();
   const [paying, setPaying] = useState<string | null>(null);
-  const [toast, setToast]  = useState<{ msg: string; type: "success"|"error"|"info" }|null>(null);
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
 
   const handleUpgrade = async (planId: string) => {
-    if (!session) { router.push("/login?callbackUrl=/pricing"); return; }
-    if (session.user.plan === planId) { setToast({ msg: "You're already on this plan.", type: "info" }); return; }
-
-    setPaying(planId);
-    // Load Razorpay script
-    if (!window.Razorpay) {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      document.body.appendChild(script);
-      await new Promise(res => { script.onload = res; });
+    if (!session) {
+      router.push("/login?callbackUrl=/pricing");
+      return;
     }
 
-    const orderRes = await fetch("/api/payment/razorpay/create-order", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ plan: planId }),
-    });
-    const order = await orderRes.json();
-    setPaying(null);
-    if (!orderRes.ok) { setToast({ msg: order.detail ?? "Order creation failed.", type: "error" }); return; }
+    // FIX: Use optional chaining for session.user.plan
+    if (session.user?.plan === planId) {
+      toast.info("You're already on this plan");
+      return;
+    }
 
-    const rzp = new window.Razorpay({
-      key:         order.key_id,
-      amount:      order.amount,
-      currency:    order.currency,
-      name:        "AuditSmart",
-      description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan — Monthly`,
-      order_id:    order.order_id,
-      theme:       { color: "#612D53" },
-      handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-        const verRes = await fetch("/api/payment/razorpay/verify", {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ ...response, plan: planId }),
+    setPaying(planId);
+
+    try {
+      // Load Razorpay script if not loaded
+      if (!window.Razorpay) {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        document.body.appendChild(script);
+        await new Promise((resolve) => {
+          script.onload = resolve;
         });
-        const ver = await verRes.json();
-        if (ver.status === "success") {
-          setToast({ msg: `✦ Upgraded to ${planId}! Refreshing session…`, type: "success" });
-          setTimeout(() => router.push("/dashboard"), 1500);
-        } else {
-          setToast({ msg: "Payment verification failed. Contact support.", type: "error" });
-        }
-      },
-    });
-    rzp.open();
+      }
+
+      const orderRes = await fetch("/api/payment/razorpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId, interval: billingInterval }),
+      });
+
+      const order = await orderRes.json();
+
+      if (!orderRes.ok) {
+        toast.error(order.detail ?? "Order creation failed");
+        setPaying(null);
+        return;
+      }
+
+      const rzp = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "AuditSmart",
+        description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan — ${billingInterval === "yearly" ? "Yearly" : "Monthly"}`,
+        order_id: order.order_id,
+        theme: { color: "#272757" },
+        handler: async (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) => {
+          const verRes = await fetch("/api/payment/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...response, plan: planId }),
+          });
+
+          const ver = await verRes.json();
+
+          if (ver.status === "success") {
+            toast.success(`Upgraded to ${planId}! Refreshing session...`);
+            setTimeout(() => router.push("/dashboard"), 1500);
+          } else {
+            toast.error("Payment verification failed. Contact support.");
+          }
+        },
+      });
+
+      rzp.open();
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setPaying(null);
+    }
+  };
+
+  const getAnnualPrice = (monthlyPrice: string) => {
+    const match = monthlyPrice.match(/₹([\d,]+)/);
+    if (!match) return monthlyPrice;
+    const price = parseInt(match[1].replace(/,/g, ""));
+    const annualPrice = Math.floor(price * 10); // 2 months free
+    return `₹${annualPrice.toLocaleString()}`;
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div id="pricing" className="max-w-6xl mx-auto px-6 py-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
         {/* Header */}
-        <div className="text-center mb-16">
-          <p className="section-sub">Pricing</p>
-          <h1 className="font-display text-5xl mb-4" style={{ color: "var(--frost)" }}>
-            Pay for what you use.
+        <div className="text-center mb-12 md:mb-16">
+          <Badge variant="secondary" className="mb-4">
+            Pricing
+          </Badge>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4">
+            Simple, transparent pricing
           </h1>
-          <p className="text-lg max-w-lg mx-auto" style={{ color: "var(--text-secondary)" }}>
-            Start free with 3 audits. Upgrade when your contracts need more.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Start free with 3 audits. Upgrade when your contracts need more protection.
           </p>
         </div>
 
-        {/* Plan cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16">
+        {/* Billing Toggle */}
+        <div className="flex justify-center mb-12">
+          <Tabs
+            defaultValue="monthly"
+            value={billingInterval}
+            onValueChange={(v) => setBillingInterval(v as "monthly" | "yearly")}
+            className="w-[300px]"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="yearly">
+                Yearly
+                <Badge variant="secondary" className="ml-2 text-[10px]">
+                  Save 20%
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Plan Cards */}
+        <div className="grid md:grid-cols-3 gap-8 mb-20">
           {PLANS.map((plan) => {
-            const isCurrent  = session?.user?.plan === plan.id;
+            const Icon = plan.icon;
+            // FIX: Use optional chaining for session.user?.plan
+            const isCurrent = session?.user?.plan === plan.id;
             const isDisabled = paying !== null;
+            const displayPrice = billingInterval === "yearly" && plan.id !== "free"
+              ? getAnnualPrice(plan.price)
+              : plan.price;
+            const displayPeriod = billingInterval === "yearly" && plan.id !== "free"
+              ? "/year"
+              : plan.period;
+
             return (
-              <div key={plan.id} className={`pricing-card ${plan.featured ? "featured" : ""}`}>
+              <Card
+                key={plan.id}
+                className={`relative flex flex-col transition-all duration-300 ${
+                  plan.featured
+                    ? "border-primary shadow-lg scale-105 md:scale-105"
+                    : "hover:shadow-md hover:-translate-y-1"
+                }`}
+              >
                 {plan.featured && (
-                  <div className="absolute top-4 right-4">
-                    <span className="badge badge-premium text-xs">Most Popular</span>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-primary text-primary-foreground">
+                      Most Popular
+                    </Badge>
                   </div>
                 )}
-                <div>
-                  <p className="section-sub mb-1">{plan.name}</p>
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="font-display text-4xl" style={{ color: "var(--frost)" }}>{plan.price}</span>
-                    <span className="text-sm" style={{ color: "var(--text-muted)" }}>{plan.period}</span>
+
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="outline" className="text-sm">
+                      {plan.name}
+                    </Badge>
+                    <Icon className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{plan.tagline}</p>
-                </div>
+                  <CardTitle className="text-3xl font-bold">
+                    {displayPrice}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">
+                      {displayPeriod}
+                    </span>
+                  </CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                </CardHeader>
 
-                <div className="divider my-0" />
+                <CardContent className="flex-1">
+                  <ul className="space-y-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{feature}</span>
+                      </li>
+                    ))}
+                    {plan.missing.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 opacity-50">
+                        <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
 
-                <ul className="space-y-2.5 flex-1">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--text-secondary)" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--plum-light)" strokeWidth="2.5" className="mt-0.5 flex-shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
-                      {f}
-                    </li>
-                  ))}
-                  {plan.missing.map(f => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--text-muted)", opacity: 0.5 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 flex-shrink-0"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                {plan.id === "free" ? (
-                  isCurrent ? (
-                    <div className="btn btn-ghost btn-md w-full" style={{ cursor: "default", opacity: 0.7 }}>Current plan</div>
+                <CardFooter>
+                  {plan.id === "free" ? (
+                    isCurrent ? (
+                      <Button variant="outline" className="w-full" disabled>
+                        Current Plan
+                      </Button>
+                    ) : (
+                      <Button asChild variant="outline" className="w-full">
+                        <Link href={plan.ctaHref!}>{plan.cta}</Link>
+                      </Button>
+                    )
+                  ) : isCurrent ? (
+                    <Button variant="outline" className="w-full" disabled>
+                      Current Plan
+                    </Button>
                   ) : (
-                    <Link href={plan.ctaHref!} className="btn btn-ghost btn-md w-full text-center">{plan.cta}</Link>
-                  )
-                ) : isCurrent ? (
-                  <div className="btn btn-ghost btn-md w-full" style={{ cursor: "default", opacity: 0.7 }}>Current plan</div>
-                ) : (
-                  <button
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={isDisabled}
-                    className={`btn w-full btn-md ${plan.featured ? "btn-primary" : "btn-outline"}`}
-                  >
-                    {paying === plan.id ? <><Spinner size={15} /> Processing…</> : plan.cta}
-                  </button>
-                )}
-              </div>
+                    <Button
+                      onClick={() => handleUpgrade(plan.id)}
+                      disabled={isDisabled}
+                      className={`w-full ${plan.featured ? "bg-primary hover:bg-primary/90" : ""}`}
+                    >
+                      {paying === plan.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        plan.cta
+                      )}
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
             );
           })}
         </div>
 
-        {/* Deep Audit add-on */}
-        <div className="card p-8 relative overflow-hidden"
-          style={{ borderColor: "var(--border-rose)", background: "linear-gradient(135deg, rgba(133,57,83,0.08) 0%, var(--bg-card) 70%)" }}>
-          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--rose), transparent)" }} />
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="badge" style={{ background: "rgba(133,57,83,0.15)", color: "var(--rose-light)", border: "1px solid rgba(133,57,83,0.3)", fontFamily: "var(--font-mono)" }}>Add-on</span>
-                <span className="font-display text-xl" style={{ color: "var(--frost)" }}>Deep Audit</span>
+        {/* Deep Audit Add-on */}
+        <Card className="mb-20 border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-primary/5">
+          <CardContent className="p-8">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                  <Badge variant="secondary" className="font-mono">
+                    Add-on
+                  </Badge>
+                  <span className="font-semibold text-lg">Deep Audit</span>
+                </div>
+                <div className="mb-2">
+                  <span className="text-4xl font-bold">{DEEP_AUDIT.price}</span>
+                  <span className="text-muted-foreground ml-2">per audit</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">{DEEP_AUDIT.tagline}</p>
+                <Button asChild>
+                  <Link href="/dashboard/scan">
+                    Request Deep Audit
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="font-display text-4xl" style={{ color: "var(--frost)" }}>{DEEP_AUDIT.price}</span>
-                <span className="text-sm" style={{ color: "var(--text-muted)" }}>per audit</span>
+              <div>
+                <ul className="space-y-3">
+                  {DEEP_AUDIT.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>{DEEP_AUDIT.tagline}</p>
-              <Link href="/dashboard/scan" className="btn btn-rose btn-md">
-                Request Deep Audit
-              </Link>
             </div>
-            <ul className="space-y-2.5">
-              {DEEP_AUDIT.features.map(f => (
-                <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--text-secondary)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--rose-light)" strokeWidth="2.5" className="mt-0.5 flex-shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
+          </CardContent>
+        </Card>
+
+        {/* FAQ Section */}
+        <div className="text-center mb-12">
+          <Badge variant="secondary" className="mb-4">
+            FAQ
+          </Badge>
+          <h2 className="text-3xl font-bold text-foreground mb-4">
+            Frequently asked questions
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Everything you need to know about our pricing and plans
+          </p>
         </div>
 
-        {/* FAQ teaser */}
-        <div className="mt-16 text-center">
-          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+        <div className="grid md:grid-cols-2 gap-6 mb-16">
+          {FAQS.map((faq, index) => (
+            <Card key={index} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-lg">{faq.question}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-sm">
+                  {faq.answer}
+                </CardDescription>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Contact Section */}
+        <div className="text-center">
+          <Separator className="mb-8" />
+          <p className="text-muted-foreground">
             Questions? Email us at{" "}
-            <a href="mailto:hello@auditsmart.io" style={{ color: "var(--plum-light)" }}>hello@auditsmart.io</a>
-            {" "}— we respond within 24h.
+            <a
+              href="mailto:hello@auditsmart.io"
+              className="text-primary hover:underline font-medium"
+            >
+              hello@auditsmart.io
+            </a>
+            {" "}— we respond within 24 hours.
           </p>
         </div>
       </div>

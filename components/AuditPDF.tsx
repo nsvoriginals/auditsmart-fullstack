@@ -11,7 +11,12 @@ interface AuditPDFProps {
   className?: string;
 }
 
-export function AuditPDF({ auditId, contractName, buttonText = "Download PDF", className = "" }: AuditPDFProps) {
+export function AuditPDF({ 
+  auditId, 
+  contractName, 
+  buttonText = "Download PDF", 
+  className = "" 
+}: AuditPDFProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,7 +36,8 @@ export function AuditPDF({ auditId, contractName, buttonText = "Download PDF", c
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Audit_Report_${contractName.replace(/[^a-z0-9]/gi, "_")}_${auditId.slice(0, 8)}.pdf`;
+      const safeName = contractName.replace(/[^a-z0-9]/gi, "_");
+      a.download = `Audit_Report_${safeName}_${auditId.slice(0, 8)}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -50,21 +56,23 @@ export function AuditPDF({ auditId, contractName, buttonText = "Download PDF", c
       <button
         onClick={downloadPDF}
         disabled={isDownloading}
-        className={`flex items-center gap-2 px-4 py-2 rounded-md bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all disabled:opacity-50 ${className}`}
+        className={`flex items-center gap-2 px-4 py-2 rounded-md bg-card border border-border text-foreground hover:bg-accent transition-all disabled:opacity-50 ${className}`}
       >
         {isDownloading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
             Generating...
           </>
         ) : (
           <>
-            <Download className="w-4 h-4" />
+            <Download className="h-4 w-4" />
             {buttonText}
           </>
         )}
       </button>
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && (
+        <p className="text-xs text-destructive mt-1">{error}</p>
+      )}
     </div>
   );
 }

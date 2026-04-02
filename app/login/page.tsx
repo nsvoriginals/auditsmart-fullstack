@@ -5,7 +5,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, Github, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 
@@ -178,13 +178,12 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Sign Up Link */}
-        <p className="text-center text-sm text-[var(--text-secondary)]">
-          Don't have an account?{" "}
-          <Link href="/register" className="font-medium text-[var(--plum-light)] hover:text-[var(--plum)]">
-            Sign up
-          </Link>
-        </p>
+      <p className="text-center text-sm text-[var(--text-secondary)]">
+  Don&apos;t have an account?{" "}
+  <Link href="/register" className="font-medium text-[var(--plum-light)] hover:text-[var(--plum)]">
+    Sign up
+  </Link>
+</p>
       </div>
     </div>
   );

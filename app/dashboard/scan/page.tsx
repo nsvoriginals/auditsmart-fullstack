@@ -1,21 +1,20 @@
-// app/dashboard/scan/page.tsx
 "use client";
+// app/dashboard/scan/page.tsx
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  ChevronDown, 
+import {
+  Shield,
+  AlertTriangle,
+  ChevronDown,
   ChevronUp,
   Copy,
   Download,
   Loader2,
-  Zap,
-  Brain,
-  Sparkles
+  FileCode,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 
 interface Finding {
@@ -64,25 +63,30 @@ contract VulnerableVault {
     }
 }`;
 
-const getRiskColor = (level: string) => {
-  switch (level?.toLowerCase()) {
-    case "critical": return { text: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" };
-    case "high": return { text: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
-    case "medium": return { text: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20" };
-    case "low": return { text: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" };
-    default: return { text: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20" };
+const getSeverityClass = (severity: string) => {
+  switch (severity?.toLowerCase()) {
+    case "critical":
+      return "bg-red-500/10 text-red-500 border-red-500/20";
+    case "high":
+      return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+    case "medium":
+      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+    case "low":
+      return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+    default:
+      return "bg-gray-500/10 text-gray-400 border-gray-500/20";
   }
 };
 
-const getSeverityBadge = (severity: string) => {
-  const colors = {
-    critical: "bg-red-500/20 text-red-400",
-    high: "bg-orange-500/20 text-orange-400",
-    medium: "bg-yellow-500/20 text-yellow-400",
-    low: "bg-blue-500/20 text-blue-400",
-    info: "bg-gray-500/20 text-gray-400",
-  };
-  return colors[severity?.toLowerCase() as keyof typeof colors] || colors.info;
+const getVerdictClass = (verdict: string) => {
+  switch (verdict?.toUpperCase()) {
+    case "SAFE":
+      return "bg-green-500/15 text-green-500 border-green-500/30";
+    case "CAUTION":
+      return "bg-yellow-500/15 text-yellow-500 border-yellow-500/30";
+    default:
+      return "bg-red-500/15 text-red-500 border-red-500/30";
+  }
 };
 
 export default function ScanPage() {
@@ -97,7 +101,6 @@ export default function ScanPage() {
   const [auditsLeft, setAuditsLeft] = useState<number | null>(null);
   const [userPlan, setUserPlan] = useState<string>("free");
 
-  // Fetch user limits
   useEffect(() => {
     fetchUserLimits();
   }, []);
@@ -134,10 +137,10 @@ export default function ScanPage() {
       const response = await fetch("/api/audit/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          contract_code: code, 
-          contract_name: name || "Smart Contract", 
-          chain 
+        body: JSON.stringify({
+          contract_code: code,
+          contract_name: name || "Smart Contract",
+          chain,
         }),
       });
 
@@ -148,10 +151,8 @@ export default function ScanPage() {
       }
 
       setResult(data);
-      // Refresh user limits after successful scan
       await fetchUserLimits();
-      await update(); // Update session to reflect new usage
-
+      await update();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please try again.");
     } finally {
@@ -181,251 +182,288 @@ export default function ScanPage() {
     navigator.clipboard.writeText(text);
   };
 
-  const verdict = result?.deployment_verdict?.toUpperCase() || "";
-  const riskInfo = result ? getRiskColor(result.risk_level) : null;
-
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="font-display text-3xl font-bold" style={{ color: "var(--frost)" }}>
-          Scan Contract
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+        <h1 className="text-3xl font-bold text-foreground">Scan Contract</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Paste Solidity source code and run an AI-powered security audit.
         </p>
       </div>
 
-      {/* Quota warning */}
-      {userPlan === "free" && auditsLeft !== null && auditsLeft <= 1 && auditsLeft > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm" style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)" }}>
-          <AlertTriangle className="w-4 h-4 text-yellow-500" />
-          <span className="text-yellow-500">{auditsLeft} audit{auditsLeft !== 1 ? 's' : ''} remaining this month.</span>
-          <Link href="/dashboard/pricing" className="text-yellow-500 underline text-sm ml-auto">Upgrade</Link>
+      {/* Quota Warning */}
+      {userPlan === "free" && auditsLeft !== null && auditsLeft <= 2 && auditsLeft > 0 && (
+        <div className="p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-yellow-500">Limited audits remaining</h4>
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                {auditsLeft} audit{auditsLeft !== 1 ? 's' : ''} remaining this month.
+                <Link href="/pricing" className="ml-2 underline font-medium">Upgrade</Link>
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
       {userPlan === "free" && auditsLeft === 0 && (
-        <div className="flex items-center justify-between gap-4 px-5 py-4 rounded-lg" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)" }}>
-          <div>
-            <p className="text-sm font-medium text-red-400">Audit limit reached</p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>Upgrade your plan to run more audits.</p>
+        <div className="p-4 rounded-lg border border-red-500/30 bg-red-500/10">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-4 w-4 text-red-500 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-red-500">Audit limit reached</h4>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                Upgrade your plan to run more audits.
+                <Link href="/pricing" className="ml-2 underline font-medium">Upgrade Plan</Link>
+              </p>
+            </div>
           </div>
-          <Link href="/dashboard/pricing" className="px-4 py-1.5 rounded-md bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white text-sm hover:opacity-90 transition-all">
-            Upgrade Plan
-          </Link>
         </div>
       )}
 
-      {/* Form Card */}
-      <div className="card p-6 space-y-5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Contract Name</label>
-            <input 
-              className="w-full px-3 py-2 rounded-md border" 
-              style={{ background: "var(--bg-input)", borderColor: "var(--border)", color: "var(--text-primary)" }}
-              placeholder="MyToken" 
-              value={name} 
-              onChange={e => setName(e.target.value)} 
+      {/* Scan Form Card */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-1">Audit Configuration</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure your contract audit settings</p>
+        
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-muted-foreground">Contract Name</label>
+              <input
+                type="text"
+                placeholder="MyToken"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--plum-light)] transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-muted-foreground">Blockchain Network</label>
+              <select
+                value={chain}
+                onChange={(e) => setChain(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--plum-light)] transition-all"
+              >
+                {["ethereum", "polygon", "arbitrum", "optimism", "bsc", "avalanche", "base"].map((c) => (
+                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-muted-foreground">Solidity Source Code</label>
+              <button
+                onClick={() => setCode(SAMPLE_CONTRACT)}
+                className="text-sm text-[var(--plum-light)] hover:underline flex items-center gap-1"
+              >
+                <FileCode className="h-3 w-3" />
+                Load Sample
+              </button>
+            </div>
+            <textarea
+              placeholder="// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract MyContract { ... }"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              rows={12}
+              className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--plum-light)] transition-all resize-vertical"
             />
+            <p className="text-xs text-muted-foreground">
+              {code.length.toLocaleString()} / 50,000 characters
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Chain</label>
-            <select 
-              className="w-full px-3 py-2 rounded-md border cursor-pointer"
-              style={{ background: "var(--bg-input)", borderColor: "var(--border)", color: "var(--text-primary)" }}
-              value={chain} 
-              onChange={e => setChain(e.target.value)}
-            >
-              {["ethereum", "polygon", "arbitrum", "optimism", "bsc", "avalanche", "base"].map(c => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-        </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Solidity Source Code</label>
-            <button 
-              onClick={() => setCode(SAMPLE_CONTRACT)} 
-              className="text-xs hover:underline transition-all"
-              style={{ color: "var(--plum-light)" }}
-            >
-              Load sample
-            </button>
-          </div>
-          <textarea
-            className="w-full p-3 rounded-md border font-mono text-sm"
-            style={{ 
-              background: "var(--bg-input)", 
-              borderColor: "var(--border)", 
-              color: "var(--text-primary)",
-              minHeight: 280,
-              fontFamily: "monospace"
-            }}
-            placeholder="// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract MyContract { ... }"
-            value={code}
-            onChange={e => setCode(e.target.value)}
-          />
-          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-            {code.length.toLocaleString()} / 50,000 chars
-          </p>
-        </div>
+          {error && (
+            <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <span className="text-sm text-red-500">{error}</span>
+              </div>
+            </div>
+          )}
 
-        {error && (
-          <div className="px-4 py-3 rounded-md text-sm bg-red-500/10 border border-red-500/20 text-red-500">
-            {error}
-          </div>
-        )}
-
-        <div className="flex items-center gap-3">
           <button
             onClick={runScan}
             disabled={scanning || (userPlan === "free" && auditsLeft === 0)}
-            className="px-6 py-2.5 rounded-md bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="w-full py-3 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {scanning ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Scanning...</>
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Scanning...
+              </>
             ) : (
-              <><Shield className="w-4 h-4" /> Run Audit</>
+              <>
+                <Shield className="h-4 w-4" />
+                Run Audit
+              </>
             )}
           </button>
+
           {scanning && (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Analyzing with {userPlan === "enterprise" ? "Claude Sonnet" : userPlan === "pro" ? "Claude Haiku" : "Groq + Gemini"}...
-            </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Analyzing contract</span>
+                <span className="text-muted-foreground">AI Models</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full w-[65%] bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] rounded-full transition-all" />
+              </div>
+            </div>
           )}
         </div>
       </div>
 
       {/* Results Section */}
       {result && (
-        <div className="space-y-5 animate-in fade-in duration-300">
+        <div className="space-y-6 animate-in fade-in duration-500">
           {/* Summary Card */}
-          <div className="card p-6" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
-            <div className="flex flex-wrap items-start gap-6">
-              {/* Risk Ring */}
-              <div className="relative flex-shrink-0">
-                <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center ${riskInfo?.border}`}>
-                  <span className="text-2xl font-bold" style={{ color: riskInfo?.text?.replace('text-', '') }}>
-                    {result.risk_score}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-3 mb-3">
-                  <h2 className="font-display text-2xl font-bold" style={{ color: "var(--frost)" }}>
-                    {result.contract_name}
-                  </h2>
-                  {verdict && (
-                    <span className="text-xs px-3 py-1 rounded-md font-mono" style={{ 
-                      background: `rgba(${verdict === "SAFE" ? "74,222,128" : verdict === "CAUTION" ? "250,204,21" : "248,113,113"}, 0.1)`,
-                      color: verdict === "SAFE" ? "#4ade80" : verdict === "CAUTION" ? "#facc15" : "#f87171",
-                      border: `1px solid rgba(${verdict === "SAFE" ? "74,222,128" : verdict === "CAUTION" ? "250,204,21" : "248,113,113"}, 0.25)`
-                    }}>
-                      {verdict}
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Risk Score Circle */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-20 h-20 rounded-full border-4 border-primary/20 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-foreground">
+                      {result.risk_score}
                     </span>
-                  )}
+                  </div>
                 </div>
-                <p className="text-sm mb-4" style={{ color: "var(--text-primary)" }}>{result.summary}</p>
-                <div className="flex flex-wrap gap-3 text-xs font-mono">
-                  <span style={{ color: "#f87171" }}>{result.critical_count} Critical</span>
-                  <span style={{ color: "#fb923c" }}>{result.high_count} High</span>
-                  <span style={{ color: "#facc15" }}>{result.medium_count} Medium</span>
-                  <span style={{ color: "#60a5fa" }}>{result.low_count} Low</span>
-                  <span style={{ color: "var(--text-muted)" }}>{result.info_count} Info</span>
-                  <span style={{ color: "var(--text-muted)" }}>· {(result.scan_duration_ms / 1000).toFixed(1)}s</span>
+                
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-2xl font-semibold text-foreground">{result.contract_name}</h3>
+                    <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getVerdictClass(result.deployment_verdict)}`}>
+                      {result.deployment_verdict}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2 max-w-md">
+                    {result.summary}
+                  </p>
                 </div>
               </div>
               
               <div className="flex gap-2">
                 {result.pdf_available && (
-                  <button onClick={downloadPdf} className="p-2 rounded-md hover:bg-[var(--bg-hover)] transition-colors" title="Download PDF">
-                    <Download className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
+                  <button
+                    onClick={downloadPdf}
+                    className="px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-all text-sm flex items-center gap-1"
+                  >
+                    <Download className="h-3 w-3" />
+                    PDF Report
                   </button>
                 )}
-                <button onClick={copyFindings} className="p-2 rounded-md hover:bg-[var(--bg-hover)] transition-colors" title="Copy findings">
-                  <Copy className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
+                <button
+                  onClick={copyFindings}
+                  className="px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-all text-sm flex items-center gap-1"
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy Findings
                 </button>
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-border">
+              <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">
+                {result.critical_count} Critical
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                {result.high_count} High
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                {result.medium_count} Medium
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                {result.low_count} Low
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                {result.info_count} Info
+              </span>
+              <div className="w-px h-5 bg-border" />
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {(result.scan_duration_ms / 1000).toFixed(1)}s
+              </div>
+            </div>
           </div>
 
-          {/* Findings List */}
+          {/* Findings Section */}
           {result.findings.length > 0 && (
-            <div className="card overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
-              <div className="px-6 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-                <h3 className="font-semibold" style={{ color: "var(--frost)" }}>
-                  Findings ({result.total_findings})
-                </h3>
+            <div className="rounded-lg border border-border bg-card">
+              <div className="p-6 border-b border-border">
+                <h3 className="text-lg font-semibold text-foreground">Findings</h3>
+                <p className="text-sm text-muted-foreground">
+                  {result.total_findings} security issues detected
+                </p>
               </div>
-              <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                {result.findings.map((finding, idx) => (
-                  <div key={idx}>
-                    <button
-                      onClick={() => setExpandedFinding(expandedFinding === idx ? null : idx)}
-                      className="w-full flex items-start gap-4 px-6 py-4 text-left hover:bg-[var(--bg-hover)] transition-colors"
-                    >
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${getSeverityBadge(finding.severity)}`}>
-                        {finding.severity?.toUpperCase()}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{finding.type}</p>
-                        {finding.function && (
-                          <p className="text-xs mt-0.5 font-mono" style={{ color: "var(--text-muted)" }}>
-                            {finding.function}{finding.line ? ` · line ${finding.line}` : ""}
-                          </p>
-                        )}
-                      </div>
-                      {expandedFinding === idx ? (
-                        <ChevronUp className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
-                      )}
-                    </button>
+              <div className="p-6">
+                <div className="space-y-3">
+                  {result.findings.map((finding, idx) => {
+                    const isExpanded = expandedFinding === idx;
+                    const severityClass = getSeverityClass(finding.severity);
                     
-                    {expandedFinding === idx && (
-                      <div className="px-6 pb-5 space-y-3" style={{ borderTop: "1px solid var(--border)" }}>
-                        <p className="text-sm pt-3" style={{ color: "var(--text-primary)" }}>{finding.description}</p>
-                        {finding.recommendation && (
-                          <div className="p-3 rounded-md" style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
-                            <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Recommendation</p>
-                            <p className="text-sm" style={{ color: "var(--text-primary)" }}>{finding.recommendation}</p>
+                    return (
+                      <div key={idx} className="rounded-lg border border-border overflow-hidden">
+                        <button
+                          onClick={() => setExpandedFinding(isExpanded ? null : idx)}
+                          className="w-full text-left hover:bg-accent/50 transition-colors"
+                        >
+                          <div className="flex items-start gap-3 p-4">
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-medium border ${severityClass}`}>
+                              {finding.severity?.toUpperCase()}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground">
+                                {finding.type}
+                              </p>
+                              {finding.function && (
+                                <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                                  {finding.function}
+                                  {finding.line && ` · line ${finding.line}`}
+                                </p>
+                              )}
+                            </div>
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            )}
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="border-t border-border p-4 space-y-3 bg-muted/30">
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                Description
+                              </p>
+                              <p className="text-sm text-foreground">
+                                {finding.description}
+                              </p>
+                            </div>
+                            {finding.recommendation && (
+                              <div className="rounded-lg bg-[var(--plum)]/5 p-3 border border-[var(--plum)]/10">
+                                <p className="text-xs font-semibold text-[var(--plum-light)] uppercase tracking-wider mb-2">
+                                  Recommendation
+                                </p>
+                                <p className="text-sm text-foreground">
+                                  {finding.recommendation}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Test Mode Banner */}
-      {process.env.NEXT_PUBLIC_RAZORPAY_TEST_MODE === "true" && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-sm">
-          <div className="bg-yellow-500/95 backdrop-blur-sm rounded-lg shadow-xl p-4 border border-yellow-400">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-900 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h4 className="font-semibold text-yellow-900 text-sm">🧪 TEST MODE</h4>
-                <p className="text-xs text-yellow-800 mt-1">
-                  No real payments are processed. Use test cards:
-                </p>
-                <div className="mt-2 space-y-1 text-xs font-mono text-yellow-800">
-                  <p>4111 1111 1111 1111 — Visa (Success)</p>
-                  <p>4242 4242 4242 4242 — Visa (Success)</p>
-                  <p>5555 5555 5555 4444 — Mastercard (Success)</p>
-                  <p>CVV: Any 3 digits • Expiry: Any future date</p>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -2,52 +2,67 @@
 // app/page.tsx — Landing page
 
 import Link from "next/link";
-import {Navbar} from "@/components/layout/Navbar"
-import { Shield, Search, Zap, FileText, Brain, Eye } from "lucide-react";
+import { Navbar } from "@/components/layout/Navbar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Shield,
+  Search,
+  Zap,
+  FileText,
+  Brain,
+  Eye,
+  ArrowRight,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  DollarSign,
+} from "lucide-react";
 
 const FEATURES = [
   {
     icon: <Brain className="w-5 h-5" />,
     title: "Multi-Agent Analysis",
-    desc: "Groq LLaMA, Claude, and Gemini independently audit your contract and cross-validate findings for maximum accuracy.",
+    description: "Groq LLaMA, Claude, and Gemini independently audit your contract and cross-validate findings for maximum accuracy.",
   },
   {
     icon: <Search className="w-5 h-5" />,
     title: "Smart Deduplication",
-    desc: "Our engine merges duplicate findings from multiple agents, eliminating noise and surfacing what actually matters.",
+    description: "Our engine merges duplicate findings from multiple agents, eliminating noise and surfacing what actually matters.",
   },
   {
     icon: <Eye className="w-5 h-5" />,
     title: "Real-time Monitoring",
-    desc: "Paste any contract address and watch live for vulnerability patterns, suspicious activity, and upgrade events.",
+    description: "Paste any contract address and watch live for vulnerability patterns, suspicious activity, and upgrade events.",
   },
   {
     icon: <FileText className="w-5 h-5" />,
     title: "PDF Audit Reports",
-    desc: "Download professional reports with executive summaries, severity rankings, and remediation code snippets.",
+    description: "Download professional reports with executive summaries, severity rankings, and remediation code snippets.",
   },
   {
     icon: <Zap className="w-5 h-5" />,
     title: "Claude Opus Deep Audit",
-    desc: "One-off deep scans with extended thinking — see the AI's full reasoning chain and get exploit-ready PoC scenarios.",
+    description: "One-off deep scans with extended thinking — see the AI's full reasoning chain and get exploit-ready PoC scenarios.",
   },
   {
     icon: <Shield className="w-5 h-5" />,
     title: "Deployment Verdict",
-    desc: "Every audit ends with a clear SAFE / CAUTION / DO NOT DEPLOY verdict backed by quantified risk scoring.",
+    description: "Every audit ends with a clear SAFE / CAUTION / DO NOT DEPLOY verdict backed by quantified risk scoring.",
   },
 ];
 
 const STATS = [
-  { value: "12,000+", label: "Contracts Audited" },
-  { value: "98.4%", label: "Accuracy Rate" },
-  { value: "<45s", label: "Avg Scan Time" },
-  { value: "$0", label: "Start Free" },
+  { value: "12,000+", label: "Contracts Audited", icon: <CheckCircle className="w-4 h-4" /> },
+  { value: "98.4%", label: "Accuracy Rate", icon: <Shield className="w-4 h-4" /> },
+  { value: "<45s", label: "Avg Scan Time", icon: <Clock className="w-4 h-4" /> },
+  { value: "$0", label: "Start Free", icon: <DollarSign className="w-4 h-4" /> },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       {/* Hero Section */}
@@ -57,55 +72,51 @@ export default function LandingPage() {
         
         <div className="relative max-w-5xl mx-auto px-6 text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full text-xs font-mono tracking-wide bg-[rgba(97,45,83,0.1)] border border-[rgba(97,45,83,0.3)] text-[var(--plum-light)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--plum-light)] animate-pulse" />
+          <Badge variant="outline" className="mb-8 px-4 py-2 text-xs font-mono bg-primary/5 border-primary/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse mr-2" />
             Powered by Claude Opus · Groq LLaMA · Gemini
-          </div>
+          </Badge>
 
           {/* Headline */}
-          <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-[1.1] text-[var(--frost)]">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-[1.1]">
             Audit smart contracts
             <br />
-            <span className="bg-gradient-to-r from-[var(--plum)] to-[var(--rose)] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-primary">
               before attackers do.
             </span>
           </h1>
 
           {/* Description */}
-          <p className="text-lg text-[var(--text-secondary)] max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
             Multi-agent AI audits Solidity contracts in under 45 seconds. Find reentrancy, oracle manipulation,
             access control flaws, and 50+ vulnerability classes — with zero false positives.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--plum)] text-white font-medium hover:bg-[var(--plum-light)] transition-all hover:translate-y-[-1px]"
-            >
-              Start auditing free
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </Link>
-            <Link
-              href="#features"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-md border border-[var(--border)] text-[var(--text-primary)] font-medium hover:bg-[var(--bg-hover)] transition-all"
-            >
-              See how it works
-            </Link>
+            <Button asChild size="lg" className="group">
+              <Link href="/register">
+                Start auditing free
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <Link href="#features">
+                See how it works
+              </Link>
+            </Button>
           </div>
 
           {/* Code Preview */}
           <div className="mt-16 max-w-3xl mx-auto text-left">
-            <div className="rounded-lg border border-[var(--border)] overflow-hidden bg-[var(--bg-card)]">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-hover)]">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
+            <Card className="overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/50">
+                <div className="w-3 h-3 rounded-full bg-destructive" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500" />
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="ml-2 text-xs font-mono text-[var(--text-muted)]">VulnerableVault.sol</span>
+                <span className="ml-2 text-xs font-mono text-muted-foreground">VulnerableVault.sol</span>
               </div>
-              <pre className="p-4 text-xs font-mono leading-relaxed overflow-x-auto bg-[var(--bg-card)] text-[var(--text-secondary)]">
+              <pre className="p-4 text-xs font-mono leading-relaxed overflow-x-auto bg-card text-muted-foreground">
                 {`// ⚠ CRITICAL: Reentrancy vulnerability detected
 function withdraw(uint amount) external {
     require(balances[msg.sender] >= amount);
@@ -120,21 +131,22 @@ function withdraw(uint amount) external {
 // ✅ AuditSmart fix suggestion:
 // Move state update BEFORE external call (CEI pattern)`}
               </pre>
-            </div>
+            </Card>
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="border-t border-b border-[var(--border)] bg-[var(--bg-card)]">
+      <section className="border-t border-b bg-card">
         <div className="max-w-5xl mx-auto px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {STATS.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="font-display text-3xl md:text-4xl font-bold text-[var(--frost)] mb-2">
+                <div className="flex items-center justify-center gap-2 text-3xl md:text-4xl font-bold text-foreground mb-2">
                   {stat.value}
+                  <span className="text-primary">{stat.icon}</span>
                 </div>
-                <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
                   {stat.label}
                 </div>
               </div>
@@ -148,13 +160,13 @@ function withdraw(uint amount) external {
         <div className="max-w-6xl mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-16">
-            <p className="text-sm font-mono uppercase tracking-wider text-[var(--plum-light)] mb-4">
+            <Badge variant="secondary" className="mb-4">
               What we do
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[var(--frost)] mb-4">
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Enterprise security.
               <br />
-              <span className="bg-gradient-to-r from-[var(--plum)] to-[var(--rose)] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 No retainer required.
               </span>
             </h2>
@@ -163,20 +175,19 @@ function withdraw(uint amount) external {
           {/* Features Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((feature) => (
-              <div
-                key={feature.title}
-                className="group p-6 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--plum)] transition-all hover:-translate-y-1"
-              >
-                <div className="w-10 h-10 rounded-lg bg-[rgba(97,45,83,0.1)] flex items-center justify-center mb-4 text-[var(--plum-light)] group-hover:scale-110 transition-transform">
-                  {feature.icon}
-                </div>
-                <h3 className="font-semibold text-[var(--text-primary)] mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  {feature.desc}
-                </p>
-              </div>
+              <Card key={feature.title} className="group hover:border-primary transition-all hover:-translate-y-1">
+                <CardHeader>
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4 text-primary group-hover:scale-110 transition-transform">
+                    {feature.icon}
+                  </div>
+                  <CardTitle className="text-foreground">
+                    {feature.title}
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    {feature.description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
             ))}
           </div>
         </div>
@@ -185,35 +196,33 @@ function withdraw(uint amount) external {
       {/* CTA Section */}
       <section className="py-20">
         <div className="max-w-3xl mx-auto px-6">
-          <div className="relative rounded-2xl p-12 text-center overflow-hidden bg-gradient-to-br from-[rgba(97,45,83,0.1)] to-[var(--bg-card)] border border-[var(--plum)]/30">
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--plum)] to-transparent" />
-            
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-[var(--frost)] mb-4">
-              3 free audits. No credit card.
-            </h2>
-            <p className="text-[var(--text-secondary)] mb-8 max-w-md mx-auto">
-              Start securing your contracts today. Upgrade to Pro or Enterprise when you need more.
-            </p>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-md bg-[var(--plum)] text-white font-medium hover:bg-[var(--plum-light)] transition-all hover:translate-y-[-1px]"
-            >
-              Create free account
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </Link>
-          </div>
+          <Card className="relative overflow-hidden text-center border-primary/30">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+            <CardContent className="p-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                3 free audits. No credit card.
+              </h2>
+              <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                Start securing your contracts today. Upgrade to Pro or Enterprise when you need more.
+              </p>
+              <Button asChild size="lg" className="group">
+                <Link href="/register">
+                  Create free account
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--border)] py-10">
+      <footer className="border-t py-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="font-display text-lg text-[var(--text-secondary)]">
-            Audit<span className="text-[var(--plum-light)]">Smart</span>
+          <span className="text-lg font-bold text-foreground">
+            Audit<span className="text-primary">Smart</span>
           </span>
-          <p className="text-xs text-[var(--text-muted)]">
+          <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} AuditSmart. Powered by Claude · Groq · Gemini.
           </p>
           <div className="flex gap-6">
@@ -221,7 +230,7 @@ function withdraw(uint amount) external {
               <Link
                 key={link}
                 href="#"
-                className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 {link}
               </Link>

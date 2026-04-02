@@ -7,27 +7,29 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 
+// Extend the built-in session types - remove duplicate id declarations
 declare module "next-auth" {
+  interface User {
+    role?: string;
+    plan?: string;
+  }
+  
   interface Session {
     user: {
       id: string;
       email: string;
       name?: string | null;
       role?: string;
+      plan?: string;
       image?: string | null;
     }
-  }
-  
-  interface User {
-    id: string;
-    role?: string;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string;
     role?: string;
+    plan?: string;
   }
 }
 
@@ -70,6 +72,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: { subscription: true }
         });
 
         if (!user || !user.password) {
@@ -87,22 +90,21 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          plan: user.subscription?.plan || user.role,
         };
       },
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }: { user: any; account: any }) {
       if (account?.provider === "google" || account?.provider === "github") {
         try {
-          // Check if user already exists
           const existingUser = await prisma.user.findUnique({
             where: { email: user.email! },
-            include: { accounts: true }
+            include: { accounts: true, subscription: true }
           });
 
           if (!existingUser) {
-            // Create new user for OAuth
             const newUser = await prisma.user.create({
               data: {
                 email: user.email!,
@@ -129,28 +131,17 @@ export const authOptions: NextAuthOptions = {
                     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                   }
                 }
-              }
+              },
+              include: { subscription: true }
             });
             
             user.id = newUser.id;
+            user.role = newUser.role;
+            (user as any).plan = newUser.subscription?.plan;
           } else {
-            // User exists, check if they have a subscription
-            const subscription = await prisma.subscription.findUnique({
-              where: { userId: existingUser.id }
-            });
-            
-            if (!subscription) {
-              await prisma.subscription.create({
-                data: {
-                  userId: existingUser.id,
-                  plan: "FREE",
-                  status: "ACTIVE",
-                  currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                }
-              });
-            }
-            
             user.id = existingUser.id;
+            user.role = existingUser.role;
+            (user as any).plan = existingUser.subscription?.plan;
           }
           
           return true;
@@ -163,49 +154,34 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, trigger, session }: { token: any; user: any; trigger?: string; session?: any }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.plan = user.plan;
       }
       
-      // For OAuth, fetch user from database if not in token
-      if (!token.id && token.email) {
+      if (trigger === "update" && session?.user) {
         const dbUser = await prisma.user.findUnique({
-          where: { email: token.email },
-          select: { id: true, role: true }
+          where: { id: token.id },
+          include: { subscription: true }
         });
         
         if (dbUser) {
-          token.id = dbUser.id;
           token.role = dbUser.role;
+          token.plan = dbUser.subscription?.plan;
         }
       }
       
       return token;
     },
     
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
-        
-        // Get fresh user data including subscription
-        const user = await prisma.user.findUnique({
-          where: { id: token.id },
-          include: { subscription: true }
-        });
-        
-        if (user) {
-          session.user.role = user.role;
-          // Add custom property for remaining audits
-          (session.user as any).freeAuditsRemaining = user.subscription?.plan === "FREE" 
-            ? Math.max(0, 3 - user.currentMonthAudits)
-            : null;
-          (session.user as any).plan = user.subscription?.plan || "FREE";
-        }
+        session.user.plan = token.plan;
       }
-      
       return session;
     },
   },
