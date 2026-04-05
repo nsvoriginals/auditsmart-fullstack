@@ -1,18 +1,16 @@
-// components/layout/DashboardNavbar.tsx
 "use client";
+// components/layout/DashboardNavbar.tsx
 
-import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { 
-  Bell, 
-  Search, 
+import {
+  Bell,
+  Search,
   Menu,
   User,
   Settings,
   LogOut,
   HelpCircle,
-  CreditCard
+  CreditCard,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -26,7 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { signOut } from "next-auth/react";
 
 interface DashboardNavbarProps {
@@ -38,132 +35,161 @@ interface DashboardNavbarProps {
   };
 }
 
+const PLAN_STYLES: Record<string, string> = {
+  FREE:       "bg-[var(--elevated)] text-[var(--text-muted)]",
+  PRO:        "bg-[var(--brand-faint)] text-[var(--brand)]",
+  ENTERPRISE: "bg-[rgba(168,85,247,0.08)] text-[#a855f7]",
+};
+
+function getInitials(name?: string | null, email?: string | null) {
+  if (name) return name.charAt(0).toUpperCase();
+  if (email) return email.charAt(0).toUpperCase();
+  return "U";
+}
+
 export function DashboardNavbar({ user }: DashboardNavbarProps) {
-  const pathname = usePathname();
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const getInitials = (name?: string | null, email?: string | null) => {
-    if (name) return name.charAt(0).toUpperCase();
-    if (email) return email.charAt(0).toUpperCase();
-    return "U";
-  };
-
-  const getUserPlan = () => {
-    const plan = user?.plan || "FREE";
-    const colors = {
-      FREE: "bg-green-500/10 text-green-500 border-green-500/20",
-      PRO: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-      ENTERPRISE: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-    };
-    return {
-      label: plan,
-      color: colors[plan as keyof typeof colors] || colors.FREE,
-    };
-  };
-
-  const userPlan = getUserPlan();
+  const plan = (user?.plan || "FREE").toUpperCase();
+  const planStyle = PLAN_STYLES[plan] ?? PLAN_STYLES.FREE;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-      {/* Mobile Menu Button */}
+    <header
+      className="sticky top-0 z-30 flex h-14 items-center gap-4 px-5"
+      style={{
+        background: "var(--card)",
+        borderBottom: "1px solid var(--border)",
+        backdropFilter: "blur(10px)",
+      }}
+    >
+      {/* Mobile sidebar toggle */}
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden"
-        onClick={() => {
-          const event = new CustomEvent("toggle-sidebar");
-          window.dispatchEvent(event);
-        }}
+        className="md:hidden h-8 w-8 text-[var(--text-muted)]"
+        onClick={() => window.dispatchEvent(new CustomEvent("toggle-sidebar"))}
       >
-        <Menu className="h-5 w-5" />
+        <Menu className="h-4 w-4" />
       </Button>
 
-      {/* Search Bar */}
-      <div className="flex-1 max-w-md">
+      {/* Search */}
+      <div className="flex-1 max-w-sm">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5"
+            style={{ color: "var(--text-disabled)" }}
+          />
           <Input
             type="search"
-            placeholder="Search audits, contracts..."
-            className="pl-8 w-full"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search audits…"
+            className="pl-9 h-8 text-sm border-0 focus-visible:ring-1"
+            style={{
+              background: "var(--elevated)",
+              color: "var(--text-primary)",
+              fontFamily: "'Satoshi', sans-serif",
+            }}
           />
         </div>
       </div>
 
-      {/* Right Side Actions */}
-      <div className="flex items-center gap-2 ml-auto">
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
+      {/* Right */}
+      <div className="flex items-center gap-1.5 ml-auto">
+        {/* Notification bell */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative h-8 w-8 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        >
           <Bell className="h-4 w-4" />
-          <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
+          <span
+            className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+            style={{ background: "var(--brand)" }}
+          >
             3
-          </Badge>
+          </span>
         </Button>
 
-        {/* Theme Toggle */}
         <ThemeToggle />
 
-        {/* User Menu */}
+        {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+            <Button
+              variant="ghost"
+              className="relative h-8 w-8 rounded-full p-0 hover:ring-2 hover:ring-[var(--border-strong)]"
+            >
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary">
+                <AvatarFallback
+                  className="text-sm font-semibold"
+                  style={{
+                    background: "var(--brand-faint)",
+                    color: "var(--brand)",
+                    fontFamily: "'Syne', sans-serif",
+                  }}
+                >
                   {getInitials(user?.name, user?.email)}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
+              <div className="flex flex-col gap-1">
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--text-primary)", fontFamily: "'Syne', sans-serif" }}
+                >
                   {user?.name || "User"}
                 </p>
-                <p className="text-xs leading-none text-muted-foreground">
+                <p
+                  className="text-xs"
+                  style={{ color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}
+                >
                   {user?.email}
                 </p>
-                <div className="pt-1">
-                  <Badge variant="outline" className={userPlan.color}>
-                    {userPlan.label} Plan
-                  </Badge>
-                </div>
+                <span
+                  className={`mt-0.5 inline-flex w-fit rounded px-2 py-0.5 text-[11px] font-medium ${planStyle}`}
+                  style={{ fontFamily: "'Satoshi', sans-serif" }}
+                >
+                  {plan} Plan
+                </span>
               </div>
             </DropdownMenuLabel>
+
             <DropdownMenuSeparator />
+
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings" className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
-                Profile Settings
+                <User className="mr-2 h-3.5 w-3.5" />
+                Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/dashboard/billing" className="cursor-pointer">
-                <CreditCard className="mr-2 h-4 w-4" />
+                <CreditCard className="mr-2 h-3.5 w-3.5" />
                 Billing
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/help" className="cursor-pointer">
-                <HelpCircle className="mr-2 h-4 w-4" />
-                Help Center
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link href="/dashboard/settings" className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="mr-2 h-3.5 w-3.5" />
                 Settings
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/help" className="cursor-pointer">
+                <HelpCircle className="mr-2 h-3.5 w-3.5" />
+                Help
+              </Link>
+            </DropdownMenuItem>
+
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+
+            <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="text-red-600 focus:text-red-600"
+              className="text-destructive focus:text-destructive"
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
+              <LogOut className="mr-2 h-3.5 w-3.5" />
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,224 +1,193 @@
 "use client";
+// components/layout/DashboardSidebar.tsx
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  FileCode, 
-  Eye, 
-  History, 
-  CreditCard, 
+import {
+  LayoutDashboard,
+  History,
+  CreditCard,
   Settings,
   Shield,
-  Zap,
-  TrendingUp,
-  Menu,
-  X
+  PlusCircle,
+  Activity,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  {
-    label: "Overview",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Scan Contract",
-    href: "/dashboard/scan",
-    icon: FileCode,
-    badge: "New",
-  },
-  {
-    label: "Monitor",
-    href: "/dashboard/monitor",
-    icon: Eye,
-  },
-  {
-    label: "Audit History",
-    href: "/dashboard/history",
-    icon: History,
-  },
-  {
-    label: "Billing",
-    href: "/dashboard/billing",
-    icon: CreditCard,
-  },
-  {
-    label: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
+  { label: "Overview",      href: "/dashboard",          icon: LayoutDashboard },
+  { label: "Scan Contract", href: "/dashboard/scan",      icon: PlusCircle },
+  { label: "Monitor",       href: "/dashboard/monitor",   icon: Activity },
+  { label: "Audit History", href: "/dashboard/history",   icon: History },
+  { label: "Billing",       href: "/dashboard/billing",   icon: CreditCard },
+  { label: "Settings",      href: "/dashboard/settings",  icon: Settings },
 ];
 
-export function DashboardSidebar() {
+function SidebarContent() {
   const pathname = usePathname();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  useEffect(() => {
-    const handleToggle = () => setIsMobileOpen((prev) => !prev);
-    window.addEventListener("toggle-sidebar", handleToggle);
-    return () => window.removeEventListener("toggle-sidebar", handleToggle);
-  }, []);
-
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
-
-  const SidebarContent = () => (
-    <aside className="flex h-full flex-col bg-background border-r">
-      {/* Logo Section */}
-      <div className="flex h-16 items-center gap-2.5 border-b px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-          <Shield className="h-4 w-4 text-primary" />
+  return (
+    <aside
+      className="flex h-full flex-col"
+      style={{ background: "var(--sidebar)", borderRight: "1px solid var(--border)" }}
+    >
+      {/* Logo */}
+      <div
+        className="flex h-16 items-center gap-2.5 px-5 shrink-0"
+        style={{ borderBottom: "1px solid var(--border)" }}
+      >
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{ background: "var(--brand-faint)" }}
+        >
+          <Shield className="h-4 w-4" style={{ color: "var(--brand)" }} />
         </div>
-        <span className="text-lg font-bold text-foreground">
-          Audit<span className="text-primary">Smart</span>
+        <span
+          className="text-[17px] font-bold"
+          style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
+        >
+          Audit<span style={{ color: "var(--brand)" }}>Smart</span>
         </span>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-6 overflow-y-auto py-6">
-        <div className="px-3">
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Main Menu
-          </p>
-          <div className="space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || 
-                (item.href !== "/dashboard" && pathname?.startsWith(item.href));
-              
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    isActive 
-                      ? "bg-primary/10 text-primary font-medium" 
-                      : "text-muted-foreground"
-                  )}
-                >
-                  <Icon className={cn(
-                    "h-4 w-4",
-                    isActive && "text-primary"
-                  )} />
-                  <span className="flex-1">{item.label}</span>
-                  {item.badge && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+      <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
+        <p
+          className="px-2 mb-2 text-[10px] font-semibold uppercase tracking-widest"
+          style={{ fontFamily: "'DM Mono', monospace", color: "var(--text-disabled)" }}
+        >
+          Navigation
+        </p>
 
-        <Separator />
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname?.startsWith(item.href));
 
-        <div className="px-3">
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Quick Actions
-          </p>
-          <div className="space-y-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start gap-3 px-3 font-normal"
-              asChild
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2.5 text-[13.5px] font-medium transition-all",
+                isActive
+                  ? "text-[var(--brand)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              )}
+              style={{
+                fontFamily: "'Satoshi', sans-serif",
+                background: isActive ? "var(--brand-faint)" : "transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive)
+                  (e.currentTarget as HTMLElement).style.background =
+                    "var(--accent)";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive)
+                  (e.currentTarget as HTMLElement).style.background =
+                    "transparent";
+              }}
             >
-              <Link href="/dashboard/scan">
-                <Zap className="h-4 w-4" />
-                New Audit
-              </Link>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start gap-3 px-3 font-normal"
-              asChild
-            >
-              <Link href="/dashboard/monitor">
-                <Eye className="h-4 w-4" />
-                Monitor Contract
-              </Link>
-            </Button>
-          </div>
-        </div>
+              <Icon
+                className="h-4 w-4 shrink-0"
+                style={{ color: isActive ? "var(--brand)" : "var(--text-disabled)" }}
+              />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Upgrade Section */}
-      <div className="border-t p-4">
-        <div className="rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold text-foreground">
+      {/* Upgrade card */}
+      <div className="p-4 mt-auto shrink-0">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--brand-faint)",
+            border: "1px solid rgba(99,102,241,0.15)",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4" style={{ color: "var(--brand)" }} />
+            <span
+              className="text-sm font-semibold"
+              style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
+            >
               Upgrade to Pro
             </span>
           </div>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Get 20 audits/month and advanced features
+          <p
+            className="text-xs leading-relaxed mb-3"
+            style={{ color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}
+          >
+            Get 20 audits/month and access advanced AI models.
           </p>
-          <Button size="sm" className="w-full" asChild>
-            <Link href="/pricing">Upgrade Now</Link>
+          <Button
+            size="sm"
+            className="w-full text-white shadow-sm"
+            style={{ background: "var(--brand)" }}
+            asChild
+          >
+            <Link href="/pricing">Upgrade now</Link>
           </Button>
         </div>
       </div>
     </aside>
   );
+}
+
+export function DashboardSidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const handler = () => setMobileOpen((p) => !p);
+    window.addEventListener("toggle-sidebar", handler);
+    return () => window.removeEventListener("toggle-sidebar", handler);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block md:w-64 lg:w-72 flex-shrink-0">
+      {/* Desktop */}
+      <div className="hidden md:flex md:w-60 lg:w-64 flex-col shrink-0 h-screen sticky top-0">
         <SidebarContent />
       </div>
 
-      {/* Mobile Menu Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed left-4 top-4 z-50 md:hidden"
-        onClick={() => setIsMobileOpen(true)}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      {/* Mobile Sidebar */}
+      {/* Mobile drawer */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transform bg-background shadow-xl transition-transform duration-300 ease-in-out md:hidden",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 md:hidden",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="relative h-full">
-          {/* Close Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-2 z-10"
-            onClick={() => setIsMobileOpen(false)}
+          <button
+            className="absolute right-3 top-3 z-10 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--accent)]"
+            onClick={() => setMobileOpen(false)}
           >
             <X className="h-4 w-4" />
-          </Button>
+          </button>
           <SidebarContent />
         </div>
       </div>
-
-      {/* Mobile Overlay */}
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
     </>
   );
 }
