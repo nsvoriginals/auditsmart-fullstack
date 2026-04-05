@@ -1,17 +1,10 @@
 "use client";
-// src/app/pricing/page.tsx
 
 import React, { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Check, X, Sparkles, Zap, Shield, Crown, ArrowRight, Loader2 } from "lucide-react";
 
@@ -21,421 +14,247 @@ declare global {
   }
 }
 
-// Extend the Session type locally
 interface ExtendedSession {
-  user: {
-    id: string;
-    email: string;
-    name?: string | null;
-    role?: string;
-    plan?: string;  // Add plan property
-    image?: string | null;
-  }
+  user: { id: string; email: string; name?: string | null; role?: string; plan?: string; image?: string | null; }
 }
 
 const PLANS = [
   {
-    id: "free",
-    name: "Free",
-    price: "₹0",
-    period: "forever",
-    description: "Try before you commit",
-    icon: Shield,
-    features: [
-      "3 audits included",
-      "Groq LLaMA + Gemini analysis",
-      "PDF audit report",
-      "Community support",
-    ],
+    id: "free", name: "Free", price: "₹0", period: "forever",
+    description: "Try before you commit", icon: Shield,
+    features: ["3 audits included", "Groq LLaMA + Gemini analysis", "PDF audit report", "Community support"],
     missing: ["Fix suggestions", "Exploit scenarios", "Claude AI models"],
-    cta: "Start free",
-    ctaHref: "/register",
-    featured: false,
+    cta: "Start free", ctaHref: "/register", featured: false,
   },
   {
-    id: "pro",
-    name: "Pro",
-    price: "₹2,900",
-    period: "/month",
-    description: "For active developers",
-    icon: Zap,
-    features: [
-      "20 audits / month",
-      "Groq + Claude Haiku",
-      "PDF audit reports",
-      "Fix suggestions with code",
-      "Deployment verdict",
-      "Email support",
-    ],
+    id: "pro", name: "Pro", price: "₹2,900", period: "/month",
+    description: "For active developers", icon: Zap,
+    features: ["20 audits / month", "Groq + Claude Haiku", "PDF audit reports", "Fix suggestions with code", "Deployment verdict", "Email support"],
     missing: ["Exploit scenarios", "Claude Sonnet / Opus"],
-    cta: "Upgrade to Pro",
-    featured: true,
+    cta: "Upgrade to Pro", featured: true,
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "₹4,900",
-    period: "/month",
-    description: "For teams shipping to mainnet",
-    icon: Crown,
-    features: [
-      "50 audits / month",
-      "Groq + Claude Sonnet",
-      "PDF audit reports",
-      "Fix suggestions with code",
-      "Full exploit scenarios",
-      "Deployment verdict",
-      "API access",
-      "Priority support",
-    ],
-    missing: [],
-    cta: "Upgrade to Enterprise",
-    featured: false,
+    id: "enterprise", name: "Enterprise", price: "₹4,900", period: "/month",
+    description: "For teams shipping to mainnet", icon: Crown,
+    features: ["50 audits / month", "Groq + Claude Sonnet", "PDF audit reports", "Fix suggestions with code", "Full exploit scenarios", "Deployment verdict", "API access", "Priority support"],
+    missing: [], cta: "Upgrade to Enterprise", featured: false,
   },
 ];
 
-const DEEP_AUDIT = {
-  price: "₹1,650",
-  tagline: "~$20 USD · Available on any plan",
-  features: [
-    "Claude Opus — most powerful AI",
-    "Extended thinking — see full AI reasoning",
-    "Full exploit PoC for every critical finding",
-    "Production-ready patched code",
-    "Deployment verdict: SAFE / CAUTION / DO NOT DEPLOY",
-    "Priority processing",
-  ],
-};
+const DEEP_AUDIT_FEATURES = [
+  "Claude Opus — most powerful AI",
+  "Extended thinking — full AI reasoning",
+  "Full exploit PoC for every critical finding",
+  "Production-ready patched code",
+  "Deployment verdict: SAFE / CAUTION / DO NOT DEPLOY",
+  "Priority processing",
+];
 
 const FAQS = [
-  {
-    question: "Can I switch plans later?",
-    answer: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.",
-  },
-  {
-    question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards, debit cards, UPI, and net banking via Razorpay.",
-  },
-  {
-    question: "Is there a long-term contract?",
-    answer: "No, all plans are month-to-month. You can cancel anytime with no hidden fees.",
-  },
-  {
-    question: "Do you offer team discounts?",
-    answer: "Yes, for Enterprise plans we offer volume discounts. Contact sales for a custom quote.",
-  },
+  { q: "Can I switch plans later?", a: "Yes, you can upgrade or downgrade at any time. Changes take effect immediately." },
+  { q: "What payment methods do you accept?", a: "We accept all major credit cards, debit cards, UPI, and net banking via Razorpay." },
+  { q: "Is there a long-term contract?", a: "No, all plans are month-to-month. Cancel anytime with no hidden fees." },
+  { q: "Do you offer team discounts?", a: "Yes, for Enterprise plans we offer volume discounts. Contact sales for a custom quote." },
 ];
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
+  .pricing-root { background: #0a0a0f; min-height: 100vh; font-family: 'DM Mono', monospace; color: #f0f0f5; }
+  .pricing-inner { max-width: 1080px; margin: 0 auto; padding: 80px 24px; }
+  .pricing-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 100px; border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.08); color: #a5b4fc; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; }
+  .pricing-title { font-family: 'Syne', sans-serif; font-size: clamp(32px,5vw,52px); font-weight: 800; letter-spacing: -1.5px; color: #f0f0f5; margin-bottom: 14px; }
+  .pricing-sub { font-size: 13px; color: #6b6b85; max-width: 440px; margin: 0 auto; line-height: 1.8; }
+  .toggle-wrap { display: inline-flex; background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 10px; padding: 4px; gap: 2px; }
+  .toggle-btn { padding: 8px 20px; border: none; background: transparent; color: #6b6b85; font-family: 'DM Mono', monospace; font-size: 12px; border-radius: 7px; cursor: pointer; transition: all 0.15s; }
+  .toggle-btn.active { background: #1e1e2e; color: #f0f0f5; }
+  .save-pill { font-size: 10px; color: #a5b4fc; background: rgba(99,102,241,0.1); border-radius: 100px; padding: 2px 8px; margin-left: 6px; }
+  .plans-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin: 48px 0; }
+  .plan-card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; transition: border-color 0.2s; position: relative; }
+  .plan-card:hover { border-color: #2e2e45; }
+  .plan-card.featured { border-color: rgba(99,102,241,0.4); background: linear-gradient(145deg, #0e0e1f, #0e0e18); }
+  .plan-popular { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #6366f1; color: #fff; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 100px; font-weight: 500; }
+  .plan-icon { width: 36px; height: 36px; border-radius: 9px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.15); display: flex; align-items: center; justify-content: center; color: #a5b4fc; margin-bottom: 20px; }
+  .plan-name { font-size: 11px; color: #6b6b85; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .plan-price { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #f0f0f5; letter-spacing: -1px; }
+  .plan-period { font-size: 12px; color: #6b6b85; font-weight: 400; margin-left: 4px; }
+  .plan-desc { font-size: 12px; color: #6b6b85; margin: 8px 0 24px; }
+  .plan-divider { border: none; border-top: 1px solid #1e1e2e; margin: 0 0 20px; }
+  .plan-feature { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #a0a0b8; line-height: 1.5; }
+  .plan-missing { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #2e2e45; line-height: 1.5; }
+  .btn-plan-primary { margin-top: auto; padding: 11px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: background 0.15s; text-align: center; text-decoration: none; display: block; }
+  .btn-plan-primary:hover { background: #5254cc; }
+  .btn-plan-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-plan-ghost { margin-top: auto; padding: 11px; background: transparent; color: #6b6b85; border: 1px solid #1e1e2e; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; text-align: center; text-decoration: none; display: block; }
+  .btn-plan-ghost:hover { border-color: #2e2e45; color: #a0a0b8; }
+  .btn-plan-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+  .deep-card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; padding: 40px; margin-bottom: 72px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .deep-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 100px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #fbbf24; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+  .deep-price { font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 800; color: #f0f0f5; letter-spacing: -1px; }
+  .deep-tagline { font-size: 11px; color: #6b6b85; margin: 6px 0 28px; }
+  .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 60px; }
+  .faq-item { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 12px; padding: 24px; }
+  .faq-q { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; color: #e0e0f0; margin-bottom: 8px; }
+  .faq-a { font-size: 12px; color: #6b6b85; line-height: 1.8; }
+  .contact-line { text-align: center; font-size: 12px; color: #6b6b85; padding-top: 24px; border-top: 1px solid #1e1e2e; }
+  .contact-line a { color: #6366f1; text-decoration: none; }
+  .contact-line a:hover { text-decoration: underline; }
+  @media (max-width: 768px) { .plans-grid { grid-template-columns: 1fr; } .deep-card { grid-template-columns: 1fr; } .faq-grid { grid-template-columns: 1fr; } }
+`;
 
 export default function PricingPage() {
   const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
   const [paying, setPaying] = useState<string | null>(null);
-  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
+  const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
 
   const handleUpgrade = async (planId: string) => {
-    if (!session) {
-      router.push("/login?callbackUrl=/pricing");
-      return;
-    }
-
-    // FIX: Use optional chaining for session.user.plan
-    if (session.user?.plan === planId) {
-      toast.info("You're already on this plan");
-      return;
-    }
-
+    if (!session) { router.push("/login?callbackUrl=/pricing"); return; }
+    if (session.user?.plan === planId) { toast.info("You're already on this plan"); return; }
     setPaying(planId);
-
     try {
-      // Load Razorpay script if not loaded
       if (!window.Razorpay) {
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
-        document.body.appendChild(script);
-        await new Promise((resolve) => {
-          script.onload = resolve;
-        });
+        const s = document.createElement("script"); s.src = "https://checkout.razorpay.com/v1/checkout.js"; document.body.appendChild(s);
+        await new Promise(r => { s.onload = r; });
       }
-
-      const orderRes = await fetch("/api/payment/razorpay/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planId, interval: billingInterval }),
-      });
-
+      const orderRes = await fetch("/api/payment/razorpay/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId, interval }) });
       const order = await orderRes.json();
-
-      if (!orderRes.ok) {
-        toast.error(order.detail ?? "Order creation failed");
-        setPaying(null);
-        return;
-      }
-
+      if (!orderRes.ok) { toast.error(order.detail ?? "Order creation failed"); setPaying(null); return; }
       const rzp = new window.Razorpay({
-        key: order.key_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: "AuditSmart",
-        description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan — ${billingInterval === "yearly" ? "Yearly" : "Monthly"}`,
-        order_id: order.order_id,
-        theme: { color: "#272757" },
-        handler: async (response: {
-          razorpay_order_id: string;
-          razorpay_payment_id: string;
-          razorpay_signature: string;
-        }) => {
-          const verRes = await fetch("/api/payment/razorpay/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...response, plan: planId }),
-          });
-
-          const ver = await verRes.json();
-
-          if (ver.status === "success") {
-            toast.success(`Upgraded to ${planId}! Refreshing session...`);
-            setTimeout(() => router.push("/dashboard"), 1500);
-          } else {
-            toast.error("Payment verification failed. Contact support.");
-          }
+        key: order.key_id, amount: order.amount, currency: order.currency, name: "AuditSmart",
+        description: `${planId} Plan`, order_id: order.order_id, theme: { color: "#6366f1" },
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          const ver = await fetch("/api/payment/razorpay/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...response, plan: planId }) }).then(r => r.json());
+          if (ver.status === "success") { toast.success(`Upgraded to ${planId}!`); setTimeout(() => router.push("/dashboard"), 1500); }
+          else toast.error("Payment verification failed.");
         },
       });
-
       rzp.open();
-    } catch (error) {
-      console.error("Payment error:", error);
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setPaying(null);
-    }
+    } catch { toast.error("Something went wrong."); }
+    finally { setPaying(null); }
   };
 
-  const getAnnualPrice = (monthlyPrice: string) => {
-    const match = monthlyPrice.match(/₹([\d,]+)/);
-    if (!match) return monthlyPrice;
-    const price = parseInt(match[1].replace(/,/g, ""));
-    const annualPrice = Math.floor(price * 10); // 2 months free
-    return `₹${annualPrice.toLocaleString()}`;
+  const annualPrice = (p: string) => {
+    const m = p.match(/₹([\d,]+)/); if (!m) return p;
+    return `₹${(parseInt(m[1].replace(/,/g, "")) * 10).toLocaleString()}`;
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="pricing-root">
+      <style dangerouslySetInnerHTML={{ __html: css }} />
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24">
+      <div className="pricing-inner">
         {/* Header */}
-        <div className="text-center mb-12 md:mb-16">
-          <Badge variant="secondary" className="mb-4">
-            Pricing
-          </Badge>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4">
-            Simple, transparent pricing
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Start free with 3 audits. Upgrade when your contracts need more protection.
-          </p>
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <div className="pricing-badge">Pricing</div>
+          <h1 className="pricing-title">Simple, transparent pricing</h1>
+          <p className="pricing-sub">Start free with 3 audits. Upgrade when your contracts need more protection.</p>
         </div>
 
-        {/* Billing Toggle */}
-        <div className="flex justify-center mb-12">
-          <Tabs
-            defaultValue="monthly"
-            value={billingInterval}
-            onValueChange={(v) => setBillingInterval(v as "monthly" | "yearly")}
-            className="w-[300px]"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              <TabsTrigger value="yearly">
-                Yearly
-                <Badge variant="secondary" className="ml-2 text-[10px]">
-                  Save 20%
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        {/* Toggle */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 0 }}>
+          <div className="toggle-wrap">
+            <button className={`toggle-btn ${interval === "monthly" ? "active" : ""}`} onClick={() => setInterval("monthly")}>Monthly</button>
+            <button className={`toggle-btn ${interval === "yearly" ? "active" : ""}`} onClick={() => setInterval("yearly")}>
+              Yearly <span className="save-pill">Save 20%</span>
+            </button>
+          </div>
         </div>
 
-        {/* Plan Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-20">
-          {PLANS.map((plan) => {
+        {/* Plans */}
+        <div className="plans-grid">
+          {PLANS.map(plan => {
             const Icon = plan.icon;
-            // FIX: Use optional chaining for session.user?.plan
             const isCurrent = session?.user?.plan === plan.id;
-            const isDisabled = paying !== null;
-            const displayPrice = billingInterval === "yearly" && plan.id !== "free"
-              ? getAnnualPrice(plan.price)
-              : plan.price;
-            const displayPeriod = billingInterval === "yearly" && plan.id !== "free"
-              ? "/year"
-              : plan.period;
+            const displayPrice = interval === "yearly" && plan.id !== "free" ? annualPrice(plan.price) : plan.price;
+            const displayPeriod = interval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
 
             return (
-              <Card
-                key={plan.id}
-                className={`relative flex flex-col transition-all duration-300 ${
-                  plan.featured
-                    ? "border-primary shadow-lg scale-105 md:scale-105"
-                    : "hover:shadow-md hover:-translate-y-1"
-                }`}
-              >
-                {plan.featured && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground">
-                      Most Popular
-                    </Badge>
-                  </div>
-                )}
+              <div key={plan.id} className={`plan-card ${plan.featured ? "featured" : ""}`}>
+                {plan.featured && <div className="plan-popular">Most Popular</div>}
+                <div className="plan-icon"><Icon size={16} /></div>
+                <div className="plan-name">{plan.name}</div>
+                <div>
+                  <span className="plan-price">{displayPrice}</span>
+                  <span className="plan-period">{displayPeriod}</span>
+                </div>
+                <div className="plan-desc">{plan.description}</div>
+                <hr className="plan-divider" />
 
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="outline" className="text-sm">
-                      {plan.name}
-                    </Badge>
-                    <Icon className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <CardTitle className="text-3xl font-bold">
-                    {displayPrice}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">
-                      {displayPeriod}
-                    </span>
-                  </CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                </CardHeader>
+                <div style={{ flex: 1 }}>
+                  {plan.features.map(f => (
+                    <div key={f} className="plan-feature">
+                      <Check size={12} color="#6ee7b7" style={{ flexShrink: 0, marginTop: 2 }} />{f}
+                    </div>
+                  ))}
+                  {plan.missing.map(f => (
+                    <div key={f} className="plan-missing">
+                      <X size={12} style={{ flexShrink: 0, marginTop: 2 }} />{f}
+                    </div>
+                  ))}
+                </div>
 
-                <CardContent className="flex-1">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                    {plan.missing.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 opacity-50">
-                        <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-
-                <CardFooter>
+                <div style={{ marginTop: 28 }}>
                   {plan.id === "free" ? (
-                    isCurrent ? (
-                      <Button variant="outline" className="w-full" disabled>
-                        Current Plan
-                      </Button>
-                    ) : (
-                      <Button asChild variant="outline" className="w-full">
-                        <Link href={plan.ctaHref!}>{plan.cta}</Link>
-                      </Button>
+                    isCurrent
+                      ? <button className="btn-plan-ghost" disabled>Current Plan</button>
+                      : <Link href={plan.ctaHref!} className="btn-plan-primary">{plan.cta}</Link>
+                  ) : isCurrent
+                    ? <button className="btn-plan-ghost" disabled>Current Plan</button>
+                    : (
+                      <button
+                        className={plan.featured ? "btn-plan-primary" : "btn-plan-ghost"}
+                        onClick={() => handleUpgrade(plan.id)}
+                        disabled={paying !== null}
+                        style={{ width: "100%" }}
+                      >
+                        {paying === plan.id ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><Loader2 size={12} style={{ animation: "spin 0.7s linear infinite" }} /> Processing…</span> : plan.cta}
+                      </button>
                     )
-                  ) : isCurrent ? (
-                    <Button variant="outline" className="w-full" disabled>
-                      Current Plan
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => handleUpgrade(plan.id)}
-                      disabled={isDisabled}
-                      className={`w-full ${plan.featured ? "bg-primary hover:bg-primary/90" : ""}`}
-                    >
-                      {paying === plan.id ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        plan.cta
-                      )}
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
+                  }
+                </div>
+              </div>
             );
           })}
         </div>
 
-        {/* Deep Audit Add-on */}
-        <Card className="mb-20 border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-primary/5">
-          <CardContent className="p-8">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                  <Badge variant="secondary" className="font-mono">
-                    Add-on
-                  </Badge>
-                  <span className="font-semibold text-lg">Deep Audit</span>
-                </div>
-                <div className="mb-2">
-                  <span className="text-4xl font-bold">{DEEP_AUDIT.price}</span>
-                  <span className="text-muted-foreground ml-2">per audit</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-6">{DEEP_AUDIT.tagline}</p>
-                <Button asChild>
-                  <Link href="/dashboard/scan">
-                    Request Deep Audit
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              <div>
-                <ul className="space-y-3">
-                  {DEEP_AUDIT.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-muted-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* FAQ Section */}
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            FAQ
-          </Badge>
-          <h2 className="text-3xl font-bold text-foreground mb-4">
-            Frequently asked questions
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Everything you need to know about our pricing and plans
-          </p>
+        {/* Deep Audit */}
+        <div className="deep-card">
+          <div>
+            <div className="deep-tag"><Sparkles size={10} /> Add-on</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 22, color: "#f0f0f5", marginBottom: 12 }}>Deep Audit</div>
+            <div className="deep-price">₹1,650 <span style={{ fontSize: 14, fontWeight: 400, color: "#6b6b85" }}>per audit</span></div>
+            <div className="deep-tagline">~$20 USD · Available on any plan</div>
+            <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "#6366f1", color: "#fff", borderRadius: 8, fontSize: 12, textDecoration: "none", fontFamily: "'DM Mono', monospace" }}>
+              Request Deep Audit <ArrowRight size={12} />
+            </Link>
+          </div>
+          <div>
+            {DEEP_AUDIT_FEATURES.map(f => (
+              <div key={f} className="plan-feature"><Check size={12} color="#a5b4fc" style={{ flexShrink: 0, marginTop: 2 }} />{f}</div>
+            ))}
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-16">
-          {FAQS.map((faq, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-lg">{faq.question}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-sm">
-                  {faq.answer}
-                </CardDescription>
-              </CardContent>
-            </Card>
+        {/* FAQ */}
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div className="pricing-badge" style={{ marginBottom: 16 }}>FAQ</div>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.5px", color: "#f0f0f5" }}>Frequently asked questions</h2>
+        </div>
+
+        <div className="faq-grid">
+          {FAQS.map(faq => (
+            <div key={faq.q} className="faq-item">
+              <div className="faq-q">{faq.q}</div>
+              <div className="faq-a">{faq.a}</div>
+            </div>
           ))}
         </div>
 
-        {/* Contact Section */}
-        <div className="text-center">
-          <Separator className="mb-8" />
-          <p className="text-muted-foreground">
-            Questions? Email us at{" "}
-            <a
-              href="mailto:hello@auditsmart.io"
-              className="text-primary hover:underline font-medium"
-            >
-              hello@auditsmart.io
-            </a>
-            {" "}— we respond within 24 hours.
-          </p>
+        <div className="contact-line">
+          Questions? Email us at{" "}
+          <a href="mailto:hello@auditsmart.io">hello@auditsmart.io</a>
+          {" "}— we respond within 24 hours.
         </div>
       </div>
     </div>

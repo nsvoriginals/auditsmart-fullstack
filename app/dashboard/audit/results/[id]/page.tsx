@@ -2,48 +2,94 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { 
-  AlertTriangle, Shield, Clock, Brain, CheckCircle, 
-  XCircle, AlertCircle, ChevronDown, ChevronUp, 
-  Download, ArrowLeft, Loader2, FileText, Share2,
-  TrendingUp, Zap, Award, BarChart3
+import {
+  AlertTriangle, Shield, Brain, CheckCircle, XCircle,
+  AlertCircle, ChevronDown, ChevronUp, Download, ArrowLeft,
+  Loader2, FileText, Share2, Zap, Award, BarChart3
 } from "lucide-react";
 
-interface Finding {
-  id: string;
-  title: string;
-  severity: string;
-  description: string;
-  recommendation: string;
-  lineNumber: string | null;
+interface Finding { id: string; title: string; severity: string; description: string; recommendation: string; lineNumber: string | null; }
+interface AuditData {
+  id: string; contractName: string; status: string; score: number; summary: string;
+  report: { risk_level: string; risk_score: number; total_findings: number; critical_count: number; high_count: number; medium_count: number; low_count: number; info_count: number; agents_used: string[]; scan_duration_ms: number; deployment_verdict?: string; thinking_chain?: string; findings?: Finding[]; plan_used?: string; has_fix_suggestions?: boolean; };
+  createdAt: string; findings: Finding[];
 }
 
-interface AuditData {
-  id: string;
-  contractName: string;
-  status: string;
-  score: number;
-  summary: string;
-  report: {
-    risk_level: string;
-    risk_score: number;
-    total_findings: number;
-    critical_count: number;
-    high_count: number;
-    medium_count: number;
-    low_count: number;
-    info_count: number;
-    agents_used: string[];
-    scan_duration_ms: number;
-    deployment_verdict?: string;
-    thinking_chain?: string;
-    findings?: Finding[];
-    plan_used?: string;
-    has_fix_suggestions?: boolean;
-  };
-  createdAt: string;
-  findings: Finding[];
-}
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
+  .results-root { font-family: 'DM Mono', monospace; color: #f0f0f5; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 36px; }
+  .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 8px; color: #6b6b85; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+  .btn-back:hover { color: #f0f0f5; border-color: #2e2e45; }
+  .btn-actions { display: flex; gap: 10px; }
+  .btn-action { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .btn-action-ghost { background: #0e0e18; border: 1px solid #1e1e2e; color: #6b6b85; }
+  .btn-action-ghost:hover { border-color: #2e2e45; color: #f0f0f5; }
+  .btn-action-primary { background: #6366f1; border: none; color: #fff; }
+  .btn-action-primary:hover { background: #5254cc; }
+  .btn-action-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .contract-title-area { text-align: center; margin-bottom: 36px; }
+  .audit-label { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #a5b4fc; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+  .contract-name { font-family: 'Syne', sans-serif; font-size: clamp(24px,4vw,36px); font-weight: 800; color: #f0f0f5; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .contract-meta { font-size: 11px; color: #3a3a55; }
+  .score-card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; padding: 32px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap; margin-bottom: 16px; }
+  .gauge-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+  .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge-score { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; color: #f0f0f5; line-height: 1; }
+  .gauge-label { font-size: 9px; color: #6b6b85; margin-top: 2px; }
+  .risk-chip { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
+  .counts-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; flex: 1; }
+  .count-item { text-align: center; }
+  .count-num { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
+  .count-lbl { font-size: 10px; color: #6b6b85; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 10px; padding: 16px; text-align: center; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: #f0f0f5; }
+  .stat-lbl { font-size: 10px; color: #6b6b85; margin-top: 4px; }
+  .section-card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; margin-bottom: 16px; overflow: hidden; }
+  .section-head { padding: 18px 24px; border-bottom: 1px solid #1e1e2e; display: flex; align-items: center; gap: 10px; }
+  .section-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #e0e0f0; }
+  .section-body { padding: 24px; }
+  .summary-text { font-size: 13px; line-height: 1.9; color: #a0a0b8; }
+  .verdict-box { margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-size: 12px; }
+  .thinking-body { padding: 20px 24px; }
+  .thinking-pre { background: #111118; border: 1px solid #1e1e2e; border-radius: 8px; padding: 16px; font-size: 11px; line-height: 1.8; color: #6b6b85; white-space: pre-wrap; overflow-x: auto; }
+  .findings-list { }
+  .finding-row { border-bottom: 1px solid #1e1e2e; }
+  .finding-row:last-child { border-bottom: none; }
+  .finding-trigger { width: 100%; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: none; border: none; color: #f0f0f5; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; text-align: left; transition: background 0.1s; }
+  .finding-trigger:hover { background: rgba(255,255,255,0.02); }
+  .finding-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .sev-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid; }
+  .line-chip { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: #111118; border: 1px solid #1e1e2e; color: #6b6b85; font-family: 'DM Mono', monospace; }
+  .finding-title { font-size: 13px; color: #e0e0f0; }
+  .finding-detail { padding: 16px 24px 24px; background: #080810; border-top: 1px solid #1e1e2e; }
+  .detail-label { font-size: 10px; color: #6b6b85; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .detail-text { font-size: 12px; color: #a0a0b8; line-height: 1.8; }
+  .reco-box { padding: 12px 16px; background: rgba(52,211,153,0.04); border: 1px solid rgba(52,211,153,0.1); border-radius: 8px; }
+  .empty-state { text-align: center; padding: 60px 24px; }
+  .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; gap: 12px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  .spin-sm { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 600px) { .counts-grid { grid-template-columns: repeat(2,1fr); } .stats-row { grid-template-columns: repeat(2,1fr); } }
+`;
+
+const SEVER = {
+  critical: { color: "rgba(239,68,68,0.12)", text: "#fca5a5", border: "rgba(239,68,68,0.2)" },
+  high:     { color: "rgba(249,115,22,0.12)", text: "#fdba74", border: "rgba(249,115,22,0.2)" },
+  medium:   { color: "rgba(234,179,8,0.12)",  text: "#fde047", border: "rgba(234,179,8,0.2)" },
+  low:      { color: "rgba(59,130,246,0.12)", text: "#93c5fd", border: "rgba(59,130,246,0.2)" },
+  info:     { color: "rgba(100,116,139,0.12)",text: "#94a3b8", border: "rgba(100,116,139,0.2)" },
+};
+
+const RISK = {
+  critical: { gauge: "#ef4444", text: "#fca5a5", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)" },
+  high:     { gauge: "#f97316", text: "#fdba74", bg: "rgba(249,115,22,0.08)", border: "rgba(249,115,22,0.2)" },
+  medium:   { gauge: "#eab308", text: "#fde047", bg: "rgba(234,179,8,0.08)", border: "rgba(234,179,8,0.2)" },
+  low:      { gauge: "#10b981", text: "#6ee7b7", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)" },
+  unknown:  { gauge: "#6366f1", text: "#a5b4fc", bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.2)" },
+};
 
 export default function AuditResultsPage() {
   const params = useParams();
@@ -52,385 +98,242 @@ export default function AuditResultsPage() {
   const [audit, setAudit] = useState<AuditData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
-  const [downloadingPDF, setDownloadingPDF] = useState(false);
-  const [shareSuccess, setShareSuccess] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
 
   const fetchAudit = useCallback(async () => {
     try {
-      const response = await fetch(`/api/audit/results/${auditId}`);
-      const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.error);
-      
+      const res = await fetch(`/api/audit/results/${auditId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       setAudit(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load audit");
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed to load audit"); }
+    finally { setLoading(false); }
   }, [auditId]);
 
-  useEffect(() => {
-    fetchAudit();
-  }, [fetchAudit]);
+  useEffect(() => { fetchAudit(); }, [fetchAudit]);
 
   const downloadPDF = async () => {
-    setDownloadingPDF(true);
+    setPdfLoading(true);
     try {
-      const response = await fetch(`/api/audit/report/${auditId}/pdf`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate PDF");
-      }
-
-      const blob = await response.blob();
+      const res = await fetch(`/api/audit/report/${auditId}/pdf`);
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
+      const a = document.createElement("a"); a.href = url;
       a.download = `Audit_Report_${audit?.contractName?.replace(/[^a-z0-9]/gi, "_") || "contract"}_${auditId.slice(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF download error:", err);
-      alert(err instanceof Error ? err.message : "Failed to download PDF");
-    } finally {
-      setDownloadingPDF(false);
-    }
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    } catch (e) { alert(e instanceof Error ? e.message : "Failed to download PDF"); }
+    finally { setPdfLoading(false); }
   };
 
-  const shareResults = async () => {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareSuccess(true);
-      setTimeout(() => setShareSuccess(false), 3000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
+  const share = async () => {
+    await navigator.clipboard.writeText(window.location.href).catch(() => {});
+    setCopied(true); setTimeout(() => setCopied(false), 2500);
   };
 
-  const toggleFinding = (id: string) => {
-    const newExpanded = new Set(expandedFindings);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedFindings(newExpanded);
+  const toggle = (id: string) => {
+    const s = new Set(expanded);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setExpanded(s);
   };
 
-  const getRiskColor = (level: string) => {
-    switch (level?.toLowerCase()) {
-      case "critical": return { bg: "bg-red-500/10", border: "border-red-500/20", text: "text-red-400", glow: "shadow-red-500/20" };
-      case "high": return { bg: "bg-orange-500/10", border: "border-orange-500/20", text: "text-orange-400", glow: "shadow-orange-500/20" };
-      case "medium": return { bg: "bg-yellow-500/10", border: "border-yellow-500/20", text: "text-yellow-400", glow: "shadow-yellow-500/20" };
-      case "low": return { bg: "bg-blue-500/10", border: "border-blue-500/20", text: "text-blue-400", glow: "shadow-blue-500/20" };
-      default: return { bg: "bg-green-500/10", border: "border-green-500/20", text: "text-green-400", glow: "shadow-green-500/20" };
-    }
-  };
+  if (loading) return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+      <div className="loading-state"><div className="spinner" /><span style={{ fontSize: 12, color: "#6b6b85" }}>Loading audit results…</span></div>
+    </>
+  );
 
-  const getSeverityBadge = (severity: string) => {
-    const config = {
-      critical: { color: "bg-red-500/20 text-red-400 border-red-500/30", icon: AlertCircle },
-      high: { color: "bg-orange-500/20 text-orange-400 border-orange-500/30", icon: AlertTriangle },
-      medium: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: AlertTriangle },
-      low: { color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Shield },
-      info: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: CheckCircle },
-    };
-    const c = config[severity.toLowerCase() as keyof typeof config] || config.info;
-    const Icon = c.icon;
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${c.color}`}>
-        <Icon className="w-3 h-3" />
-        {severity.toUpperCase()}
-      </span>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[var(--plum-light)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[var(--text-secondary)]">Loading audit results...</p>
+  if (error || !audit) return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+      <div style={{ maxWidth: 500, margin: "80px auto", padding: 32, background: "#0e0e18", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <XCircle size={18} color="#ef4444" />
+          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 16, color: "#fca5a5" }}>Error loading audit</span>
         </div>
+        <p style={{ fontSize: 12, color: "#6b6b85", marginBottom: 20 }}>{error || "Audit not found"}</p>
+        <button onClick={() => router.push("/dashboard/audit")} style={{ padding: "10px 20px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>
+          Start New Audit
+        </button>
       </div>
-    );
-  }
-
-  if (error || !audit) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="p-6 rounded-lg bg-red-500/10 border border-red-500/20">
-          <div className="flex items-center gap-3 mb-3">
-            <XCircle className="w-6 h-6 text-red-500" />
-            <h2 className="text-xl font-semibold text-red-500">Error</h2>
-          </div>
-          <p className="text-[var(--text-secondary)]">{error || "Audit not found"}</p>
-          <button
-            onClick={() => router.push("/dashboard/audit")}
-            className="mt-4 px-4 py-2 rounded-md bg-[var(--plum)] text-white hover:bg-[var(--plum-light)] transition-colors"
-          >
-            Start New Audit
-          </button>
-        </div>
-      </div>
-    );
-  }
+    </>
+  );
 
   const report = audit.report;
   const findings = audit.findings || report?.findings || [];
-  const riskInfo = getRiskColor(report?.risk_level || "unknown");
+  const riskKey = (report?.risk_level?.toLowerCase() as keyof typeof RISK) || "unknown";
+  const riskStyle = RISK[riskKey] || RISK.unknown;
   const riskScore = report?.risk_score || audit.score || 0;
-  
+  const circumference = 2 * Math.PI * 52;
+  const dash = (riskScore / 100) * circumference;
+
   return (
-    <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <button
-          onClick={() => router.push("/dashboard/audit")}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          New Audit
-        </button>
-        
-        <div className="flex items-center gap-2">
-          <button
-            onClick={shareResults}
-            className="px-4 py-2 rounded-lg border border-border bg-card text-foreground hover:bg-accent transition-all flex items-center gap-2"
-          >
-            <Share2 className="w-4 h-4" />
-            {shareSuccess ? "Copied!" : "Share"}
-          </button>
-          
-          <button
-            onClick={downloadPDF}
-            disabled={downloadingPDF}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50"
-          >
-            {downloadingPDF ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Export PDF
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+      <div className="results-root">
 
-      {/* Title Section */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-          <FileText className="w-3 h-3 text-primary" />
-          <span className="text-xs font-medium text-primary">AUDIT REPORT</span>
+        {/* Top bar */}
+        <div className="top-bar">
+          <button className="btn-back" onClick={() => router.push("/dashboard/audit")}>
+            <ArrowLeft size={12} /> New Audit
+          </button>
+          <div className="btn-actions">
+            <button className="btn-action btn-action-ghost" onClick={share}>
+              <Share2 size={12} /> {copied ? "Copied!" : "Share"}
+            </button>
+            <button className="btn-action btn-action-primary" onClick={downloadPDF} disabled={pdfLoading}>
+              {pdfLoading ? <><div className="spin-sm" /> Generating…</> : <><Download size={12} /> Export PDF</>}
+            </button>
+          </div>
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground">{audit.contractName}</h1>
-        <p className="text-muted-foreground">
-          Completed on {new Date(audit.createdAt).toLocaleDateString()} • 
-          <span className="ml-1 font-mono">{report?.scan_duration_ms ? Math.round(report.scan_duration_ms / 1000) : 0}s scan time</span>
-        </p>
-      </div>
 
-      {/* Risk Score Gauge */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="text-center">
-            <div className="relative w-32 h-32 mx-auto">
-              <svg className="w-32 h-32 transform -rotate-90">
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  fill="none"
-                  stroke="var(--muted)"
-                  strokeWidth="12"
-                />
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  fill="none"
-                  stroke="url(#riskGradient)"
-                  strokeWidth="12"
-                  strokeDasharray={`${(riskScore / 100) * 351.86} 351.86`}
-                  strokeLinecap="round"
-                />
-                <defs>
-                  <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#10b981" />
-                    <stop offset="50%" stopColor="#f59e0b" />
-                    <stop offset="100%" stopColor="#ef4444" />
-                  </linearGradient>
-                </defs>
+        {/* Title */}
+        <div className="contract-title-area">
+          <div className="audit-label"><FileText size={10} /> Audit Report</div>
+          <div className="contract-name">{audit.contractName}</div>
+          <div className="contract-meta">
+            Completed {new Date(audit.createdAt).toLocaleDateString()} &nbsp;·&nbsp;
+            <span style={{ fontFamily: "'DM Mono', monospace" }}>{report?.scan_duration_ms ? Math.round(report.scan_duration_ms / 1000) : 0}s scan</span>
+          </div>
+        </div>
+
+        {/* Score card */}
+        <div className="score-card">
+          <div>
+            <div className="gauge-wrap">
+              <svg width="120" height="120" style={{ transform: "rotate(-90deg)" }}>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#1e1e2e" strokeWidth="10" />
+                <circle cx="60" cy="60" r="52" fill="none" stroke={riskStyle.gauge} strokeWidth="10"
+                  strokeDasharray={`${dash} ${circumference}`} strokeLinecap="round" />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-foreground">{riskScore}</span>
-                <span className="text-xs text-muted-foreground">/100</span>
+              <div className="gauge-center">
+                <div className="gauge-score">{riskScore}</div>
+                <div className="gauge-label">/100</div>
               </div>
             </div>
-            <div className="mt-2">
-              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${riskInfo.bg} ${riskInfo.text}`}>
-                {report?.risk_level?.toUpperCase()} RISK
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <span className="risk-chip" style={{ background: riskStyle.bg, color: riskStyle.text, border: `1px solid ${riskStyle.border}` }}>
+                {report?.risk_level?.toUpperCase() || "UNKNOWN"} RISK
               </span>
             </div>
           </div>
 
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-500">{report?.critical_count || 0}</div>
-              <div className="text-xs text-muted-foreground">Critical</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-500">{report?.high_count || 0}</div>
-              <div className="text-xs text-muted-foreground">High</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-500">{report?.medium_count || 0}</div>
-              <div className="text-xs text-muted-foreground">Medium</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-500">{report?.low_count || 0}</div>
-              <div className="text-xs text-muted-foreground">Low</div>
-            </div>
+          <div className="counts-grid">
+            <div className="count-item"><div className="count-num" style={{ color: "#fca5a5" }}>{report?.critical_count || 0}</div><div className="count-lbl">Critical</div></div>
+            <div className="count-item"><div className="count-num" style={{ color: "#fdba74" }}>{report?.high_count || 0}</div><div className="count-lbl">High</div></div>
+            <div className="count-item"><div className="count-num" style={{ color: "#fde047" }}>{report?.medium_count || 0}</div><div className="count-lbl">Medium</div></div>
+            <div className="count-item"><div className="count-num" style={{ color: "#93c5fd" }}>{report?.low_count || 0}</div><div className="count-lbl">Low</div></div>
           </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-card rounded-lg border border-border p-3 text-center">
-          <AlertTriangle className="w-4 h-4 text-primary mx-auto mb-1" />
-          <div className="text-xl font-bold text-foreground">{report?.total_findings || findings.length}</div>
-          <div className="text-xs text-muted-foreground">Total Findings</div>
+        {/* Stats */}
+        <div className="stats-row">
+          {[
+            { icon: <AlertTriangle size={13} />, val: report?.total_findings || findings.length, lbl: "Total Findings" },
+            { icon: <Brain size={13} />, val: report?.agents_used?.length || 0, lbl: "AI Agents" },
+            { icon: <Zap size={13} />, val: report?.plan_used || "Free", lbl: "Plan Used" },
+            { icon: <Award size={13} />, val: report?.has_fix_suggestions ? "Yes" : "No", lbl: "Fix Suggestions" },
+          ].map(s => (
+            <div key={s.lbl} className="stat-card">
+              <div style={{ color: "#a5b4fc", marginBottom: 6 }}>{s.icon}</div>
+              <div className="stat-val">{s.val}</div>
+              <div className="stat-lbl">{s.lbl}</div>
+            </div>
+          ))}
         </div>
-        
-        <div className="bg-card rounded-lg border border-border p-3 text-center">
-          <Brain className="w-4 h-4 text-primary mx-auto mb-1" />
-          <div className="text-xl font-bold text-foreground">{report?.agents_used?.length || 0}</div>
-          <div className="text-xs text-muted-foreground">AI Agents</div>
-        </div>
-        
-        <div className="bg-card rounded-lg border border-border p-3 text-center">
-          <Zap className="w-4 h-4 text-primary mx-auto mb-1" />
-          <div className="text-xl font-bold text-foreground capitalize">{report?.plan_used || "Free"}</div>
-          <div className="text-xs text-muted-foreground">Plan Used</div>
-        </div>
-        
-        <div className="bg-card rounded-lg border border-border p-3 text-center">
-          <Award className="w-4 h-4 text-primary mx-auto mb-1" />
-          <div className="text-xl font-bold text-foreground">
-            {report?.has_fix_suggestions ? "Yes" : "No"}
+
+        {/* Executive Summary */}
+        <div className="section-card">
+          <div className="section-head">
+            <BarChart3 size={14} color="#a5b4fc" />
+            <span className="section-title">Executive Summary</span>
           </div>
-          <div className="text-xs text-muted-foreground">Fix Suggestions</div>
+          <div className="section-body">
+            <p className="summary-text">{audit.summary}</p>
+            {report?.deployment_verdict && (
+              <div className="verdict-box" style={{ background: riskStyle.bg, border: `1px solid ${riskStyle.border}` }}>
+                <span style={{ color: riskStyle.text, fontWeight: 500, fontSize: 11 }}>Deployment Verdict: </span>
+                <span style={{ fontSize: 12, color: "#a0a0b8" }}>{report.deployment_verdict}</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Executive Summary */}
-      <div className="bg-gradient-to-r from-primary/5 to-transparent rounded-xl border border-border p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-primary" />
-          Executive Summary
-        </h2>
-        <p className="text-foreground leading-relaxed">{audit.summary}</p>
-        
-        {report?.deployment_verdict && (
-          <div className={`mt-4 p-3 rounded-lg border ${riskInfo.border} ${riskInfo.bg}`}>
-            <p className="text-sm">
-              <strong className={riskInfo.text}>Deployment Verdict:</strong>{' '}
-              <span className="text-foreground">{report.deployment_verdict}</span>
-            </p>
+        {/* AI Thinking */}
+        {report?.thinking_chain && (
+          <div className="section-card">
+            <div className="section-head" style={{ cursor: "pointer" }} onClick={() => setShowThinking(!showThinking)}>
+              <Brain size={14} color="#a5b4fc" />
+              <span className="section-title">AI Extended Thinking</span>
+              <div style={{ marginLeft: "auto", color: "#6b6b85" }}>{showThinking ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</div>
+            </div>
+            {showThinking && (
+              <div className="thinking-body">
+                <pre className="thinking-pre">{report.thinking_chain}</pre>
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      {/* AI Thinking Chain */}
-      {report?.thinking_chain && (
-        <div className="bg-purple-500/5 rounded-xl border border-purple-500/20 p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Brain className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-purple-400">AI Extended Thinking</h2>
+        {/* Findings */}
+        <div className="section-card">
+          <div className="section-head">
+            <AlertTriangle size={14} color="#a5b4fc" />
+            <span className="section-title">Security Findings ({findings.length})</span>
           </div>
-          <details className="group">
-            <summary className="text-sm text-muted-foreground cursor-pointer hover:text-purple-400 transition-colors">
-              Click to view Claude Opus reasoning chain
-            </summary>
-            <div className="mt-3 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-              <p className="text-sm text-foreground whitespace-pre-wrap font-mono text-xs">
-                {report.thinking_chain}
-              </p>
+
+          {findings.length === 0 ? (
+            <div className="empty-state">
+              <Shield size={40} color="#6ee7b7" style={{ marginBottom: 16 }} />
+              <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 16, color: "#f0f0f5", marginBottom: 8 }}>No Vulnerabilities Found</div>
+              <div style={{ fontSize: 12, color: "#6b6b85" }}>Your contract looks secure. Great work!</div>
             </div>
-          </details>
-        </div>
-      )}
+          ) : (
+            <div className="findings-list">
+              {findings.map((f, i) => {
+                const key = f.id || String(i);
+                const sev = f.severity.toLowerCase() as keyof typeof SEVER;
+                const s = SEVER[sev] || SEVER.info;
+                const isOpen = expanded.has(key);
 
-      {/* Findings Section */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="px-6 py-4 border-b border-border bg-muted/30">
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-primary" />
-            Security Findings ({findings.length})
-          </h2>
-        </div>
-        
-        {findings.length === 0 ? (
-          <div className="text-center py-12">
-            <Shield className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Vulnerabilities Found!</h3>
-            <p className="text-muted-foreground">Your contract looks secure. Great job!</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {findings.map((finding, idx) => (
-              <div key={finding.id || idx} className="transition-all">
-                <button
-                  onClick={() => toggleFinding(finding.id || String(idx))}
-                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-accent transition-all text-left"
-                >
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {getSeverityBadge(finding.severity)}
-                    <span className="font-medium text-foreground">{finding.title}</span>
-                    {finding.lineNumber && (
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                        Line {finding.lineNumber}
-                      </span>
+                return (
+                  <div key={key} className="finding-row">
+                    <button className="finding-trigger" onClick={() => toggle(key)}>
+                      <div className="finding-left">
+                        <span className="sev-badge" style={{ background: s.color, color: s.text, borderColor: s.border }}>
+                          {f.severity.toUpperCase()}
+                        </span>
+                        <span className="finding-title">{f.title}</span>
+                        {f.lineNumber && <span className="line-chip">Line {f.lineNumber}</span>}
+                      </div>
+                      {isOpen ? <ChevronUp size={14} color="#6b6b85" /> : <ChevronDown size={14} color="#6b6b85" />}
+                    </button>
+
+                    {isOpen && (
+                      <div className="finding-detail">
+                        <div style={{ marginBottom: 16 }}>
+                          <div className="detail-label">Description</div>
+                          <p className="detail-text">{f.description}</p>
+                        </div>
+                        <div>
+                          <div className="detail-label">Recommendation</div>
+                          <div className="reco-box">
+                            <p className="detail-text">{f.recommendation}</p>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                  {expandedFindings.has(finding.id || String(idx)) ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0 ml-2" />
-                  )}
-                </button>
-                
-                {expandedFindings.has(finding.id || String(idx)) && (
-                  <div className="px-6 pb-5 pt-2 border-t border-border bg-muted/20 space-y-4">
-                    <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-2">Description</h4>
-                      <p className="text-sm text-foreground leading-relaxed">{finding.description}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-2">Recommendation</h4>
-                      <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/20">
-                        <p className="text-sm text-foreground">{finding.recommendation}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

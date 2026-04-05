@@ -1,473 +1,244 @@
-// app/dashboard/payment/page.tsx
 "use client";
+// app/pricing/page.tsx
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Shield, Zap, Brain, Sparkles, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { toast } from "sonner";
+import { Check, X, Sparkles, Zap, Shield, Crown, ArrowRight, Loader2 } from "lucide-react";
 
 declare global {
   interface Window {
-    Razorpay: new (options: Record<string, unknown>) => {
-      open: () => void;
-    };
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
   }
+}
+
+interface ExtendedSession {
+  user: { id: string; email: string; name?: string | null; plan?: string; };
 }
 
 const PLANS = [
   {
-    id: "pro",
-    name: "Pro Plan",
-    price: 2999, // ₹2,999 in rupees
-    priceDisplay: "₹2,999",
-    description: "Perfect for active developers",
-    icon: Zap,
-    features: [
-      "20 audits per month",
-      "Claude Haiku AI",
-      "Fix suggestions with code",
-      "Deployment verdict",
-      "Email support",
-      "Priority queue",
-    ],
-    color: "from-blue-500 to-blue-600",
-    bgColor: "bg-blue-500/10",
-    textColor: "text-blue-400",
+    id: "free", name: "Free", price: "₹0", period: "forever",
+    description: "Try before you commit", icon: Shield,
+    features: ["3 audits included", "Groq LLaMA + Gemini analysis", "PDF audit report", "Community support"],
+    missing: ["Fix suggestions", "Exploit scenarios", "Claude AI models"],
+    cta: "Start free", ctaHref: "/register", featured: false,
   },
   {
-    id: "enterprise",
-    name: "Enterprise Plan",
-    price: 4999, // ₹4,999 in rupees
-    priceDisplay: "₹4,999",
-    description: "For teams shipping to mainnet",
-    icon: Brain,
-    features: [
-      "50 audits per month",
-      "Claude Sonnet AI",
-      "Full exploit scenarios",
-      "API access",
-      "24/7 priority support",
-      "Custom audit rules",
-    ],
-    color: "from-purple-500 to-purple-600",
-    bgColor: "bg-purple-500/10",
-    textColor: "text-purple-400",
-    popular: true,
+    id: "pro", name: "Pro", price: "₹2,900", period: "/month",
+    description: "For active developers", icon: Zap,
+    features: ["20 audits / month", "Groq + Claude Haiku", "PDF audit reports", "Fix suggestions with code", "Deployment verdict", "Email support"],
+    missing: ["Exploit scenarios", "Claude Sonnet / Opus"],
+    cta: "Upgrade to Pro", featured: true,
+  },
+  {
+    id: "enterprise", name: "Enterprise", price: "₹4,900", period: "/month",
+    description: "For teams shipping to mainnet", icon: Crown,
+    features: ["50 audits / month", "Groq + Claude Sonnet", "PDF audit reports", "Fix suggestions with code", "Full exploit scenarios", "Deployment verdict", "API access", "Priority support"],
+    missing: [], cta: "Upgrade to Enterprise", featured: false,
   },
 ];
 
-const DEEP_AUDIT = {
-  id: "deep_audit",
-  name: "Deep Audit",
-  price: 1650, // ₹1,650
-  priceDisplay: "₹1,650",
-  description: "One-time premium audit",
-  icon: Sparkles,
-  features: [
-    "Claude Opus AI (most powerful)",
-    "Extended thinking - see AI reasoning",
-    "Full exploit scenarios",
-    "Production-ready fix code",
-    "Deployment verdict",
-    "Priority processing (2x faster)",
-    "PDF report",
-  ],
-  color: "from-amber-500 to-amber-600",
-  bgColor: "bg-amber-500/10",
-  textColor: "text-amber-400",
+const DEEP_AUDIT_FEATURES = [
+  "Claude Opus — most powerful AI",
+  "Extended thinking — full AI reasoning",
+  "Full exploit PoC for every critical finding",
+  "Production-ready patched code",
+  "Deployment verdict: SAFE / CAUTION / DO NOT DEPLOY",
+  "Priority processing",
+];
+
+const FAQS = [
+  { q: "Can I switch plans later?", a: "Yes, you can upgrade or downgrade at any time. Changes take effect immediately." },
+  { q: "What payment methods do you accept?", a: "We accept all major credit cards, debit cards, UPI, and net banking via Razorpay." },
+  { q: "Is there a long-term contract?", a: "No, all plans are month-to-month. Cancel anytime with no hidden fees." },
+  { q: "Do you offer team discounts?", a: "Yes, for Enterprise plans we offer volume discounts. Contact sales for a custom quote." },
+];
+
+const annualPrice = (p: string) => {
+  const m = p.match(/₹([\d,]+)/);
+  if (!m) return p;
+  return `₹${(parseInt(m[1].replace(/,/g, "")) * 10).toLocaleString()}`;
 };
 
-export default function PaymentPage() {
-  const { data: session, update } = useSession();
+export default function PricingPage() {
+  const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const planParam = searchParams.get("plan");
-  
-  const [selectedPlan, setSelectedPlan] = useState<string>(planParam || "pro");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [paying, setPaying]     = useState<string | null>(null);
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
 
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!session && !isProcessing) {
-      router.push("/login?callbackUrl=/dashboard/payment");
-    }
-  }, [session, router, isProcessing]);
-
-  const handlePayment = async () => {
-    if (!session) {
-      router.push("/login?callbackUrl=/dashboard/payment");
-      return;
-    }
-
-    setIsProcessing(true);
-    setError("");
-    setSuccess("");
-
+  const handleUpgrade = async (planId: string) => {
+    if (!session) { router.push("/login?callbackUrl=/pricing"); return; }
+    if (session.user?.plan === planId) { toast.info("You're already on this plan."); return; }
+    setPaying(planId);
     try {
-      // Load Razorpay script if not loaded
       if (!window.Razorpay) {
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
-        document.body.appendChild(script);
-        await new Promise((resolve) => {
-          script.onload = resolve;
-        });
+        const s = document.createElement("script"); s.src = "https://checkout.razorpay.com/v1/checkout.js"; document.body.appendChild(s);
+        await new Promise(r => { s.onload = r; });
       }
-
-      // Get amount based on selected plan
-      const amount = selectedPlan === "deep_audit" 
-        ? DEEP_AUDIT.price 
-        : PLANS.find(p => p.id === selectedPlan)?.price || 2999;
-
-      // Create order
-      const orderResponse = await fetch("/api/payment/razorpay/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          amount: amount * 100, // Convert to paise
-        }),
+      const orderRes = await fetch("/api/payment/razorpay/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId, interval: billingInterval }) });
+      const order    = await orderRes.json();
+      if (!orderRes.ok) { toast.error(order.detail ?? "Order creation failed."); setPaying(null); return; }
+      const rzp = new window.Razorpay({
+        key: order.key_id, amount: order.amount, currency: order.currency,
+        name: "AuditSmart", description: `${planId} Plan`, order_id: order.order_id,
+        theme: { color: "#6366f1" },
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          const ver = await fetch("/api/payment/razorpay/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...response, plan: planId }) }).then(r => r.json());
+          if (ver.status === "success") { toast.success(`Upgraded to ${planId}!`); setTimeout(() => router.push("/dashboard"), 1500); }
+          else toast.error("Payment verification failed.");
+        },
       });
-
-      const order = await orderResponse.json();
-
-      if (!orderResponse.ok) {
-        throw new Error(order.error || "Failed to create order");
-      }
-
-      // Open Razorpay checkout
-      const options = {
-        key: order.key_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: "AuditSmart",
-        description: `${selectedPlan === "deep_audit" ? "Deep Audit" : selectedPlan.toUpperCase() + " Plan"}`,
-        order_id: order.order_id,
-        handler: async (response: {
-          razorpay_order_id: string;
-          razorpay_payment_id: string;
-          razorpay_signature: string;
-        }) => {
-          // Verify payment and update subscription
-          const verifyResponse = await fetch("/api/payment/razorpay/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              plan: selectedPlan,
-            }),
-          });
-
-          const verification = await verifyResponse.json();
-
-          if (verification.success) {
-            setSuccess(`Payment successful! Your ${selectedPlan === "deep_audit" ? "Deep Audit" : selectedPlan.toUpperCase()} plan is now active.`);
-            
-            // Update session to reflect new plan
-            await update();
-            
-            // Redirect after 2 seconds
-            setTimeout(() => {
-              if (selectedPlan === "deep_audit") {
-                router.push("/dashboard/audit");
-              } else {
-                router.push("/dashboard");
-              }
-            }, 2000);
-          } else {
-            throw new Error(verification.error || "Payment verification failed");
-          }
-        },
-        theme: {
-          color: "#612D53",
-        },
-        modal: {
-          ondismiss: () => {
-            setIsProcessing(false);
-            setError("Payment cancelled");
-          },
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (err) {
-      console.error("Payment error:", err);
-      setError(err instanceof Error ? err.message : "Payment failed. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
+      rzp.open();
+    } catch { toast.error("Something went wrong. Please try again."); }
+    finally { setPaying(null); }
   };
 
-  const getPlanDetails = () => {
-    if (selectedPlan === "deep_audit") return DEEP_AUDIT;
-    return PLANS.find(p => p.id === selectedPlan) || PLANS[0];
-  };
-
-  const planDetails = getPlanDetails();
-  const Icon = planDetails.icon;
+  /* ── shared token-driven styles ── */
+  const card: React.CSSProperties = { background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 28, display: "flex", flexDirection: "column", position: "relative", boxShadow: "var(--shadow-card)", transition: "box-shadow 0.2s" };
+  const featuredCard: React.CSSProperties = { ...card, border: "1px solid rgba(99,102,241,0.35)", boxShadow: "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" };
+  const btnPrimary: React.CSSProperties  = { width: "100%", padding: "11px 0", background: "var(--brand)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 };
+  const btnGhost: React.CSSProperties   = { ...btnPrimary, background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)" };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] py-12">
-      <div className="max-w-4xl mx-auto px-4">
+    <div style={{ background: "var(--background)", minHeight: "100vh", color: "var(--text-primary)" }}>
+      <Navbar />
+
+      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "80px 24px" }}>
+
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[var(--frost)]">Complete Your Purchase</h1>
-          <p className="text-[var(--text-secondary)] mt-2">
-            Upgrade your plan to unlock more features and audits
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 18 }}>
+            Pricing
+          </div>
+          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(30px,5vw,52px)", fontWeight: 800, letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: 12 }}>Simple, transparent pricing</h1>
+          <p style={{ fontSize: 14, color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>
+            Start free with 3 audits. Upgrade when your contracts need more protection.
           </p>
         </div>
 
-        {/* Success Message */}
-        {success && (
-          <div className="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <div>
-                <p className="text-green-500 font-medium">{success}</p>
-                <p className="text-sm text-[var(--text-secondary)] mt-1">Redirecting...</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <p className="text-red-500">{error}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Plan Selection */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-[var(--frost)] mb-4">Select Plan</h2>
-            
-            {/* Pro Plan */}
-            {PLANS.map((plan) => {
-              const PlanIcon = plan.icon;
-              const isSelected = selectedPlan === plan.id;
-              return (
-                <button
-                  key={plan.id}
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className={`w-full text-left p-4 rounded-lg border transition-all ${
-                    isSelected
-                      ? "border-[var(--plum-light)] bg-[var(--plum)]/10"
-                      : "border-[var(--border)] hover:border-[var(--plum-light)]/50"
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${plan.bgColor}`}>
-                        <PlanIcon className={`w-5 h-5 ${plan.textColor}`} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-[var(--frost)]">{plan.name}</h3>
-                        <p className="text-sm text-[var(--text-secondary)]">{plan.description}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-[var(--frost)]">{plan.priceDisplay}</div>
-                      <div className="text-xs text-[var(--text-muted)]">/month</div>
-                    </div>
-                  </div>
-                  {isSelected && (
-                    <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                      <div className="text-xs text-[var(--text-secondary)]">
-                        {plan.features.slice(0, 3).map((feature, i) => (
-                          <div key={i} className="flex items-center gap-2 mt-1">
-                            <CheckCircle className="w-3 h-3 text-green-500" />
-                            <span>{feature}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-
-            {/* Deep Audit */}
-            <button
-              onClick={() => setSelectedPlan("deep_audit")}
-              className={`w-full text-left p-4 rounded-lg border transition-all ${
-                selectedPlan === "deep_audit"
-                  ? "border-[var(--plum-light)] bg-[var(--plum)]/10"
-                  : "border-[var(--border)] hover:border-[var(--plum-light)]/50"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10">
-                    <Sparkles className="w-5 h-5 text-amber-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[var(--frost)]">Deep Audit</h3>
-                    <p className="text-sm text-[var(--text-secondary)]">One-time premium audit</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xl font-bold text-[var(--frost)]">₹1,650</div>
-                  <div className="text-xs text-[var(--text-muted)]">one-time</div>
-                </div>
-              </div>
-              {selectedPlan === "deep_audit" && (
-                <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                  <div className="text-xs text-[var(--text-secondary)]">
-                    {DEEP_AUDIT.features.slice(0, 3).map((feature, i) => (
-                      <div key={i} className="flex items-center gap-2 mt-1">
-                        <CheckCircle className="w-3 h-3 text-green-500" />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </button>
-          </div>
-
-          {/* Payment Summary */}
-          <div className="bg-[var(--bg-card)] rounded-lg border border-[var(--border)] p-6">
-            <h2 className="text-lg font-semibold text-[var(--frost)] mb-4">Order Summary</h2>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${planDetails.bgColor}`}>
-                    <Icon className={`w-5 h-5 ${planDetails.textColor}`} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-[var(--frost)]">{planDetails.name}</p>
-                    <p className="text-xs text-[var(--text-secondary)]">{planDetails.description}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-[var(--frost)]">{planDetails.priceDisplay}</p>
-                  {selectedPlan !== "deep_audit" && (
-                    <p className="text-xs text-[var(--text-muted)]">billed monthly</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[var(--text-secondary)]">Subtotal</span>
-                  <span className="text-[var(--frost)]">{planDetails.priceDisplay}</span>
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[var(--text-secondary)]">Tax (GST)</span>
-                  <span className="text-[var(--text-secondary)]">Included</span>
-                </div>
-                <div className="flex items-center justify-between pt-3 mt-2 border-t border-[var(--border)]">
-                  <span className="font-semibold text-[var(--frost)]">Total</span>
-                  <span className="text-xl font-bold text-[var(--plum-light)]">{planDetails.priceDisplay}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handlePayment}
-                disabled={isProcessing}
-                className="w-full py-3 rounded-lg bg-gradient-to-r from-[var(--plum)] to-[var(--plum-light)] text-white font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-5 h-5" />
-                    Pay {planDetails.priceDisplay}
-                  </>
-                )}
+        {/* Toggle */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 48 }}>
+          <div style={{ display: "inline-flex", background: "var(--elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 4, gap: 4 }}>
+            {(["monthly", "yearly"] as const).map(v => (
+              <button key={v} onClick={() => setBillingInterval(v)}
+                style={{ padding: "8px 20px", borderRadius: "var(--radius-sm)", border: "none", background: billingInterval === v ? "var(--card)" : "transparent", color: billingInterval === v ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, cursor: "pointer", boxShadow: billingInterval === v ? "var(--shadow-xs)" : "none", fontWeight: billingInterval === v ? 500 : 400 }}>
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+                {v === "yearly" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--brand)", background: "var(--brand-faint)", borderRadius: 100, padding: "2px 7px" }}>Save 20%</span>}
               </button>
+            ))}
+          </div>
+        </div>
 
-              <p className="text-xs text-center text-[var(--text-muted)]">
-                Secure payment powered by Razorpay. Your card details are encrypted.
-              </p>
+        {/* Plans grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 56 }}>
+          {PLANS.map(plan => {
+            const Icon      = plan.icon;
+            const isCurrent = session?.user?.plan === plan.id;
+            const price     = billingInterval === "yearly" && plan.id !== "free" ? annualPrice(plan.price) : plan.price;
+            const period    = billingInterval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
+
+            return (
+              <div key={plan.id} style={plan.featured ? featuredCard : card}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card-hover)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = plan.featured ? "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" : "var(--shadow-card)"}
+              >
+                {plan.featured && (
+                  <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", background: "var(--brand)", color: "#fff", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100, fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}>
+                    Most Popular
+                  </div>
+                )}
+
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brand)", marginBottom: 18 }}>
+                  <Icon size={16} />
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>{plan.name}</div>
+                <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 34, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+                  {price}<span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)", marginLeft: 3, fontFamily: "'Satoshi', sans-serif" }}>{period}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 22px", fontFamily: "'Satoshi', sans-serif" }}>{plan.description}</div>
+                <div style={{ height: 1, background: "var(--border)", marginBottom: 18 }} />
+
+                <div style={{ flex: 1 }}>
+                  {plan.features.map(f => (
+                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: 12, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
+                      <Check size={12} style={{ color: "var(--success)", flexShrink: 0, marginTop: 2 }} />{f}
+                    </div>
+                  ))}
+                  {plan.missing.map(f => (
+                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: 12, color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}>
+                      <X size={12} style={{ flexShrink: 0, marginTop: 2 }} />{f}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: 24 }}>
+                  {plan.id === "free" ? (
+                    isCurrent
+                      ? <button style={btnGhost} disabled>Current Plan</button>
+                      : <Link href={plan.ctaHref!} style={{ ...btnPrimary, textDecoration: "none" }}>{plan.cta}</Link>
+                  ) : isCurrent
+                    ? <button style={btnGhost} disabled>Current Plan</button>
+                    : (
+                      <button style={plan.featured ? btnPrimary : btnGhost} onClick={() => handleUpgrade(plan.id)} disabled={paying !== null}>
+                        {paying === plan.id ? <><Loader2 size={13} className="animate-spin" /> Processing…</> : plan.cta}
+                      </button>
+                    )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Deep Audit */}
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 40, marginBottom: 72, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center", boxShadow: "var(--shadow-card)" }}>
+          <div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 100, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: "#d97706", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>
+              <Sparkles size={10} /> Add-on
             </div>
+            <h3 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 22, color: "var(--text-primary)", marginBottom: 10 }}>Deep Audit</h3>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 38, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+              ₹1,650 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
+            </div>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>~$20 USD · Available on any plan</p>
+            <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "var(--brand)", color: "#fff", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textDecoration: "none" }}>
+              Request Deep Audit <ArrowRight size={13} />
+            </Link>
+          </div>
+          <div>
+            {DEEP_AUDIT_FEATURES.map(f => (
+              <div key={f} style={{ display: "flex", gap: 9, marginBottom: 10, alignItems: "flex-start", fontSize: 13, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
+                <Check size={12} style={{ color: "var(--brand)", flexShrink: 0, marginTop: 2 }} />{f}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Features Comparison */}
-        <div className="mt-12">
-          <h2 className="text-xl font-semibold text-[var(--frost)] text-center mb-6">Compare Plans</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-3 px-4 text-[var(--text-secondary)]">Feature</th>
-                  <th className="text-center py-3 px-4 text-[var(--frost)]">Free</th>
-                  <th className="text-center py-3 px-4 text-[var(--frost)]">Pro</th>
-                  <th className="text-center py-3 px-4 text-[var(--frost)]">Enterprise</th>
-                  <th className="text-center py-3 px-4 text-[var(--frost)]">Deep Audit</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-[var(--border)]">
-                  <td className="py-3 px-4 text-[var(--text-secondary)]">Audits/month</td>
-                  <td className="text-center py-3 px-4 text-[var(--text-primary)]">3</td>
-                  <td className="text-center py-3 px-4 text-[var(--text-primary)]">20</td>
-                  <td className="text-center py-3 px-4 text-[var(--text-primary)]">50</td>
-                  <td className="text-center py-3 px-4 text-[var(--text-primary)]">1 (one-time)</td>
-                </tr>
-                <tr className="border-b border-[var(--border)]">
-                  <td className="py-3 px-4 text-[var(--text-secondary)]">AI Model</td>
-                  <td className="text-center py-3 px-4">Gemini</td>
-                  <td className="text-center py-3 px-4">Claude Haiku</td>
-                  <td className="text-center py-3 px-4">Claude Sonnet</td>
-                  <td className="text-center py-3 px-4">Claude Opus</td>
-                </tr>
-                <tr className="border-b border-[var(--border)]">
-                  <td className="py-3 px-4 text-[var(--text-secondary)]">Extended Thinking</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                </tr>
-                <tr className="border-b border-[var(--border)]">
-                  <td className="py-3 px-4 text-[var(--text-secondary)]">Fix Suggestions</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                </tr>
-                <tr className="border-b border-[var(--border)]">
-                  <td className="py-3 px-4 text-[var(--text-secondary)]">Exploit Scenarios</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-[var(--text-secondary)]">Priority Support</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">❌</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                  <td className="text-center py-3 px-4">✅</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        {/* FAQ */}
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>FAQ</div>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>Frequently asked questions</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 56 }}>
+          {FAQS.map(faq => (
+            <div key={faq.q} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 24 }}>
+              <h4 style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>{faq.q}</h4>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>{faq.a}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Test Mode Notice */}
-        {process.env.NEXT_PUBLIC_RAZORPAY_TEST_MODE === "true" && (
-          <div className="mt-8 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-            <p className="text-sm text-yellow-500 text-center">
-              🧪 TEST MODE: Use test card 4111 1111 1111 1111 (CVV: any, Expiry: any future date)
-            </p>
-          </div>
-        )}
+        <div style={{ textAlign: "center", paddingTop: 24, borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+          Questions? Email us at{" "}
+          <a href="mailto:hello@auditsmart.io" style={{ color: "var(--brand)" }}>hello@auditsmart.io</a>
+          {" "}— we respond within 24 hours.
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }

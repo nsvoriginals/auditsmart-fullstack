@@ -4,10 +4,10 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { 
   Shield, 
   AlertTriangle, 
-  TrendingUp, 
   Clock, 
   Plus, 
   Eye, 
@@ -18,17 +18,12 @@ import {
   ArrowRight,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Calendar,
+  TrendingUp,
+  FileText
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
-// Types for dashboard data
 interface DashboardStats {
   stats: {
     totalAudits: number;
@@ -52,30 +47,38 @@ interface DashboardStats {
   };
 }
 
-// Helper to get risk level from score
-const getRiskLevel = (score: number) => {
-  if (score >= 80) return { text: "Critical", variant: "destructive" as const };
-  if (score >= 60) return { text: "High", variant: "default" as const, className: "bg-orange-500" };
-  if (score >= 35) return { text: "Medium", variant: "secondary" as const };
-  if (score >= 10) return { text: "Low", variant: "outline" as const };
-  return { text: "Good", variant: "default" as const, className: "bg-green-500" };
+const riskColors = (score: number) => {
+  if (score >= 80) return { color: "#ef4444", border: "rgba(239,68,68,0.25)", bg: "rgba(239,68,68,0.08)", text: "Critical" };
+  if (score >= 60) return { color: "#f97316", border: "rgba(249,115,22,0.25)", bg: "rgba(249,115,22,0.08)", text: "High" };
+  if (score >= 35) return { color: "#ca8a04", border: "rgba(234,179,8,0.25)", bg: "rgba(234,179,8,0.08)", text: "Medium" };
+  if (score >= 10) return { color: "#3b82f6", border: "rgba(59,130,246,0.25)", bg: "rgba(59,130,246,0.08)", text: "Low" };
+  return { color: "#10b981", border: "rgba(16,185,129,0.25)", bg: "rgba(16,185,129,0.08)", text: "Good" };
 };
 
 const getStatusConfig = (status: string) => {
   switch (status) {
     case "COMPLETED":
-      return { icon: CheckCircle, label: "Complete", variant: "default" as const, className: "bg-green-500" };
+      return { icon: CheckCircle, label: "Complete", color: "#10b981", bg: "rgba(16,185,129,0.08)" };
     case "PROCESSING":
-      return { icon: Loader2, label: "Processing", variant: "secondary" as const };
+      return { icon: Loader2, label: "Processing", color: "#f59e0b", bg: "rgba(245,158,11,0.08)" };
     case "FAILED":
-      return { icon: XCircle, label: "Failed", variant: "destructive" as const };
+      return { icon: XCircle, label: "Failed", color: "#ef4444", bg: "rgba(239,68,68,0.08)" };
     default:
-      return { icon: Clock, label: "Pending", variant: "outline" as const };
+      return { icon: Clock, label: "Pending", color: "#6b7280", bg: "rgba(107,114,128,0.08)" };
   }
+};
+
+const relTime = (d: string) => {
+  const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return `${diff} days ago`;
+  return new Date(d).toLocaleDateString();
 };
 
 export default function DashboardOverview() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,9 +91,7 @@ export default function DashboardOverview() {
     try {
       const response = await fetch("/api/dashboard/stats");
       const result = await response.json();
-      
       if (!response.ok) throw new Error(result.error);
-      
       setData(result);
     } catch (err) {
       console.error("Error fetching dashboard:", err);
@@ -104,65 +105,32 @@ export default function DashboardOverview() {
   const recentAudits = data?.recentAudits || [];
   const subscription = data?.subscription;
   const averageScore = stats?.averageScore || 0;
-  const riskInfo = getRiskLevel(averageScore);
+  const riskInfo = riskColors(averageScore);
 
-  // Stat cards configuration
   const statCards = [
-    { 
-      label: "Total Audits", 
-      value: stats?.totalAudits || 0, 
-      description: "all time",
-      icon: Shield,
-      trend: "+12%",
-    },
-    { 
-      label: "Completed", 
-      value: stats?.completedAudits || 0, 
-      description: "successful audits",
-      icon: CheckCircle,
-      trend: "+8%",
-    },
-    { 
-      label: "Pending", 
-      value: stats?.pendingAudits || 0, 
-      description: "in progress",
-      icon: Clock,
-      trend: "-2%",
-    },
-    { 
-      label: "Security Score", 
-      value: averageScore.toFixed(0), 
-      description: "/ 100",
-      icon: Shield,
-      suffix: "%",
-    },
+    { label: "Total Audits", value: stats?.totalAudits || 0, icon: Shield },
+    { label: "Completed", value: stats?.completedAudits || 0, icon: CheckCircle },
+    { label: "Pending", value: stats?.pendingAudits || 0, icon: Clock },
+    { label: "Avg Score", value: averageScore.toFixed(0), suffix: "/100", icon: TrendingUp },
   ];
 
-  const getPlanIcon = (plan: string) => {
-    switch (plan?.toLowerCase()) {
-      case "pro": return Zap;
-      case "enterprise": return Brain;
-      default: return Shield;
-    }
-  };
-
-  // FIX 1: Add fallback for undefined subscription?.plan
-  const PlanIcon = getPlanIcon(subscription?.plan || "free");
+  const Skeleton = () => (
+    <div style={{ height: 120, borderRadius: "var(--radius-md)", background: "var(--elevated)", animation: "pulse 1.5s ease-in-out infinite" }} />
+  );
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <Skeleton className="h-10 w-32" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+          <div><Skeleton /><div style={{ height: 20, width: 200, marginTop: 8 }}><Skeleton /></div></div>
+          <div style={{ width: 120 }}><Skeleton /></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array(4).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+          {[1,2,3,4].map(i => <Skeleton key={i} />)}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
+          <div style={{ gridColumn: "span 2" }}><Skeleton /><div style={{ height: 300, marginTop: 12 }}><Skeleton /></div></div>
+          <div><Skeleton /><div style={{ height: 300, marginTop: 12 }}><Skeleton /></div></div>
         </div>
       </div>
     );
@@ -170,294 +138,201 @@ export default function DashboardOverview() {
 
   if (error) {
     return (
-      <Card className="text-center py-12">
-        <CardContent>
-          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <CardTitle className="mb-2">Error Loading Dashboard</CardTitle>
-          <CardDescription>{error}</CardDescription>
-          <Button onClick={() => fetchDashboardData()} className="mt-4">
-            Try Again
-          </Button>
-        </CardContent>
-      </Card>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center" }}>
+        <AlertTriangle size={48} style={{ color: "#ef4444", margin: "0 auto 20px" }} />
+        <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Error Loading Dashboard</h3>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>{error}</p>
+        <button onClick={fetchDashboardData} style={{ padding: "10px 22px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Try Again</button>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
             Welcome back, {session?.user?.name?.split(" ")[0] || "there"}!
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Here&apos;s your security audit overview and recent activity.
+          <p style={{ fontSize: 13, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+            Here's your security audit overview and recent activity.
           </p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          {/* Plan Badge */}
-          <Badge variant="outline" className="gap-2 px-3 py-1.5">
-            <PlanIcon className="h-3 w-3" />
-            <span className="capitalize">{subscription?.plan?.toLowerCase() || "free"}</span>
-          </Badge>
-          
-          {/* New Audit Button */}
-          <Button asChild>
-            <Link href="/dashboard/scan">
-              <Plus className="mr-2 h-4 w-4" />
-              New Audit
-            </Link>
-          </Button>
-        </div>
+        <Link href="/dashboard/scan"
+          style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>
+          <Plus size={13} /> New Audit
+        </Link>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.label} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {card.label}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {card.value}{card.suffix || ""}
+      {/* Stats Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+        {statCards.map(({ label, value, suffix, icon: Icon }) => (
+          <div key={label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18, boxShadow: "var(--shadow-card)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'DM Mono', monospace" }}>{label}</span>
+              <Icon size={14} style={{ color: "var(--text-muted)" }} />
+            </div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, color: label === "Avg Score" ? riskInfo.color : "var(--text-primary)", marginBottom: 4 }}>
+              {value}{suffix || ""}
+            </div>
+            {label === "Avg Score" && averageScore > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ width: `${averageScore}%`, height: "100%", background: riskInfo.color, borderRadius: 2 }} />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {card.description}
-                </p>
-                {card.label === "Security Score" && averageScore > 0 && (
-                  <div className="mt-3">
-                    <Progress value={averageScore} className="h-1.5" />
-                    <Badge 
-                      variant={riskInfo.variant}
-                      className={cn("mt-2 text-xs", riskInfo.className)}
-                    >
-                      {riskInfo.text} Risk
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                <span style={{ display: "inline-block", marginTop: 8, fontSize: 10, padding: "2px 8px", borderRadius: 4, background: riskInfo.bg, color: riskInfo.color, fontFamily: "'Satoshi', sans-serif", fontWeight: 600 }}>
+                  {riskInfo.text} Risk
+                </span>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Two Column Layout */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recent Audits - Left Column */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Recent Audits</CardTitle>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/history">
-                    View all
-                    <ArrowRight className="ml-1 h-3 w-3" />
-                  </Link>
-                </Button>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
+        {/* Recent Audits */}
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+          <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>Recent Audits</h3>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>Your most recent security audit reports</p>
+            </div>
+            {recentAudits.length > 0 && (
+              <Link href="/dashboard/history" style={{ fontSize: 11, color: "var(--primary)", textDecoration: "none", fontFamily: "'Satoshi', sans-serif" }}>
+                View all →
+              </Link>
+            )}
+          </div>
+          <div style={{ padding: "8px 0" }}>
+            {recentAudits.length === 0 ? (
+              <div style={{ padding: "48px 24px", textAlign: "center" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "var(--radius-lg)", background: "var(--primary-faint)", border: "1px solid rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <FileText size={22} style={{ color: "var(--primary)" }} />
+                </div>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16, fontFamily: "'Satoshi', sans-serif" }}>No audits yet. Run your first scan.</p>
+                <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--primary)", color: "#fff", borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+                  <Plus size={12} /> Start First Audit
+                </Link>
               </div>
-              <CardDescription>
-                Your most recent security audit reports
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentAudits.length === 0 ? (
-                <div className="py-12 text-center">
-                  <Shield className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">No audits yet.</p>
-                  <Button asChild className="mt-4">
-                    <Link href="/dashboard/scan">
-                      Run your first audit
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {recentAudits.map((audit) => {
-                    const auditRisk = getRiskLevel(audit.score);
-                    const StatusIcon = getStatusConfig(audit.status).icon;
-                    const statusConfig = getStatusConfig(audit.status);
-                    
-                    return (
-                      <Link
-                        key={audit.id}
-                        href={`/dashboard/audit/results/${audit.id}`}
-                        className="flex items-center gap-4 p-3 rounded-lg transition-all hover:bg-accent group"
-                      >
-                        {/* Score Circle */}
-                        <div className="flex-shrink-0">
-                          <div className="relative inline-flex">
-                            <svg className="w-12 h-12 transform -rotate-90">
-                              <circle
-                                cx="24"
-                                cy="24"
-                                r="20"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                fill="none"
-                                className="text-muted-foreground/20"
-                              />
-                              <circle
-                                cx="24"
-                                cy="24"
-                                r="20"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                                fill="none"
-                                strokeDasharray={`${(audit.score / 100) * 125.6} 125.6`}
-                                className="text-primary"
-                              />
-                            </svg>
-                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">
-                              {audit.score}
-                            </span>
-                          </div>
+            ) : (
+              recentAudits.map((audit, idx) => {
+                const risk = riskColors(audit.score);
+                const status = getStatusConfig(audit.status);
+                const StatusIcon = status.icon;
+                return (
+                  <div
+                    key={audit.id}
+                    onClick={() => router.push(`/dashboard/audit/results/${audit.id}`)}
+                    style={{
+                      padding: "14px 20px",
+                      cursor: "pointer",
+                      borderBottom: idx < recentAudits.length - 1 ? "1px solid var(--border)" : "none",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--elevated)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      {/* Score Circle */}
+                      <div style={{ width: 44, height: 44, borderRadius: "50%", border: `2px solid ${risk.border}`, background: risk.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 800, color: risk.color }}>{audit.score}</span>
+                      </div>
+                      
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                          <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{audit.contractName}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, padding: "2px 7px", borderRadius: 4, background: status.bg, color: status.color, fontFamily: "'Satoshi', sans-serif" }}>
+                            <StatusIcon size={10} style={status.label === "Processing" ? { animation: "spin 1s linear infinite" } : {}} />
+                            {status.label}
+                          </span>
                         </div>
-                        
-                        {/* Audit Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <p className="text-sm font-medium truncate text-foreground">
-                              {audit.contractName}
-                            </p>
-                            <Badge 
-                              variant={statusConfig.variant}
-                              className={cn("gap-1", statusConfig.className)}
-                            >
-                              <StatusIcon className="h-2.5 w-2.5" />
-                              {statusConfig.label}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(audit.createdAt).toLocaleDateString()}
-                          </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 10, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Calendar size={9} />{relTime(audit.createdAt)}</span>
                         </div>
-                        
-                        {/* Risk Level */}
-                        <Badge 
-                          variant={auditRisk.variant}
-                          className={cn("capitalize", auditRisk.className)}
-                        >
-                          {auditRisk.text}
-                        </Badge>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </div>
+                      
+                      <ArrowRight size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
         {/* Right Column */}
-        <div className="space-y-6">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Plan & Usage Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Plan & Usage</CardTitle>
-              <CardDescription>Your current subscription details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2 text-sm">
-                  <span className="text-muted-foreground">Audits this month</span>
-                  <span className="font-medium text-foreground">
-                    {stats?.currentMonthAudits || 0}
-                    {subscription?.plan === "FREE" && <span className="text-muted-foreground"> / 3</span>}
-                  </span>
-                </div>
-                <Progress 
-                  value={subscription?.plan === "FREE" 
-                    ? ((stats?.currentMonthAudits || 0) / 3) * 100
-                    : ((stats?.currentMonthAudits || 0) / 100) * 100
-                  } 
-                  className="h-2"
-                />
+          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>Plan & Usage</h3>
+              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "var(--primary-faint)", color: "var(--primary)", fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textTransform: "uppercase" }}>
+                {subscription?.plan || "FREE"}
+              </span>
+            </div>
+            
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+                <span>Audits this month</span>
+                <span style={{ color: "var(--text-primary)" }}>{stats?.currentMonthAudits || 0}{subscription?.plan === "FREE" && <span style={{ color: "var(--text-muted)" }}> / 3</span>}</span>
               </div>
-              
-              {subscription?.plan === "FREE" && stats?.remainingAudits !== null && (
-                <div className="p-3 rounded-lg bg-accent">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      Remaining free audits
-                    </span>
-                    {/* FIX 2: Add optional chaining for stats */}
-                    <span className="text-lg font-bold text-foreground">
-                      {stats?.remainingAudits}
-                    </span>
-                  </div>
+              <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ width: `${subscription?.plan === "FREE" ? ((stats?.currentMonthAudits || 0) / 3) * 100 : Math.min(((stats?.currentMonthAudits || 0) / 100) * 100, 100)}%`, height: "100%", background: "var(--primary)", borderRadius: 2 }} />
+              </div>
+            </div>
+            
+            {subscription?.plan === "FREE" && stats?.remainingAudits !== null && (
+              <div style={{ padding: 10, borderRadius: "var(--radius-sm)", background: "var(--elevated)", marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>Remaining free audits</span>
+                  <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{stats?.remainingAudits}</span>
                 </div>
-              )}
-              
-              {subscription?.plan === "FREE" ? (
-                <Button asChild className="w-full">
-                  <Link href="/pricing">
-                    <Zap className="mr-2 h-4 w-4" />
-                    Upgrade for more audits
-                  </Link>
-                </Button>
-              ) : (
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground">
-                    Renews on {subscription?.currentPeriodEnd 
-                      ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
-                      : "N/A"}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+            
+            {subscription?.plan === "FREE" ? (
+              <Link href="/pricing" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "9px 16px", background: "var(--primary)", color: "#fff", borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+                <Zap size={12} /> Upgrade for more audits
+              </Link>
+            ) : (
+              <p style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "center", fontFamily: "'Satoshi', sans-serif" }}>
+                Renews on {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "N/A"}
+              </p>
+            )}
+          </div>
 
-          {/* Quick Actions Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks and shortcuts</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="ghost" className="w-full justify-start" asChild>
-                <Link href="/dashboard/scan">
-                  <Shield className="mr-2 h-4 w-4" />
-                  New Security Audit
+          {/* Quick Actions */}
+          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18 }}>
+            <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12 }}>Quick Actions</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {[
+                { icon: Shield, label: "New Security Audit", href: "/dashboard/scan" },
+                { icon: Eye, label: "View Audit History", href: "/dashboard/history" },
+                { icon: Star, label: "Upgrade Plan", href: "/pricing" },
+              ].map(({ icon: Icon, label, href }) => (
+                <Link key={label} href={href} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: "var(--radius-sm)", color: "var(--text-secondary)", fontSize: 12, textDecoration: "none", transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--elevated)"} onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                  <Icon size={14} style={{ color: "var(--primary)" }} />
+                  <span style={{ fontFamily: "'Satoshi', sans-serif" }}>{label}</span>
                 </Link>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" asChild>
-                <Link href="/dashboard/history">
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Audit History
-                </Link>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" asChild>
-                <Link href="/pricing">
-                  <Star className="mr-2 h-4 w-4" />
-                  Upgrade Plan
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-          
-          {/* Security Tip Card */}
-          <Card className="bg-gradient-to-r from-primary/5 via-transparent to-primary/5 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-medium text-foreground mb-1">Security Tip</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Regular audits are crucial for contract security. Run audits after every major update.
-                  </p>
-                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Security Tip */}
+          <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(99,102,241,0.02) 100%)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: "var(--radius-md)", padding: 16 }}>
+            <div style={{ display: "flex", gap: 12 }}>
+              <Shield size={18} style={{ color: "var(--primary)", flexShrink: 0 }} />
+              <div>
+                <h4 style={{ fontFamily: "'Syne', sans-serif", fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Security Tip</h4>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5, fontFamily: "'Satoshi', sans-serif" }}>Regular audits are crucial for contract security. Run audits after every major update.</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
