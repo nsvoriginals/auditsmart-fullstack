@@ -1,10 +1,12 @@
 "use client";
+// app/pricing/page.tsx
 
 import React, { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import { toast } from "sonner";
 import { Check, X, Sparkles, Zap, Shield, Crown, ArrowRight, Loader2 } from "lucide-react";
 
@@ -57,55 +59,16 @@ const FAQS = [
   { q: "Do you offer team discounts?", a: "Yes, for Enterprise plans we offer volume discounts. Contact sales for a custom quote." },
 ];
 
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
-  .pricing-root { background: #0a0a0f; min-height: 100vh; font-family: 'DM Mono', monospace; color: #f0f0f5; }
-  .pricing-inner { max-width: 1080px; margin: 0 auto; padding: 80px 24px; }
-  .pricing-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 100px; border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.08); color: #a5b4fc; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; }
-  .pricing-title { font-family: 'Syne', sans-serif; font-size: clamp(32px,5vw,52px); font-weight: 800; letter-spacing: -1.5px; color: #f0f0f5; margin-bottom: 14px; }
-  .pricing-sub { font-size: 13px; color: #6b6b85; max-width: 440px; margin: 0 auto; line-height: 1.8; }
-  .toggle-wrap { display: inline-flex; background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 10px; padding: 4px; gap: 2px; }
-  .toggle-btn { padding: 8px 20px; border: none; background: transparent; color: #6b6b85; font-family: 'DM Mono', monospace; font-size: 12px; border-radius: 7px; cursor: pointer; transition: all 0.15s; }
-  .toggle-btn.active { background: #1e1e2e; color: #f0f0f5; }
-  .save-pill { font-size: 10px; color: #a5b4fc; background: rgba(99,102,241,0.1); border-radius: 100px; padding: 2px 8px; margin-left: 6px; }
-  .plans-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin: 48px 0; }
-  .plan-card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; transition: border-color 0.2s; position: relative; }
-  .plan-card:hover { border-color: #2e2e45; }
-  .plan-card.featured { border-color: rgba(99,102,241,0.4); background: linear-gradient(145deg, #0e0e1f, #0e0e18); }
-  .plan-popular { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #6366f1; color: #fff; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 100px; font-weight: 500; }
-  .plan-icon { width: 36px; height: 36px; border-radius: 9px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.15); display: flex; align-items: center; justify-content: center; color: #a5b4fc; margin-bottom: 20px; }
-  .plan-name { font-size: 11px; color: #6b6b85; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
-  .plan-price { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #f0f0f5; letter-spacing: -1px; }
-  .plan-period { font-size: 12px; color: #6b6b85; font-weight: 400; margin-left: 4px; }
-  .plan-desc { font-size: 12px; color: #6b6b85; margin: 8px 0 24px; }
-  .plan-divider { border: none; border-top: 1px solid #1e1e2e; margin: 0 0 20px; }
-  .plan-feature { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #a0a0b8; line-height: 1.5; }
-  .plan-missing { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #2e2e45; line-height: 1.5; }
-  .btn-plan-primary { margin-top: auto; padding: 11px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: background 0.15s; text-align: center; text-decoration: none; display: block; }
-  .btn-plan-primary:hover { background: #5254cc; }
-  .btn-plan-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-plan-ghost { margin-top: auto; padding: 11px; background: transparent; color: #6b6b85; border: 1px solid #1e1e2e; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; text-align: center; text-decoration: none; display: block; }
-  .btn-plan-ghost:hover { border-color: #2e2e45; color: #a0a0b8; }
-  .btn-plan-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
-  .deep-card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; padding: 40px; margin-bottom: 72px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
-  .deep-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 100px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #fbbf24; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
-  .deep-price { font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 800; color: #f0f0f5; letter-spacing: -1px; }
-  .deep-tagline { font-size: 11px; color: #6b6b85; margin: 6px 0 28px; }
-  .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 60px; }
-  .faq-item { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 12px; padding: 24px; }
-  .faq-q { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; color: #e0e0f0; margin-bottom: 8px; }
-  .faq-a { font-size: 12px; color: #6b6b85; line-height: 1.8; }
-  .contact-line { text-align: center; font-size: 12px; color: #6b6b85; padding-top: 24px; border-top: 1px solid #1e1e2e; }
-  .contact-line a { color: #6366f1; text-decoration: none; }
-  .contact-line a:hover { text-decoration: underline; }
-  @media (max-width: 768px) { .plans-grid { grid-template-columns: 1fr; } .deep-card { grid-template-columns: 1fr; } .faq-grid { grid-template-columns: 1fr; } }
-`;
+const annualPrice = (p: string) => {
+  const m = p.match(/₹([\d,]+)/); if (!m) return p;
+  return `₹${(parseInt(m[1].replace(/,/g, "")) * 10).toLocaleString()}`;
+};
 
 export default function PricingPage() {
   const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
   const [paying, setPaying] = useState<string | null>(null);
-  const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
 
   const handleUpgrade = async (planId: string) => {
     if (!session) { router.push("/login?callbackUrl=/pricing"); return; }
@@ -116,7 +79,7 @@ export default function PricingPage() {
         const s = document.createElement("script"); s.src = "https://checkout.razorpay.com/v1/checkout.js"; document.body.appendChild(s);
         await new Promise(r => { s.onload = r; });
       }
-      const orderRes = await fetch("/api/payment/razorpay/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId, interval }) });
+      const orderRes = await fetch("/api/payment/razorpay/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId, interval: billingInterval }) });
       const order = await orderRes.json();
       if (!orderRes.ok) { toast.error(order.detail ?? "Order creation failed"); setPaying(null); return; }
       const rzp = new window.Razorpay({
@@ -133,85 +96,95 @@ export default function PricingPage() {
     finally { setPaying(null); }
   };
 
-  const annualPrice = (p: string) => {
-    const m = p.match(/₹([\d,]+)/); if (!m) return p;
-    return `₹${(parseInt(m[1].replace(/,/g, "")) * 10).toLocaleString()}`;
-  };
+  const card: React.CSSProperties = { background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 28, display: "flex", flexDirection: "column", position: "relative", boxShadow: "var(--shadow-card)", transition: "box-shadow 0.2s" };
+  const featuredCard: React.CSSProperties = { ...card, border: "1px solid rgba(99,102,241,0.35)", boxShadow: "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" };
+  const btnPrimary: React.CSSProperties = { width: "100%", padding: "11px 0", background: "var(--brand)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 };
+  const btnGhost: React.CSSProperties = { ...btnPrimary, background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)" };
 
   return (
-    <div className="pricing-root">
-      <style dangerouslySetInnerHTML={{ __html: css }} />
+    <div style={{ background: "var(--background)", minHeight: "100vh", color: "var(--text-primary)" }}>
       <Navbar />
 
-      <div className="pricing-inner">
+      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "80px 24px" }}>
+
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <div className="pricing-badge">Pricing</div>
-          <h1 className="pricing-title">Simple, transparent pricing</h1>
-          <p className="pricing-sub">Start free with 3 audits. Upgrade when your contracts need more protection.</p>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 18 }}>
+            Pricing
+          </div>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,5vw,52px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 12 }}>Simple, transparent pricing</h1>
+          <p style={{ fontSize: 14, color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>
+            Start free with 3 audits. Upgrade when your contracts need more protection.
+          </p>
         </div>
 
         {/* Toggle */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 0 }}>
-          <div className="toggle-wrap">
-            <button className={`toggle-btn ${interval === "monthly" ? "active" : ""}`} onClick={() => setInterval("monthly")}>Monthly</button>
-            <button className={`toggle-btn ${interval === "yearly" ? "active" : ""}`} onClick={() => setInterval("yearly")}>
-              Yearly <span className="save-pill">Save 20%</span>
-            </button>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 48 }}>
+          <div style={{ display: "inline-flex", background: "var(--elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 4, gap: 4 }}>
+            {(["monthly", "yearly"] as const).map(v => (
+              <button key={v} onClick={() => setBillingInterval(v)}
+                style={{ padding: "8px 20px", borderRadius: "var(--radius-sm)", border: "none", background: billingInterval === v ? "var(--card)" : "transparent", color: billingInterval === v ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, cursor: "pointer", boxShadow: billingInterval === v ? "var(--shadow-xs)" : "none", fontWeight: billingInterval === v ? 500 : 400 }}>
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+                {v === "yearly" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--brand)", background: "var(--brand-faint)", borderRadius: 100, padding: "2px 7px" }}>Save 20%</span>}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Plans */}
-        <div className="plans-grid">
+        {/* Plans grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 56 }}>
           {PLANS.map(plan => {
             const Icon = plan.icon;
             const isCurrent = session?.user?.plan === plan.id;
-            const displayPrice = interval === "yearly" && plan.id !== "free" ? annualPrice(plan.price) : plan.price;
-            const displayPeriod = interval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
+            const price = billingInterval === "yearly" && plan.id !== "free" ? annualPrice(plan.price) : plan.price;
+            const period = billingInterval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
 
             return (
-              <div key={plan.id} className={`plan-card ${plan.featured ? "featured" : ""}`}>
-                {plan.featured && <div className="plan-popular">Most Popular</div>}
-                <div className="plan-icon"><Icon size={16} /></div>
-                <div className="plan-name">{plan.name}</div>
-                <div>
-                  <span className="plan-price">{displayPrice}</span>
-                  <span className="plan-period">{displayPeriod}</span>
+              <div key={plan.id} style={plan.featured ? featuredCard : card}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card-hover)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = plan.featured ? "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" : "var(--shadow-card)"}
+              >
+                {plan.featured && (
+                  <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", background: "var(--brand)", color: "#fff", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100, fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}>
+                    Most Popular
+                  </div>
+                )}
+
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brand)", marginBottom: 18 }}>
+                  <Icon size={16} />
                 </div>
-                <div className="plan-desc">{plan.description}</div>
-                <hr className="plan-divider" />
+                <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4, fontFamily: "'Satoshi', sans-serif" }}>{plan.name}</div>
+                <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 34, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+                  {price}<span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)", marginLeft: 3, fontFamily: "'Satoshi', sans-serif" }}>{period}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 22px", fontFamily: "'Satoshi', sans-serif" }}>{plan.description}</div>
+                <div style={{ height: 1, background: "var(--border)", marginBottom: 18 }} />
 
                 <div style={{ flex: 1 }}>
                   {plan.features.map(f => (
-                    <div key={f} className="plan-feature">
-                      <Check size={12} color="#6ee7b7" style={{ flexShrink: 0, marginTop: 2 }} />{f}
+                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: 12, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
+                      <Check size={12} style={{ color: "var(--success)", flexShrink: 0, marginTop: 2 }} />{f}
                     </div>
                   ))}
                   {plan.missing.map(f => (
-                    <div key={f} className="plan-missing">
+                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: 12, color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}>
                       <X size={12} style={{ flexShrink: 0, marginTop: 2 }} />{f}
                     </div>
                   ))}
                 </div>
 
-                <div style={{ marginTop: 28 }}>
+                <div style={{ marginTop: 24 }}>
                   {plan.id === "free" ? (
                     isCurrent
-                      ? <button className="btn-plan-ghost" disabled>Current Plan</button>
-                      : <Link href={plan.ctaHref!} className="btn-plan-primary">{plan.cta}</Link>
+                      ? <button style={btnGhost} disabled>Current Plan</button>
+                      : <Link href={plan.ctaHref!} style={{ ...btnPrimary, textDecoration: "none" }}>{plan.cta}</Link>
                   ) : isCurrent
-                    ? <button className="btn-plan-ghost" disabled>Current Plan</button>
+                    ? <button style={btnGhost} disabled>Current Plan</button>
                     : (
-                      <button
-                        className={plan.featured ? "btn-plan-primary" : "btn-plan-ghost"}
-                        onClick={() => handleUpgrade(plan.id)}
-                        disabled={paying !== null}
-                        style={{ width: "100%" }}
-                      >
-                        {paying === plan.id ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><Loader2 size={12} style={{ animation: "spin 0.7s linear infinite" }} /> Processing…</span> : plan.cta}
+                      <button style={plan.featured ? btnPrimary : btnGhost} onClick={() => handleUpgrade(plan.id)} disabled={paying !== null}>
+                        {paying === plan.id ? <><Loader2 size={13} style={{ animation: "spin 0.7s linear infinite" }} /> Processing…</> : plan.cta}
                       </button>
-                    )
-                  }
+                    )}
                 </div>
               </div>
             );
@@ -219,44 +192,51 @@ export default function PricingPage() {
         </div>
 
         {/* Deep Audit */}
-        <div className="deep-card">
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 40, marginBottom: 72, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center", boxShadow: "var(--shadow-card)" }}>
           <div>
-            <div className="deep-tag"><Sparkles size={10} /> Add-on</div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 22, color: "#f0f0f5", marginBottom: 12 }}>Deep Audit</div>
-            <div className="deep-price">₹1,650 <span style={{ fontSize: 14, fontWeight: 400, color: "#6b6b85" }}>per audit</span></div>
-            <div className="deep-tagline">~$20 USD · Available on any plan</div>
-            <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "#6366f1", color: "#fff", borderRadius: 8, fontSize: 12, textDecoration: "none", fontFamily: "'DM Mono', monospace" }}>
-              Request Deep Audit <ArrowRight size={12} />
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 100, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: "#d97706", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>
+              <Sparkles size={10} /> Add-on
+            </div>
+            <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 10 }}>Deep Audit</h3>
+            <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 38, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+              ₹1,650 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
+            </div>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>~$20 USD · Available on any plan</p>
+            <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "var(--brand)", color: "#fff", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textDecoration: "none" }}>
+              Request Deep Audit <ArrowRight size={13} />
             </Link>
           </div>
           <div>
             {DEEP_AUDIT_FEATURES.map(f => (
-              <div key={f} className="plan-feature"><Check size={12} color="#a5b4fc" style={{ flexShrink: 0, marginTop: 2 }} />{f}</div>
+              <div key={f} style={{ display: "flex", gap: 9, marginBottom: 10, alignItems: "flex-start", fontSize: 13, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
+                <Check size={12} style={{ color: "var(--brand)", flexShrink: 0, marginTop: 2 }} />{f}
+              </div>
             ))}
           </div>
         </div>
 
         {/* FAQ */}
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div className="pricing-badge" style={{ marginBottom: 16 }}>FAQ</div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.5px", color: "#f0f0f5" }}>Frequently asked questions</h2>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>FAQ</div>
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>Frequently asked questions</h2>
         </div>
-
-        <div className="faq-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 56 }}>
           {FAQS.map(faq => (
-            <div key={faq.q} className="faq-item">
-              <div className="faq-q">{faq.q}</div>
-              <div className="faq-a">{faq.a}</div>
+            <div key={faq.q} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 24 }}>
+              <h4 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 600, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 8 }}>{faq.q}</h4>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>{faq.a}</p>
             </div>
           ))}
         </div>
 
-        <div className="contact-line">
+        <div style={{ textAlign: "center", paddingTop: 24, borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
           Questions? Email us at{" "}
-          <a href="mailto:hello@auditsmart.io">hello@auditsmart.io</a>
+          <a href="mailto:hello@auditsmart.io" style={{ color: "var(--brand)" }}>hello@auditsmart.io</a>
           {" "}— we respond within 24 hours.
         </div>
       </div>
+      <Footer />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

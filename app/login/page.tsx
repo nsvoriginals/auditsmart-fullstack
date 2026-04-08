@@ -14,7 +14,7 @@ const inputStyle: React.CSSProperties = {
   border: "1px solid var(--border)",
   borderRadius: "var(--radius)",
   color: "var(--text-primary)",
-  fontFamily: "'DM Mono', monospace", fontSize: 13,
+  fontFamily: "'Satoshi', sans-serif", fontSize: 13,
   outline: "none", transition: "border-color 0.15s",
 };
 
@@ -24,7 +24,7 @@ function Logo() {
       <div style={{ width: 28, height: 28, borderRadius: 8, background: "var(--brand-faint)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Shield size={15} style={{ color: "var(--brand)" }} />
       </div>
-      <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 19, color: "var(--text-primary)" }}>
+      <span style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, fontSize: 19, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
         Audit<span style={{ color: "var(--brand)" }}>Smart</span>
       </span>
     </div>
@@ -68,7 +68,7 @@ export default function LoginPage() {
         <Logo />
 
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 36, boxShadow: "var(--shadow-md)" }}>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>Welcome back</h2>
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>Welcome back</h2>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 24, fontFamily: "'Satoshi', sans-serif" }}>Sign in to your account to continue</p>
 
           {error && (

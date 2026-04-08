@@ -11,39 +11,38 @@ interface BillingStatus {
 }
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
-  .billing-root { font-family: 'DM Mono', monospace; color: #f0f0f5; max-width: 680px; }
-  .page-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.5px; margin-bottom: 6px; }
-  .page-sub { font-size: 12px; color: #6b6b85; margin-bottom: 32px; }
+  .billing-root { font-family: 'Satoshi', sans-serif; color: #f0f0f5; max-width: 680px; }
+  .page-title { font-family: 'Satoshi', sans-serif; font-size: 28px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.025em; margin-bottom: 6px; }
+  .page-sub { font-size: 12px; color: #6b6b85; margin-bottom: 32px; font-family: 'Satoshi', sans-serif; }
   .card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; margin-bottom: 16px; overflow: hidden; }
   .card-body { padding: 28px; }
-  .section-label { font-size: 10px; color: #6b6b85; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .section-label { font-size: 10px; color: #6b6b85; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; font-family: 'Satoshi', sans-serif; }
   .plan-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-  .plan-name { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.5px; margin-top: 2px; }
-  .plan-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-left: 10px; font-weight: 500; }
+  .plan-name { font-family: 'Satoshi', sans-serif; font-size: 26px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.025em; margin-top: 2px; }
+  .plan-badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-left: 10px; font-weight: 500; font-family: 'Satoshi', sans-serif; }
   .plan-badge.premium { background: rgba(99,102,241,0.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.2); }
   .plan-badge.free { background: rgba(100,116,139,0.1); color: #94a3b8; border: 1px solid rgba(100,116,139,0.2); }
-  .renews-val { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #f0f0f5; }
-  .renews-sub { font-size: 10px; color: #6b6b85; text-transform: uppercase; letter-spacing: 0.06em; }
+  .renews-val { font-family: 'Satoshi', sans-serif; font-size: 22px; font-weight: 800; color: #f0f0f5; }
+  .renews-sub { font-size: 10px; color: #6b6b85; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'Satoshi', sans-serif; }
   .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 20px; background: #111118; border-top: 1px solid #1e1e2e; border-bottom: 1px solid #1e1e2e; }
   .stat-block { }
-  .stat-num { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #f0f0f5; }
-  .stat-lbl { font-size: 10px; color: #6b6b85; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-num { font-family: 'Satoshi', sans-serif; font-size: 22px; font-weight: 800; color: #f0f0f5; }
+  .stat-lbl { font-size: 10px; color: #6b6b85; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'Satoshi', sans-serif; }
   .actions-row { padding: 20px 28px; display: flex; gap: 10px; }
-  .btn-upgrade { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; text-decoration: none; transition: background 0.15s; }
+  .btn-upgrade { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-family: 'Satoshi', sans-serif; font-size: 12px; cursor: pointer; text-decoration: none; transition: background 0.15s; }
   .btn-upgrade:hover { background: #5254cc; }
-  .btn-cancel { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: transparent; color: #6b6b85; border: 1px solid #1e1e2e; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .btn-cancel { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: transparent; color: #6b6b85; border: 1px solid #1e1e2e; border-radius: 8px; font-family: 'Satoshi', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.15s; }
   .btn-cancel:hover { border-color: rgba(239,68,68,0.3); color: #fca5a5; }
   .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
   .card-header { padding: 18px 24px; border-bottom: 1px solid #1e1e2e; }
-  .card-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #e0e0f0; }
-  .history-empty { padding: 40px 24px; text-align: center; font-size: 12px; color: #6b6b85; }
+  .card-title { font-family: 'Satoshi', sans-serif; font-size: 14px; font-weight: 700; color: #e0e0f0; }
+  .history-empty { padding: 40px 24px; text-align: center; font-size: 12px; color: #6b6b85; font-family: 'Satoshi', sans-serif; }
   .history-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #1e1e2e; }
   .history-row:last-child { border-bottom: none; }
-  .history-plan { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: #f0f0f5; text-transform: capitalize; }
-  .history-date { font-size: 11px; color: #6b6b85; margin-top: 3px; }
-  .history-amount { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #f0f0f5; text-align: right; }
-  .history-status { font-size: 10px; margin-top: 2px; text-align: right; }
+  .history-plan { font-family: 'Satoshi', sans-serif; font-size: 13px; font-weight: 700; color: #f0f0f5; text-transform: capitalize; }
+  .history-date { font-size: 11px; color: #6b6b85; margin-top: 3px; font-family: 'Satoshi', sans-serif; }
+  .history-amount { font-family: 'Satoshi', sans-serif; font-size: 14px; font-weight: 700; color: #f0f0f5; text-align: right; }
+  .history-status { font-size: 10px; margin-top: 2px; text-align: right; font-family: 'Satoshi', sans-serif; }
   .status-verified { color: #6ee7b7; }
   .status-pending { color: #fde047; }
   .skeleton { background: #111118; border-radius: 8px; animation: pulse 1.5s ease-in-out infinite; }

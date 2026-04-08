@@ -75,7 +75,7 @@ export default function HistoryPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>Audit History</h1>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>Audit History</h1>
           <p style={{ fontSize: 13, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>View and manage all your past smart contract security audits</p>
         </div>
         <Link href="/dashboard/scan"
@@ -105,8 +105,8 @@ export default function HistoryPage() {
                 { label: "PDF Reports",     value: audits.filter(a => a.pdf_available).length, color: "var(--text-primary)" },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18, textAlign: "center", boxShadow: "var(--shadow-card)" }}>
-                  <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, color, marginBottom: 4 }}>{value}</div>
-                  <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'DM Mono', monospace" }}>{label}</div>
+                  <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 26, fontWeight: 800, color, marginBottom: 4 }}>{value}</div>
+                  <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif" }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -117,7 +117,7 @@ export default function HistoryPage() {
               <div style={{ width: 64, height: 64, borderRadius: "var(--radius-lg)", background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
                 <FileText size={28} style={{ color: "var(--brand)" }} />
               </div>
-              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>No audits yet</h3>
+              <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 8 }}>No audits yet</h3>
               <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, lineHeight: 1.7, fontFamily: "'Satoshi', sans-serif" }}>Run your first smart contract audit to see results here.</p>
               <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 22px", background: "var(--brand)", color: "#fff", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
                 <Plus size={13} /> Start Your First Audit
@@ -137,14 +137,14 @@ export default function HistoryPage() {
                   >
                     {/* Score ring */}
                     <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px solid ${rs.border}`, background: rs.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 800, color: rs.color }}>{audit.risk_score}</span>
+                      <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 800, color: rs.color }}>{audit.risk_score}</span>
                     </div>
 
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{audit.contract_name}</span>
-                        <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: "var(--elevated)", border: "1px solid var(--border)", color: "var(--text-disabled)", fontFamily: "'DM Mono', monospace" }}>{audit.chain}</span>
+                        <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{audit.contract_name}</span>
+                        <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: "var(--elevated)", border: "1px solid var(--border)", color: "var(--text-disabled)", fontFamily: "'Satoshi', monospace" }}>{audit.chain}</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", fontSize: 11, color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={10} />{relTime(audit.created_at)}</span>

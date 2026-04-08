@@ -135,7 +135,7 @@ export default function ScanPage() {
 
       {/* Header */}
       <div>
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
+        <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>
           Scan Contract
         </h1>
         <p style={{ fontSize: 13, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
@@ -171,7 +171,7 @@ export default function ScanPage() {
 
       {/* Form card */}
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 28, boxShadow: "var(--shadow-card)" }}>
-        <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Audit Configuration</h3>
+        <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>Audit Configuration</h3>
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 20, fontFamily: "'Satoshi', sans-serif" }}>Configure your contract audit settings</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
@@ -204,7 +204,7 @@ export default function ScanPage() {
             placeholder={"// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract MyContract { ... }"}
             value={code}
             onChange={e => setCode(e.target.value)}
-            style={{ ...inputBase, fontFamily: "'DM Mono', monospace", resize: "vertical", minHeight: 240 }}
+            style={{ ...inputBase, fontFamily: "'Satoshi', monospace", resize: "vertical", minHeight: 240 }}
             onFocus={e => (e.target.style.borderColor = "var(--brand)")}
             onBlur={e  => (e.target.style.borderColor = "var(--border)")}
           />
@@ -258,11 +258,11 @@ export default function ScanPage() {
               <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
                 {/* Score ring */}
                 <div style={{ width: 72, height: 72, borderRadius: "50%", border: "3px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>{result.risk_score}</span>
+                  <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 22, fontWeight: 800, color: "var(--text-primary)" }}>{result.risk_score}</span>
                 </div>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                    <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, color: "var(--text-primary)" }}>{result.contract_name}</h3>
+                    <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 20, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>{result.contract_name}</h3>
                     <span style={{ padding: "2px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, fontFamily: "'Satoshi', sans-serif", ...verdictStyle(result.deployment_verdict), border: `1px solid ${verdictStyle(result.deployment_verdict).border}` }}>
                       {result.deployment_verdict}
                     </span>
@@ -306,7 +306,7 @@ export default function ScanPage() {
           {result.findings.length > 0 && (
             <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
               <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)" }}>
-                <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>Findings</h3>
+                <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 2 }}>Findings</h3>
                 <p style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>{result.total_findings} security issues detected</p>
               </div>
               <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -325,7 +325,7 @@ export default function ScanPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", fontFamily: "'Satoshi', sans-serif", marginBottom: 2 }}>{finding.type}</p>
                           {finding.function && (
-                            <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "'DM Mono', monospace" }}>
+                            <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "'Satoshi', monospace" }}>
                               {finding.function}{finding.line && ` · line ${finding.line}`}
                             </p>
                           )}
@@ -336,12 +336,12 @@ export default function ScanPage() {
                       {isOpen && (
                         <div style={{ borderTop: "1px solid var(--border)", padding: 16, background: "var(--elevated)", display: "flex", flexDirection: "column", gap: 12 }}>
                           <div>
-                            <p style={{ fontSize: 10, fontWeight: 600, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>Description</p>
+                            <p style={{ fontSize: 10, fontWeight: 600, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, fontFamily: "'Satoshi', sans-serif" }}>Description</p>
                             <p style={{ fontSize: 13, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif", lineHeight: 1.65 }}>{finding.description}</p>
                           </div>
                           {finding.recommendation && (
                             <div style={{ padding: "12px 14px", borderRadius: "var(--radius)", background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.15)" }}>
-                              <p style={{ fontSize: 10, fontWeight: 600, color: "var(--brand)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, fontFamily: "'DM Mono', monospace" }}>Recommendation</p>
+                              <p style={{ fontSize: 10, fontWeight: 600, color: "var(--brand)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, fontFamily: "'Satoshi', sans-serif" }}>Recommendation</p>
                               <p style={{ fontSize: 13, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif", lineHeight: 1.65 }}>{finding.recommendation}</p>
                             </div>
                           )}
