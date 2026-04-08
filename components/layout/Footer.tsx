@@ -84,7 +84,7 @@ export function Footer() {
             <div>
               <h3
                 className="text-2xl font-bold mb-2"
-                style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
+                style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}
               >
                 Stay ahead of threats
               </h3>
@@ -122,7 +122,9 @@ export function Footer() {
               <h4
                 className="text-xs font-semibold uppercase tracking-widest mb-4"
                 style={{
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'Satoshi', sans-serif",
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
                   color: "var(--text-disabled)",
                 }}
               >
@@ -160,7 +162,7 @@ export function Footer() {
             <FaShieldAlt className="h-4 w-4" style={{ color: "var(--brand)" }} />
             <span
               className="text-sm font-medium"
-              style={{ fontFamily: "'DM Mono', monospace", color: "var(--text-secondary)" }}
+              style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--text-secondary)" }}
             >
               Enterprise-grade security
             </span>
@@ -201,7 +203,7 @@ export function Footer() {
             </div>
             <span
               className="text-base font-bold"
-              style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
+              style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}
             >
               Audit<span style={{ color: "var(--brand)" }}>Smart</span>
             </span>

@@ -140,8 +140,8 @@ export default function DashboardOverview() {
     return (
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center" }}>
         <AlertTriangle size={48} style={{ color: "#ef4444", margin: "0 auto 20px" }} />
-        <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Error Loading Dashboard</h3>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>{error}</p>
+        <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 8 }}>Error Loading Dashboard</h3>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, fontFamily: "'Satoshi', sans-serif" }}>{error}</p>
         <button onClick={fetchDashboardData} style={{ padding: "10px 22px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Try Again</button>
       </div>
     );
@@ -154,7 +154,7 @@ export default function DashboardOverview() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>
             Welcome back, {session?.user?.name?.split(" ")[0] || "there"}!
           </h1>
           <p style={{ fontSize: 13, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
@@ -172,10 +172,10 @@ export default function DashboardOverview() {
         {statCards.map(({ label, value, suffix, icon: Icon }) => (
           <div key={label} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18, boxShadow: "var(--shadow-card)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'DM Mono', monospace" }}>{label}</span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif" }}>{label}</span>
               <Icon size={14} style={{ color: "var(--text-muted)" }} />
             </div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, color: label === "Avg Score" ? riskInfo.color : "var(--text-primary)", marginBottom: 4 }}>
+            <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 32, fontWeight: 800, letterSpacing: "-0.025em", color: label === "Avg Score" ? riskInfo.color : "var(--text-primary)", marginBottom: 4 }}>
               {value}{suffix || ""}
             </div>
             {label === "Avg Score" && averageScore > 0 && (
@@ -198,7 +198,7 @@ export default function DashboardOverview() {
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
           <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>Recent Audits</h3>
+              <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 2 }}>Recent Audits</h3>
               <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>Your most recent security audit reports</p>
             </div>
             {recentAudits.length > 0 && (
@@ -239,13 +239,13 @@ export default function DashboardOverview() {
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       {/* Score Circle */}
                       <div style={{ width: 44, height: 44, borderRadius: "50%", border: `2px solid ${risk.border}`, background: risk.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 800, color: risk.color }}>{audit.score}</span>
+                        <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 800, color: risk.color }}>{audit.score}</span>
                       </div>
                       
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                          <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{audit.contractName}</span>
+                          <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>{audit.contractName}</span>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, padding: "2px 7px", borderRadius: 4, background: status.bg, color: status.color, fontFamily: "'Satoshi', sans-serif" }}>
                             <StatusIcon size={10} style={status.label === "Processing" ? { animation: "spin 1s linear infinite" } : {}} />
                             {status.label}
@@ -270,7 +270,7 @@ export default function DashboardOverview() {
           {/* Plan & Usage Card */}
           <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>Plan & Usage</h3>
+              <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>Plan & Usage</h3>
               <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "var(--primary-faint)", color: "var(--primary)", fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textTransform: "uppercase" }}>
                 {subscription?.plan || "FREE"}
               </span>
@@ -290,7 +290,7 @@ export default function DashboardOverview() {
               <div style={{ padding: 10, borderRadius: "var(--radius-sm)", background: "var(--elevated)", marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>Remaining free audits</span>
-                  <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{stats?.remainingAudits}</span>
+                  <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{stats?.remainingAudits}</span>
                 </div>
               </div>
             )}
@@ -308,7 +308,7 @@ export default function DashboardOverview() {
 
           {/* Quick Actions */}
           <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18 }}>
-            <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12 }}>Quick Actions</h3>
+            <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 12 }}>Quick Actions</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {[
                 { icon: Shield, label: "New Security Audit", href: "/dashboard/scan" },
@@ -328,7 +328,7 @@ export default function DashboardOverview() {
             <div style={{ display: "flex", gap: 12 }}>
               <Shield size={18} style={{ color: "var(--primary)", flexShrink: 0 }} />
               <div>
-                <h4 style={{ fontFamily: "'Syne', sans-serif", fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Security Tip</h4>
+                <h4 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>Security Tip</h4>
                 <p style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5, fontFamily: "'Satoshi', sans-serif" }}>Regular audits are crucial for contract security. Run audits after every major update.</p>
               </div>
             </div>

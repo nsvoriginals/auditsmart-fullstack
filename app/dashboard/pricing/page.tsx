@@ -115,7 +115,7 @@ export default function PricingPage() {
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 18 }}>
             Pricing
           </div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(30px,5vw,52px)", fontWeight: 800, letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: 12 }}>Simple, transparent pricing</h1>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,5vw,52px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 12 }}>Simple, transparent pricing</h1>
           <p style={{ fontSize: 14, color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>
             Start free with 3 audits. Upgrade when your contracts need more protection.
           </p>
@@ -156,8 +156,8 @@ export default function PricingPage() {
                 <div style={{ width: 36, height: 36, borderRadius: 9, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brand)", marginBottom: 18 }}>
                   <Icon size={16} />
                 </div>
-                <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4, fontFamily: "'DM Mono', monospace" }}>{plan.name}</div>
-                <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 34, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+                <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4, fontFamily: "'Satoshi', sans-serif" }}>{plan.name}</div>
+                <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 34, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
                   {price}<span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)", marginLeft: 3, fontFamily: "'Satoshi', sans-serif" }}>{period}</span>
                 </div>
                 <div style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 22px", fontFamily: "'Satoshi', sans-serif" }}>{plan.description}</div>
@@ -200,8 +200,8 @@ export default function PricingPage() {
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 100, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: "#d97706", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>
               <Sparkles size={10} /> Add-on
             </div>
-            <h3 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 22, color: "var(--text-primary)", marginBottom: 10 }}>Deep Audit</h3>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 38, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+            <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 10 }}>Deep Audit</h3>
+            <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 38, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
               ₹1,650 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
             </div>
             <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>~$20 USD · Available on any plan</p>
@@ -221,12 +221,12 @@ export default function PricingPage() {
         {/* FAQ */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>FAQ</div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>Frequently asked questions</h2>
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>Frequently asked questions</h2>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 56 }}>
           {FAQS.map(faq => (
             <div key={faq.q} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 24 }}>
-              <h4 style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>{faq.q}</h4>
+              <h4 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>{faq.q}</h4>
               <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>{faq.a}</p>
             </div>
           ))}

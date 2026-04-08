@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuditSmart — AI Smart Contract Security</title>
+<!-- Times New Roman system font — no CDN needed -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --c:#00d4ff;--p:#7b2fff;--pk:#ff3d9a;--g:#00ff94;
+  --bg:#050508;--s1:#0a0a12;--s2:#0f0f1a;--s3:#141428;
+  --t1:#f0f0ff;--t2:#b0b0cc;--t3:#777799;
+  --border:rgba(0,212,255,0.12);--border2:rgba(0,212,255,0.3);
+  --glass:rgba(255,255,255,0.02);--glass2:rgba(0,212,255,0.04);
+  --font:'Times New Roman','Times',Georgia,serif;--display:'Times New Roman','Times',Georgia,serif;--mono:'Courier New',Courier,monospace;
+  --r:12px;--r2:8px;--r3:20px
+}
+html{scroll-behavior:smooth}
+body{font-family:'Times New Roman','Times',Georgia,serif!important;background:var(--bg);color:var(--t1);overflow-x:hidden;line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,p,span,div,a,button,input,textarea,select,label,.nav-logo,.app-logo,.hero h1,.sec-title,.view-title,.plan-price,.gauge-num,.ds-val,.scan-title,.results-title,.sidebar-lbl,.sp-left,.hi-name,.dash-stat .ds-val,.findings-title,.modal h2,nav,footer,section{font-family:'Times New Roman','Times',Georgia,serif!important}
+a{text-decoration:none;color:inherit}
+button{font-family:'Times New Roman','Times',serif;cursor:pointer;border:none;outline:none}
+input,textarea,select{font-family:'Courier New',Courier,monospace;outline:none}
+
+/* LIGHT MODE OVERRIDES */
+:root.light #bgCanvas{opacity:.15!important}
+:root.light nav{background:var(--nav-bg)!important}
+:root.light .app-nav{background:rgba(248,249,255,.95)!important}
+:root.light .app-sidebar{background:#ffffff!important;border-color:rgba(100,100,200,.15)!important}
+:root.light .app-main{background:var(--bg)!important}
+:root.light .audit-card,:root.light .score-card,:root.light .risk-card,:root.light .finding,:root.light .history-item,:root.light .dash-stat,:root.light .plan,:root.light .step,:root.light .feat-card,:root.light .agent-card,:root.light .terminal,:root.light .modal,:root.light .pay-plan-box,:root.light .share-section,:root.light .sidebar-plan{background:var(--s1)!important;border-color:rgba(100,100,200,.15)!important}
+:root.light .feat-card:hover,:root.light .step:hover{background:var(--s2)!important}
+:root.light .fi{background:var(--s2)!important;border-color:rgba(100,100,200,.2)!important;color:var(--t1)!important}
+:root.light .code-area{color:#1d4ed8!important}
+:root.light .run-btn,:root.light .btn-pri,:root.light .m-btn{color:#fff!important}
+:root.light .ticker-wrap{background:rgba(123,47,255,.04)!important}
+:root.light .ticker-item{color:var(--t2)!important}
+:root.light footer{background:var(--s2)!important}
+:root.light .footer-bot{border-color:rgba(100,100,200,.15)!important}
+:root.light #modeToggle:after{content:'☀️'}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--p);border-radius:2px}
+
+/* CANVAS BG */
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.6}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;background:var(--nav-bg);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;letter-spacing:-.5px}
+.nav-logo svg{width:32px;height:32px}
+.nav-links{display:flex;gap:32px;font-size:13px;font-weight:500;color:var(--t2)}
+.nav-links a:hover{color:var(--t1)}
+.nav-ctas{display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:var(--r2);font-size:13px;font-weight:700;transition:.2s;letter-spacing:.3px}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--t2)}
+.btn-ghost:hover{border-color:var(--c);color:var(--c)}
+.btn-pri{background:linear-gradient(135deg,var(--p),var(--c));color:#fff;border:none}
+.btn-pri:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,212,255,.2)}
+.btn-pk{background:linear-gradient(135deg,var(--pk),var(--p));color:#fff}
+.btn-pk:hover{opacity:.9;transform:translateY(-1px)}
+#navUser{display:none;align-items:center;gap:12px}
+#navPlan{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:var(--c);font-family:'Courier New',Courier,monospace}
+.ham{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px}
+.ham span{display:block;width:22px;height:2px;background:var(--t2);transition:.3s;border-radius:2px}
+
+/* LANDING */
+#landing{position:relative;z-index:1}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;padding:100px 40px 60px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 30% 40%,rgba(123,47,255,.12),transparent 60%),radial-gradient(ellipse 50% 50% at 80% 60%,rgba(0,212,255,.08),transparent 55%);pointer-events:none}
+.hero-inner{max-width:1100px;margin:0 auto;width:100%}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,148,.08);border:1px solid rgba(0,255,148,.2);padding:6px 16px;border-radius:20px;font-size:11px;font-weight:700;color:var(--g);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:28px;font-family:'Courier New',Courier,monospace}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:clamp(42px,6vw,80px);font-weight:800;line-height:1.05;letter-spacing:-2px;margin-bottom:24px}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--c),var(--p),var(--pk));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:17px;color:var(--t2);max-width:520px;line-height:1.75;margin-bottom:40px;font-weight:400}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:60px}
+.hero-ctas .btn{padding:14px 28px;font-size:14px}
+.hero-stats{display:flex;gap:48px;flex-wrap:wrap}
+.h-stat p:first-child{font-size:32px;font-weight:800;font-family:'Courier New',Courier,monospace;color:var(--t1)}
+.h-stat p:last-child{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px}
+
+/* TICKER */
+.ticker-wrap{background:rgba(0,212,255,.04);border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;padding:10px 0;position:relative;z-index:2}
+.ticker-track{display:flex;gap:60px;animation:ticker 30s linear infinite;width:max-content}
+.ticker-item{display:flex;align-items:center;gap:8px;font-size:12px;font-family:'Courier New',Courier,monospace;color:var(--t2);white-space:nowrap}
+.ticker-item .tik-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.tik-r{background:#ef4444}.tik-y{background:#f59e0b}.tik-g{background:var(--g)}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* FEATURES */
+.sec{padding:100px 40px;position:relative;z-index:1}
+.sec-inner{max-width:1100px;margin:0 auto}
+.sec-label{font-size:11px;font-weight:700;color:var(--c);letter-spacing:3px;text-transform:uppercase;font-family:'Courier New',Courier,monospace;margin-bottom:14px}
+.sec-title{font-size:clamp(28px,4vw,48px);font-weight:800;letter-spacing:-1.5px;line-height:1.05;margin-bottom:16px;font-family:'Times New Roman','Times',serif}
+.sec-sub{font-size:16px;color:var(--t2);max-width:520px;margin-bottom:56px;line-height:1.8}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.feat-card{background:var(--s1);padding:36px;transition:.3s;cursor:default}
+.feat-card:hover{background:var(--s2)}
+.feat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:20px;position:relative}
+.feat-icon::after{content:'';position:absolute;inset:0;border-radius:10px;opacity:.15}
+.fi-c{background:rgba(0,212,255,.08)}.fi-c::after{background:var(--c)}
+.fi-p{background:rgba(123,47,255,.08)}.fi-p::after{background:var(--p)}
+.fi-pk{background:rgba(255,61,154,.08)}.fi-pk::after{background:var(--pk)}
+.fi-g{background:rgba(0,255,148,.08)}.fi-g::after{background:var(--g)}
+.fi-y{background:rgba(245,158,11,.08)}
+.feat-card h3{font-size:15px;font-weight:700;margin-bottom:10px;color:var(--t1)}
+.feat-card p{font-size:14px;color:var(--t2);line-height:1.75;margin-top:6px}
+
+/* AGENTS */
+.agents-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:48px}
+.agent-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px 16px;text-align:center;transition:.3s;cursor:default}
+.agent-card:hover{background:var(--s2);border-color:var(--c);transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,212,255,.06)}
+.agent-card .ag-icon{font-size:24px;margin-bottom:10px;display:block}
+.agent-card p{font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.5px;text-transform:uppercase;font-family:'Courier New',Courier,monospace}
+.agent-card .ag-model{font-size:10px;color:var(--t3);margin-top:4px;font-family:'Courier New',Courier,monospace}
+
+/* HOW IT WORKS */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:48px;position:relative}
+.steps::before{content:'';position:absolute;top:32px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--border2),var(--c),var(--border2),transparent)}
+.step{background:var(--s1);border:1px solid var(--border);border-radius:var(--r3);padding:32px 24px;text-align:center;transition:.3s}
+.step:hover{background:var(--s2);border-color:var(--border2)}
+.step-num{width:56px;height:56px;border-radius:50%;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--c);margin:0 auto 20px;font-family:'Courier New',Courier,monospace}
+.step h3{font-size:14px;font-weight:700;margin-bottom:8px}
+.step p{font-size:14px;color:var(--t2);line-height:1.7}
+
+/* PRICING */
+.plans{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
+.plan{background:var(--s1);border:1px solid var(--border);border-radius:var(--r3);padding:28px;transition:.3s;display:flex;flex-direction:column}
+.plan:hover{border-color:var(--border2)}
+.plan.featured{border-color:rgba(123,47,255,.4);background:linear-gradient(180deg,rgba(123,47,255,.06),var(--s1))}
+.plan-name{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:16px;font-family:'Courier New',Courier,monospace}
+.plan-price{font-size:40px;font-weight:800;font-family:'Courier New',Courier,monospace;line-height:1;margin-bottom:4px}
+.plan-price span{font-size:13px;font-weight:400;color:var(--t2)}
+.plan-desc{font-size:12px;color:var(--t3);margin-bottom:24px;font-family:'Courier New',Courier,monospace}
+.plan-feats{flex:1;list-style:none;space-y:8px;margin-bottom:24px;display:flex;flex-direction:column;gap:10px}
+.plan-feats li{font-size:14px;color:var(--t2);display:flex;align-items:flex-start;gap:8px;line-height:1.6}
+.plan-feats li::before{content:'→';color:var(--c);flex-shrink:0;font-family:'Courier New',Courier,monospace}
+.plan-feats li.extra{color:var(--t1)}
+.plan-feats li.extra::before{content:'✦';color:var(--p)}
+.plan-btn{width:100%;padding:12px;border-radius:var(--r2);font-size:13px;font-weight:700;transition:.2s;text-align:center}
+.plan.featured .plan-btn{background:linear-gradient(135deg,var(--p),var(--c));color:#fff}
+.plan.featured .plan-btn:hover{opacity:.9;box-shadow:0 8px 24px rgba(0,212,255,.2)}
+.plan:not(.featured) .plan-btn{background:transparent;border:1px solid var(--border2);color:var(--t2)}
+.plan:not(.featured) .plan-btn:hover{border-color:var(--c);color:var(--c)}
+.plan-badge{display:inline-block;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:var(--c);font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:16px;font-family:'Courier New',Courier,monospace;letter-spacing:1px}
+
+/* FOOTER */
+footer{background:var(--s1);border-top:1px solid var(--border);padding:60px 40px 32px;position:relative;z-index:1}
+.footer-inner{max-width:1100px;margin:0 auto}
+.footer-top{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;margin-bottom:48px}
+.footer-brand p{font-size:13px;color:var(--t3);max-width:240px;margin-top:12px;line-height:1.65}
+.footer-socials{display:flex;gap:12px;margin-top:20px}
+.soc-btn{width:36px;height:36px;border-radius:8px;background:var(--glass);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--t2);transition:.2s}
+.soc-btn:hover{border-color:var(--c);color:var(--c)}
+.footer-links h4{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:16px;font-family:'Courier New',Courier,monospace}
+.footer-links ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.footer-links ul li a{font-size:13px;color:var(--t2);transition:.2s}
+.footer-links ul li a:hover{color:var(--t1)}
+.footer-bot{border-top:1px solid var(--border);padding-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-bot p{font-size:12px;color:var(--t3);font-family:'Courier New',Courier,monospace}
+.disc{font-size:11px;color:var(--t3);text-align:right;line-height:1.5}
+
+/* ═══════════ APP OVERLAY ═══════════ */
+#appOverlay{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);flex-direction:column}
+.app-nav{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(5,5,8,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);flex-shrink:0}
+.app-logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px}
+.app-tabs{display:flex;gap:4px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:3px}
+.app-tab{padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;transition:.2s;letter-spacing:.3px;background:none;border:none;font-family:'Times New Roman','Times',serif}
+.app-tab.active{background:rgba(0,212,255,.1);color:var(--c);border:1px solid rgba(0,212,255,.15)}
+.app-right{display:flex;align-items:center;gap:12px}
+.app-right .user-info{text-align:right}
+.app-right .user-info strong{display:block;font-size:13px;color:var(--t1)}
+.app-right .user-info span{font-size:10px;color:var(--t3);font-family:'Courier New',Courier,monospace}
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.app-sidebar{width:220px;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 12px;flex-shrink:0;overflow-y:auto}
+.sidebar-section{margin-bottom:8px}
+.sidebar-lbl{font-size:9px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase;font-family:'Courier New',Courier,monospace;padding:0 10px;margin-bottom:6px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:.2s;background:none;border:none;width:100%;text-align:left;font-family:'Times New Roman','Times',serif}
+.sb-item:hover{background:rgba(255,255,255,.04);color:var(--t1)}
+.sb-item.active{background:rgba(0,212,255,.08);color:var(--c);border:1px solid rgba(0,212,255,.12)}
+.sb-item .sb-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-plan{margin:auto 0 0;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.sp-name{font-size:10px;font-weight:700;color:var(--c);font-family:'Courier New',Courier,monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.sp-left{font-size:22px;font-weight:800;font-family:'Courier New',Courier,monospace;color:var(--t1)}
+.sp-sub{font-size:10px;color:var(--t3);font-family:'Courier New',Courier,monospace}
+.sp-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:10px;overflow:hidden}
+.sp-fill{height:100%;background:linear-gradient(90deg,var(--c),var(--g));border-radius:2px;transition:.5s}
+.sp-upgrade{width:100%;margin-top:10px;padding:8px;border-radius:6px;background:linear-gradient(135deg,var(--p),var(--c));color:#fff;font-size:11px;font-weight:700;font-family:'Times New Roman','Times',serif;cursor:pointer;border:none;transition:.2s}
+.sp-upgrade:hover{opacity:.9}
+
+/* APP MAIN */
+.app-main{flex:1;overflow-y:auto;padding:32px;background:var(--bg)}
+.app-main::-webkit-scrollbar{width:4px}
+.app-main::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.view{display:none}
+.view.active{display:block}
+.view-title{font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px}
+.view-sub{font-size:13px;color:var(--t2);margin-bottom:32px}
+
+/* AUDIT VIEW */
+.audit-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r3);padding:32px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;font-family:'Courier New',Courier,monospace}
+.fi{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--t1);font-size:13px;transition:.2s;width:100%}
+.fi:focus{border-color:rgba(0,212,255,.4);background:rgba(0,212,255,.02)}
+.fi option{background:var(--s2)}
+.code-area{min-height:220px;resize:vertical;color:#7dd3fc;font-size:12px;line-height:1.7;font-family:'Courier New',Courier,monospace}
+.audit-quota{display:flex;justify-content:space-between;align-items:center;margin:16px 0 0;padding:14px 16px;background:var(--s2);border-radius:10px;border:1px solid var(--border)}
+.aq-label{font-size:11px;color:var(--t3);font-family:'Courier New',Courier,monospace}
+.aq-val{font-size:13px;font-weight:700;color:var(--c);font-family:'Courier New',Courier,monospace}
+.run-btn{width:100%;margin-top:20px;padding:16px;border-radius:12px;background:linear-gradient(135deg,var(--p),var(--c));color:#fff;font-size:14px;font-weight:800;letter-spacing:.5px;transition:.3s;border:none;font-family:'Times New Roman','Times',serif}
+.run-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,212,255,.2)}
+.run-btn:disabled{opacity:.5;cursor:not-allowed}
+.err-box{margin-top:14px;padding:12px 16px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:12px;color:#f87171;font-family:'Courier New',Courier,monospace;display:none}
+
+/* SCAN PROGRESS */
+#scanView{display:none;text-align:center;padding:60px 20px}
+.scan-ring-wrap{position:relative;width:160px;height:160px;margin:0 auto 32px}
+.scan-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;animation:spin 2s linear infinite}
+.scan-ring.r1{border-top-color:var(--c);animation-duration:2s}
+.scan-ring.r2{inset:12px;border-top-color:var(--p);animation-duration:1.5s;animation-direction:reverse}
+.scan-ring.r3{inset:24px;border-top-color:var(--pk);animation-duration:3s}
+.scan-core{position:absolute;inset:36px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;font-family:'Courier New',Courier,monospace;color:var(--c)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scan-title{font-size:22px;font-weight:800;margin-bottom:8px}
+#scanAgent{font-size:13px;color:var(--c);font-family:'Courier New',Courier,monospace;margin-bottom:28px;min-height:20px}
+.scan-stages{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+.stage-item{display:flex;align-items:center;gap:6px;font-size:11px;font-family:'Courier New',Courier,monospace;color:var(--t3);padding:6px 14px;background:var(--s1);border:1px solid var(--border);border-radius:20px;transition:.3s}
+.stage-item.active{color:var(--c);border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.05)}
+.stage-item.done{color:var(--g);border-color:rgba(0,255,148,.2)}
+.stage-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.scan-progress-wrap{max-width:500px;margin:0 auto}
+.scan-pbar{height:3px;background:var(--s2);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.scan-pfill{height:100%;width:0%;background:linear-gradient(90deg,var(--p),var(--c),var(--g));border-radius:2px;transition:width .4s}
+.scan-pct{font-size:12px;color:var(--t3);font-family:'Courier New',Courier,monospace}
+.terminal{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;margin:24px auto 0;max-width:600px;text-align:left;max-height:140px;overflow:hidden}
+.term-top{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.term-dot{width:8px;height:8px;border-radius:50%}
+#termLog{font-size:10px;font-family:'Courier New',Courier,monospace;color:var(--t3);line-height:1.8}
+#termLog p{margin:0}
+#termLog .tl-ok{color:var(--g)}
+#termLog .tl-warn{color:#fbbf24}
+#termLog .tl-info{color:var(--c)}
+
+/* RESULTS */
+#resultsView{display:none}
+.results-header{margin-bottom:28px}
+.results-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.r-badge{font-size:10px;font-weight:700;padding:4px 12px;border-radius:20px;font-family:'Courier New',Courier,monospace;letter-spacing:1px}
+.rb-live{background:rgba(0,255,148,.08);border:1px solid rgba(0,255,148,.2);color:var(--g)}
+.rb-id{background:var(--s1);border:1px solid var(--border);color:var(--t3)}
+.results-title{font-size:clamp(22px,3.5vw,40px);font-weight:800;letter-spacing:-1px;margin-bottom:14px}
+.results-sub{display:flex;gap:10px;flex-wrap:wrap}
+.r-sub-item{display:flex;align-items:center;gap:6px;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--t2);font-family:'Courier New',Courier,monospace}
+.results-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:20px;margin-bottom:24px}
+.score-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r3);padding:28px;display:flex;flex-direction:column;align-items:center}
+.score-gauge{position:relative;width:150px;height:150px;margin:0 auto 20px}
+.gauge-svg{width:100%;height:100%;transform:rotate(-90deg)}
+.gauge-track{fill:none;stroke:rgba(255,255,255,.05);stroke-width:10}
+.gauge-fill{fill:none;stroke-width:10;stroke-linecap:round;stroke-dasharray:408;stroke-dashoffset:408;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge-num{font-size:40px;font-weight:800;font-family:'Courier New',Courier,monospace;line-height:1}
+.gauge-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;font-family:'Courier New',Courier,monospace;margin-top:2px}
+.score-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:8px}
+.sm-item{background:var(--s2);border-radius:8px;padding:10px;text-align:center}
+.sm-item .sm-val{font-size:13px;font-weight:700;color:var(--t1);font-family:'Courier New',Courier,monospace}
+.sm-item .sm-key{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.risk-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r3);padding:28px}
+.risk-card h3{font-size:13px;font-weight:700;margin-bottom:20px;color:var(--t1);display:flex;justify-content:space-between;align-items:center}
+.risk-bars{display:flex;flex-direction:column;gap:14px}
+.rb-row{display:flex;align-items:center;gap:12px}
+.rb-lbl{font-size:10px;font-weight:700;font-family:'Courier New',Courier,monospace;text-transform:uppercase;width:100px;flex-shrink:0}
+.rb-track{flex:1;height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.rb-bar{height:100%;border-radius:3px;transition:width 1s ease}
+.rb-count{font-size:12px;font-weight:700;font-family:'Courier New',Courier,monospace;width:24px;text-align:right}
+.verdict-banner{border-radius:12px;padding:14px 20px;text-align:center;margin-bottom:20px}
+.findings-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.findings-title{font-size:16px;font-weight:800}
+.toolbar-btns{display:flex;gap:8px}
+.t-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;font-family:'Times New Roman','Times',serif;cursor:pointer;transition:.2s;border:1px solid var(--border);background:var(--s1);color:var(--t2)}
+.t-btn:hover{border-color:var(--c);color:var(--c)}
+.finding{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:10px;transition:.2s}
+.finding:hover{border-color:var(--border2);transform:translateX(3px)}
+.finding-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.finding-title{font-size:14px;font-weight:700;color:var(--t1);flex:1}
+.finding-badges{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.sev-badge{font-size:9px;font-weight:700;padding:3px 9px;border-radius:6px;font-family:'Courier New',Courier,monospace;letter-spacing:.5px}
+.sev-CRITICAL{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.sev-HIGH{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.sev-MEDIUM{background:rgba(234,179,8,.08);color:#fde047;border:1px solid rgba(234,179,8,.15)}
+.sev-LOW{background:rgba(0,255,148,.06);color:#6ee7b7;border:1px solid rgba(0,255,148,.12)}
+.sev-INFO{background:rgba(0,212,255,.06);color:var(--c);border:1px solid rgba(0,212,255,.12)}
+.conf-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;font-family:'Courier New',Courier,monospace}
+.conf-high{background:rgba(0,255,148,.06);color:var(--g);border:1px solid rgba(0,255,148,.12)}
+.conf-medium{background:rgba(0,212,255,.06);color:var(--c);border:1px solid rgba(0,212,255,.12)}
+.finding-desc{font-size:12px;color:var(--t2);line-height:1.7;font-family:'Courier New',Courier,monospace;margin-bottom:8px}
+.finding-metas{display:flex;gap:6px;flex-wrap:wrap}
+.finding-meta{font-size:10px;color:var(--t3);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;font-family:'Courier New',Courier,monospace}
+.finding-toggle{margin-top:10px;font-size:11px;color:var(--c);font-family:'Courier New',Courier,monospace;cursor:pointer;background:none;border:none;padding:0;display:flex;align-items:center;gap:4px;transition:.2s}
+.finding-toggle:hover{opacity:.7}
+.finding-detail{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.finding-detail.open{display:block}
+.detail-fix{background:rgba(0,255,148,.04);border:1px solid rgba(0,255,148,.1);border-radius:8px;padding:12px;margin-top:8px}
+.detail-fix-label{font-size:9px;font-weight:700;color:var(--g);font-family:'Courier New',Courier,monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.detail-fix pre{font-size:10px;color:rgba(0,255,148,.7);font-family:'Courier New',Courier,monospace;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.no-findings{text-align:center;padding:60px 20px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r3)}
+.nf-icon{font-size:48px;margin-bottom:16px}
+.nf-title{font-size:18px;font-weight:800;color:var(--g);margin-bottom:8px}
+.nf-sub{font-size:13px;color:var(--t2)}
+.share-section{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px}
+.share-title{font-size:11px;font-weight:700;color:var(--c);font-family:'Courier New',Courier,monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.share-btns{display:flex;gap:10px;flex-wrap:wrap}
+.s-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;font-family:'Courier New',Courier,monospace;cursor:pointer;transition:.2s;border:1px solid var(--border);background:transparent;color:var(--t2)}
+.s-btn:hover{border-color:var(--c);color:var(--c)}
+
+/* HISTORY VIEW */
+.history-item{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer;transition:.2s}
+.history-item:hover{border-color:var(--border2);transform:translateX(3px)}
+.hi-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.hi-meta{font-size:11px;color:var(--t3);font-family:'Courier New',Courier,monospace}
+.hi-right{display:flex;align-items:center;gap:10px}
+.hi-rl{font-size:12px;font-weight:700;font-family:'Courier New',Courier,monospace}
+.hi-crit{font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(239,68,68,.08);color:#f87171;border:1px solid rgba(239,68,68,.15);font-family:'Courier New',Courier,monospace}
+
+/* DASHBOARD VIEW */
+.dash-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:28px}
+.dash-stat{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;transition:.2s}
+.dash-stat:hover{border-color:var(--border2)}
+.ds-val{font-size:26px;font-weight:800;font-family:'Courier New',Courier,monospace}
+.ds-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px}
+.upgrade-banner{background:linear-gradient(135deg,rgba(123,47,255,.08),rgba(0,212,255,.04));border:1px solid rgba(0,212,255,.15);border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.ub-text h4{font-size:15px;font-weight:800;margin-bottom:4px}
+.ub-text p{font-size:12px;color:var(--t2)}
+
+/* MODALS */
+.modal-bg{position:fixed;inset:0;z-index:500;background:rgba(5,5,8,.9);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:.3s}
+.modal-bg.open{opacity:1;visibility:visible}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:24px;padding:36px;width:100%;max-width:420px;position:relative}
+.modal::before{content:'';position:absolute;top:0;left:40px;right:40px;height:1px;background:linear-gradient(90deg,transparent,var(--c),transparent);border-radius:0}
+.modal h2{font-size:22px;font-weight:800;margin-bottom:4px;letter-spacing:-.5px}
+.modal-sub{font-size:11px;color:var(--t3);font-family:'Courier New',Courier,monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:24px}
+.close-btn{position:absolute;top:20px;right:20px;width:32px;height:32px;border-radius:8px;background:var(--s2);border:1px solid var(--border);color:var(--t2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.close-btn:hover{border-color:var(--c);color:var(--c)}
+.modal-tabs{display:flex;gap:4px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:20px}
+.modal-tab{flex:1;padding:8px;border-radius:6px;font-size:12px;font-weight:700;color:var(--t2);cursor:pointer;transition:.2s;background:none;border:none;font-family:'Times New Roman','Times',serif;text-align:center}
+.modal-tab.active{background:rgba(0,212,255,.1);color:var(--c);border:1px solid rgba(0,212,255,.15)}
+.m-form{display:flex;flex-direction:column;gap:14px}
+.m-form .form-group{gap:6px}
+.pw-wrap{position:relative}
+.pw-wrap .fi{padding-right:40px}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;padding:0}
+.m-err{padding:10px 14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:11px;color:#f87171;font-family:'Courier New',Courier,monospace;display:none}
+.m-btn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--p),var(--c));color:#fff;font-size:13px;font-weight:800;font-family:'Times New Roman','Times',serif;cursor:pointer;border:none;transition:.2s;letter-spacing:.3px}
+.m-btn:hover:not(:disabled){opacity:.9;box-shadow:0 8px 20px rgba(0,212,255,.15)}
+.m-btn:disabled{opacity:.5;cursor:not-allowed}
+.m-link{font-size:11px;color:var(--t3);text-align:right;font-family:'Courier New',Courier,monospace;cursor:pointer;background:none;border:none;padding:0;transition:.2s}
+.m-link:hover{color:var(--c)}
+.pay-plan-box{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.pay-plan-name{font-size:13px;font-weight:700;color:var(--t2);font-family:'Courier New',Courier,monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.pay-price{font-size:36px;font-weight:800;font-family:'Courier New',Courier,monospace;background:linear-gradient(90deg,var(--p),var(--c));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+.pay-feats{list-style:none;display:flex;flex-direction:column;gap:8px}
+.pay-feats li{font-size:12px;color:var(--t2);display:flex;gap:8px;font-family:'Courier New',Courier,monospace}
+.pay-feats li::before{content:'→';color:var(--c)}
+
+/* TOAST */
+#toasts{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:12px 18px;border-radius:10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;pointer-events:auto;font-family:'Times New Roman','Times',serif;transform:translateX(100px);opacity:0;transition:.3s;min-width:200px}
+.toast.show{transform:translateX(0);opacity:1}
+.toast.t-ok{background:rgba(0,255,148,.9);color:#002b10}
+.toast.t-err{background:rgba(239,68,68,.9);color:#fff}
+.toast.t-info{background:rgba(0,212,255,.9);color:#001f2b}
+
+/* MOB MENU */
+#mobMenu{display:none;position:fixed;inset:0;top:64px;z-index:90;background:rgba(5,5,8,.97);backdrop-filter:blur(20px);padding:24px;flex-direction:column;gap:4px}
+#mobMenu a,#mobMenu button{display:block;padding:14px;font-size:14px;font-weight:600;color:var(--t2);border-bottom:1px solid var(--border);background:none;border-left:none;border-right:none;border-top:none;text-align:left;cursor:pointer;font-family:'Times New Roman','Times',serif;width:100%;transition:.2s}
+#mobMenu a:last-of-type{border:none}
+#mobMenu a:hover,#mobMenu button:hover{color:var(--t1)}
+#mobMenu .mob-cta{margin-top:16px;padding:14px;background:linear-gradient(135deg,var(--p),var(--c));color:#fff;border-radius:10px;text-align:center;font-weight:800;cursor:pointer;border:none;font-family:'Times New Roman','Times',serif;font-size:14px;width:100%}
+
+/* LEGAL MODAL */
+#legalModal .modal{max-width:560px;max-height:70vh;overflow-y:auto}
+#legalModal .modal::-webkit-scrollbar{width:3px}
+#legalModal .modal::-webkit-scrollbar-thumb{background:var(--border2)}
+.legal-content h2{font-size:20px;font-weight:800;margin-bottom:16px}
+.legal-content p{font-size:13px;color:var(--t2);line-height:1.75;margin-bottom:12px}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .plans{grid-template-columns:1fr 1fr}
+  .agents-grid{grid-template-columns:repeat(3,1fr)}
+  .steps{grid-template-columns:1fr 1fr}
+  .steps::before{display:none}
+  .dash-stats{grid-template-columns:repeat(3,1fr)}
+  .results-grid{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  nav{padding:0 20px}
+  .nav-links,.nav-ctas{display:none}
+  .ham{display:flex}
+  .hero{padding:80px 20px 40px}
+  .hero-stats{gap:28px}
+  .sec{padding:60px 20px}
+  .grid3{grid-template-columns:1fr}
+  .plans{grid-template-columns:1fr}
+  .agents-grid{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .app-sidebar{display:none}
+  .dash-stats{grid-template-columns:repeat(2,1fr)}
+  .results-grid{grid-template-columns:1fr}
+  footer{padding:40px 20px 24px}
+  .footer-top{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+
+<!-- ══════════ NAV ══════════ -->
+<nav id="mainNav">
+  <a href="/" class="nav-logo" style="gap:10px;text-decoration:none">
+    <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(123,47,255,.15));border:1px solid rgba(0,212,255,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none"><path d="M16 2L4 8v8c0 7.7 5.1 14.9 12 16.5C23 30.9 28 23.7 28 16V8L16 2z" fill="none" stroke="url(#sg)" stroke-width="1.5"/><path d="M16 8l-5 10h3.5l-.7 6L19 14h-3.5L16 8z" fill="url(#sg2)"/><defs><linearGradient id="sg" x1="4" y1="2" x2="28" y2="30"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient><linearGradient id="sg2" x1="11" y1="8" x2="19" y2="24"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient></defs></svg>
+    </div>
+    <span style="font-family:'Times New Roman','Times',serif;font-weight:800;font-size:17px;letter-spacing:-.4px;background:linear-gradient(90deg,var(--t1) 60%,var(--c));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">AuditSmart</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#agents">Agents</a>
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+  <button id="modeToggle" onclick="toggleMode()" title="Toggle dark/light mode" style="width:38px;height:38px;border-radius:8px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--t1);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0;line-height:1">🌙</button>
+  <div id="navGuest" class="nav-ctas">
+    <button class="btn btn-ghost" onclick="openAuth('login')">Login</button>
+    <button class="btn btn-pri" onclick="openAuth('register')">Start Free Audit</button>
+  </div>
+  <div id="navUser">
+    <span id="navPlan">FREE</span>
+    <span id="navQuota" style="font-size:11px;color:var(--t3);font-family:'Courier New',Courier,monospace"></span>
+    <button class="btn btn-pri" onclick="openApp()">Open App</button>
+    <button class="btn btn-ghost" onclick="doLogout()" style="padding:9px 14px">Exit</button>
+  </div>
+  <div class="ham" id="hamBtn" onclick="toggleMob()">
+    <span id="h1"></span><span id="h2"></span><span id="h3"></span>
+  </div>
+</nav>
+
+<!-- MOB MENU -->
+<div id="mobMenu">
+  <a href="#features" onclick="closeMob()">Features</a>
+  <a href="#agents" onclick="closeMob()">Agents</a>
+  <a href="#how" onclick="closeMob()">How It Works</a>
+  <a href="#pricing" onclick="closeMob()">Pricing</a>
+  <button class="mob-cta" onclick="openAuth('register');closeMob()">Start Free Audit →</button>
+</div>
+
+<!-- ══════════ LANDING ══════════ -->
+<div id="landing">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><span class="dot"></span>10 AI Agents · Live · Under 60 Seconds</div>
+    <h1>Find Vulnerabilities<br>Before <em>Hackers Do.</em></h1>
+    <p class="hero-sub" style="font-family:'Times New Roman','Times',serif;font-size:17px;font-weight:400;color:var(--t1);opacity:.8;max-width:520px;line-height:1.75;margin-bottom:40px">Multi-agent AI security for Solidity contracts — 10 specialist agents, dedup engine, professional PDF reports. <strong style="color:var(--t1);font-weight:600">Results in under 60 seconds.</strong></p>
+    <div class="hero-ctas">
+      <button class="btn btn-pri" onclick="openAuth('register')">Start Free Audit →</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How It Works ↓</button>
+    </div>
+    <div class="hero-stats">
+      <div class="h-stat"><p style="font-family:'Times New Roman','Times',serif;font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--c),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">10</p><p style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-family:'Courier New',Courier,monospace;margin-top:4px">AI Agents</p></div>
+      <div style="width:1px;background:var(--border);align-self:stretch"></div>
+      <div class="h-stat"><p style="font-family:'Times New Roman','Times',serif;font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--p),var(--pk));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">&lt;60s</p><p style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-family:'Courier New',Courier,monospace;margin-top:4px">Scan Time</p></div>
+      <div style="width:1px;background:var(--border);align-self:stretch"></div>
+      <div class="h-stat"><p style="font-family:'Times New Roman','Times',serif;font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--g),var(--c));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">56%+</p><p style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-family:'Courier New',Courier,monospace;margin-top:4px">Detection Rate</p></div>
+      <div style="width:1px;background:var(--border);align-self:stretch"></div>
+      <div class="h-stat"><p style="font-family:'Times New Roman','Times',serif;font-size:36px;font-weight:800;color:var(--t1)">$0</p><p style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-family:'Courier New',Courier,monospace;margin-top:4px">To Start</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker">
+    <div class="ticker-item"><span class="tik-dot tik-r"></span>Critical reentrancy found in Token#4821</div>
+    <div class="ticker-item"><span class="tik-dot tik-y"></span>Medium overflow risk in Contract#4820</div>
+    <div class="ticker-item"><span class="tik-dot tik-g"></span>Contract#4819 passed · Score 94/100</div>
+    <div class="ticker-item"><span class="tik-dot tik-r"></span>Backdoor detected in Vault#4818</div>
+    <div class="ticker-item"><span class="tik-dot tik-g"></span>DeFi#4817 clean · 0 critical issues</div>
+    <div class="ticker-item"><span class="tik-dot tik-y"></span>Access control issue in Bridge#4816</div>
+    <div class="ticker-item"><span class="tik-dot tik-r"></span>Critical reentrancy found in Token#4821</div>
+    <div class="ticker-item"><span class="tik-dot tik-y"></span>Medium overflow risk in Contract#4820</div>
+    <div class="ticker-item"><span class="tik-dot tik-g"></span>Contract#4819 passed · Score 94/100</div>
+    <div class="ticker-item"><span class="tik-dot tik-r"></span>Backdoor detected in Vault#4818</div>
+    <div class="ticker-item"><span class="tik-dot tik-g"></span>DeFi#4817 clean · 0 critical issues</div>
+    <div class="ticker-item"><span class="tik-dot tik-y"></span>Access control issue in Bridge#4816</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="sec" id="features">
+  <div class="sec-inner">
+    <p class="sec-label">Capabilities</p>
+    <h2 class="sec-title">Every Angle Covered</h2>
+    <p class="sec-sub">Not another basic scanner. 10 parallel agents, dedup engine, and actionable results with fix code in seconds.</p>
+    <div class="grid3">
+      <div class="feat-card"><div class="feat-icon fi-c">🔗</div><h3>Multi-Agent Pipeline</h3><p>8 Groq LLaMA 3.3 70B specialists + Gemini cross-validator + Slither. Each agent targets one vulnerability class in parallel.</p></div>
+      <div class="feat-card"><div class="feat-icon fi-p">🧹</div><h3>Dedup Engine</h3><p>Removes false positives, merges duplicates, auto-corrects severity. Clean actionable findings, not noise.</p></div>
+      <div class="feat-card"><div class="feat-icon fi-pk">🚪</div><h3>Backdoor Detection</h3><p>Dedicated agent hunts selfdestruct, delegatecall, and governance rug-pull vectors other scanners miss.</p></div>
+      <div class="feat-card"><div class="feat-icon fi-c">📄</div><h3>PDF Audit Reports</h3><p>Branded encrypted PDF with executive summary, severity breakdown, exploit paths, and fix code. Shareable public link.</p></div>
+      <div class="feat-card"><div class="feat-icon fi-g">⚡</div><h3>Under 60 Seconds</h3><p>Full multi-agent analysis in under a minute. Paste your Solidity code and get professional results instantly.</p></div>
+      <div class="feat-card"><div class="feat-icon fi-p">🔒</div><h3>Zero Code Storage</h3><p>Your contract is never stored. Only SHA256 hash retained for report verification. Privacy by design.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- AGENTS -->
+<section class="sec" id="agents" style="padding-top:0">
+  <div class="sec-inner">
+    <p class="sec-label">AI Arsenal</p>
+    <h2 class="sec-title">10 Agents. Every Angle.</h2>
+    <div class="agents-grid">
+      <div class="agent-card"><span class="ag-icon">🔄</span><p>Reentrancy</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">🔢</span><p>Overflow</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">🔐</span><p>Access Ctrl</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">🧩</span><p>Logic</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">⛽</span><p>Gas / DoS</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">💰</span><p>DeFi</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">🚪</span><p>Backdoor</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">✍️</span><p>Signature</p><p class="ag-model">Groq LLaMA</p></div>
+      <div class="agent-card"><span class="ag-icon">🌟</span><p>Gemini</p><p class="ag-model">Google AI</p></div>
+      <div class="agent-card"><span class="ag-icon">🐍</span><p>Slither</p><p class="ag-model">Crytic</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="sec" id="how" style="background:var(--s1)">
+  <div class="sec-inner">
+    <p class="sec-label">Process</p>
+    <h2 class="sec-title">Audit in 4 Steps</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">01</div><h3>Paste Code</h3><p>Paste your Solidity contract in the editor. No setup, no installation required.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>10 Agents Scan</h3><p>Parallel AI + static analysis runs simultaneously across all vulnerability classes.</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Dedup & Validate</h3><p>Engine removes duplicates and false positives. Only real, unique findings remain.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>Download PDF</h3><p>Branded report with severity breakdown, fix code, and public share link.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="sec" id="pricing">
+  <div class="sec-inner">
+    <p class="sec-label">Pricing</p>
+    <h2 class="sec-title">Simple. Transparent.</h2>
+    <p class="sec-sub">Professional audit reports at a fraction of manual audit costs. Start free, upgrade when ready.</p>
+    <div class="plans">
+      <div class="plan">
+        <p class="plan-name">Free</p>
+        <p class="plan-price">₹0 <span>/ month</span></p>
+        <p class="plan-desc">3 audits · forever</p>
+        <ul class="plan-feats">
+          <li>3 audits / month</li>
+          <li>8 Groq AI agents</li>
+          <li>PDF reports</li>
+          <li>Backdoor detection</li>
+          <li>Public share link</li>
+        </ul>
+        <button class="plan-btn" onclick="openAuth('register')">Get Started Free</button>
+      </div>
+      <div class="plan featured">
+        <span class="plan-badge">POPULAR</span>
+        <p class="plan-name">Pro</p>
+        <p class="plan-price" id="proPriceEl">$29 <span>/ month</span></p>
+        <p class="plan-desc">15 audits / month</p>
+        <ul class="plan-feats">
+          <li>Everything in Free</li>
+          <li class="extra">Claude Haiku (Anthropic)</li>
+          <li class="extra">Fix code in PDF</li>
+          <li class="extra">Deployment verdict</li>
+          <li class="extra">Priority support</li>
+        </ul>
+        <button class="plan-btn" onclick="openPayment('pro')">Upgrade to Pro</button>
+      </div>
+      <div class="plan">
+        <p class="plan-name">Enterprise</p>
+        <p class="plan-price" id="entPriceEl">$49 <span>/ month</span></p>
+        <p class="plan-desc">20 audits / month</p>
+        <ul class="plan-feats">
+          <li>Everything in Pro</li>
+          <li class="extra">Claude Sonnet (stronger)</li>
+          <li class="extra">Full exploit scenarios</li>
+          <li class="extra">Patched code in PDF</li>
+          <li class="extra">API access</li>
+        </ul>
+        <button class="plan-btn" onclick="openPayment('enterprise')">Upgrade Now</button>
+      </div>
+      <div class="plan" style="border-color:rgba(255,61,154,.2);background:linear-gradient(180deg,rgba(255,61,154,.04),var(--s1))">
+        <p class="plan-name" style="color:var(--pk)">Deep Audit</p>
+        <p class="plan-price" style="color:var(--pk)">$20 <span>/ audit</span></p>
+        <p class="plan-desc">One-time · any plan</p>
+        <ul class="plan-feats">
+          <li>Claude Opus (max power)</li>
+          <li class="extra" style="color:var(--pk)">Extended Thinking visible</li>
+          <li class="extra">Full exploit walkthrough</li>
+          <li class="extra">SAFE / CAUTION / DANGER</li>
+          <li class="extra">Patched production code</li>
+        </ul>
+        <button class="plan-btn" style="border-color:rgba(255,61,154,.3);color:var(--pk)" onclick="openDeepModal()">Activate Deep Audit</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- POWERED BY -->
+<section style="padding:40px;background:var(--s1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div style="max-width:1100px;margin:0 auto">
+    <p style="text-align:center;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--t3);font-family:'Courier New',Courier,monospace;margin-bottom:32px">POWERED BY WORLD-CLASS AI</p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap">
+
+      <!-- Claude / Anthropic -->
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 24px;background:var(--bg);border:1px solid var(--border);border-radius:14px;transition:.2s;cursor:default" onmouseover="this.style.borderColor='rgba(0,212,255,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="15" fill="#cc785c" fill-opacity=".15" stroke="#cc785c" stroke-width="1"/><path d="M16 8.5l2.5 7h-5l2.5-7zm0 0l-4.5 12h2.5l2-5.5 2 5.5H20.5L16 8.5z" fill="#cc785c" fill-opacity=".9"/></svg>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:'Times New Roman','Times',serif">Claude</div>
+          <div style="font-size:10px;color:var(--t3);font-family:'Courier New',Courier,monospace">by Anthropic</div>
+        </div>
+      </div>
+
+      <div style="width:1px;height:40px;background:var(--border)"></div>
+
+      <!-- Groq -->
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 24px;background:var(--bg);border:1px solid var(--border);border-radius:14px;transition:.2s;cursor:default" onmouseover="this.style.borderColor='rgba(0,212,255,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#f55036" fill-opacity=".15"/><text x="6" y="22" font-size="16" font-weight="900" fill="#f55036" font-family="monospace">G</text><circle cx="22" cy="12" r="5" fill="none" stroke="#f55036" stroke-width="1.5"/><path d="M22 9.5v5M19.5 12h5" stroke="#f55036" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:'Times New Roman','Times',serif">Groq</div>
+          <div style="font-size:10px;color:var(--t3);font-family:'Courier New',Courier,monospace">LLaMA 3.3 70B</div>
+        </div>
+      </div>
+
+      <div style="width:1px;height:40px;background:var(--border)"></div>
+
+      <!-- Gemini / Google -->
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 24px;background:var(--bg);border:1px solid var(--border);border-radius:14px;transition:.2s;cursor:default" onmouseover="this.style.borderColor='rgba(0,212,255,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#4285f4" fill-opacity=".12"/><path d="M16 6c-.8 4.5-3.5 7.2-8 8 4.5.8 7.2 3.5 8 8 .8-4.5 3.5-7.2 8-8-4.5-.8-7.2-3.5-8-8z" fill="url(#gg1)"/><defs><linearGradient id="gg1" x1="8" y1="6" x2="24" y2="22"><stop offset="0%" stop-color="#4285f4"/><stop offset="50%" stop-color="#9c27b0"/><stop offset="100%" stop-color="#ea4335"/></linearGradient></defs></svg>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:'Times New Roman','Times',serif">Gemini</div>
+          <div style="font-size:10px;color:var(--t3);font-family:'Courier New',Courier,monospace">by Google</div>
+        </div>
+      </div>
+
+      <div style="width:1px;height:40px;background:var(--border)"></div>
+
+      <!-- Slither / Crytic -->
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 24px;background:var(--bg);border:1px solid var(--border);border-radius:14px;transition:.2s;cursor:default" onmouseover="this.style.borderColor='rgba(0,212,255,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#00c97a" fill-opacity=".12"/><path d="M8 16c2-6 14-8 16-4-2 6-14 8-16 4z" fill="#00c97a" fill-opacity=".3" stroke="#00c97a" stroke-width="1.2"/><circle cx="22" cy="13" r="2" fill="#00c97a"/><path d="M8 20c3 2 8 2 12 0" stroke="#00c97a" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:'Times New Roman','Times',serif">Slither</div>
+          <div style="font-size:10px;color:var(--t3);font-family:'Courier New',Courier,monospace">by Crytic</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;margin-bottom:8px">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><path d="M16 2L4 8v8c0 7.7 5.1 14.9 12 16.5C23 30.9 28 23.7 28 16V8L16 2z" stroke="url(#sf)" stroke-width="1.5"/><path d="M16 8l-5 10h3.5l-.7 6L19 14h-3.5L16 8z" fill="url(#sf2)"/><defs><linearGradient id="sf" x1="4" y1="2" x2="28" y2="30"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient><linearGradient id="sf2" x1="11" y1="8" x2="19" y2="24"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient></defs></svg>
+          AuditSmart
+        </div>
+        <p>AI-powered smart contract security. Not a certified manual audit.</p>
+        <div class="footer-socials">
+          <a href="https://linkedin.com/company/audit-smart" target="_blank" class="soc-btn">in</a>
+          <a href="https://x.com/auditsmart1" target="_blank" class="soc-btn">𝕏</a>
+          <a href="https://t.me/auditsmart1" target="_blank" class="soc-btn">✈</a>
+          <a href="https://discord.gg/BHJNbEtxC" target="_blank" class="soc-btn">◈</a>
+        </div>
+      </div>
+      <div class="footer-links">
+        <h4>Platform</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#agents">Agents</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#" onclick="showLegal('privacy');return false">Privacy Policy</a></li>
+          <li><a href="#" onclick="showLegal('terms');return false">Terms of Service</a></li>
+          <li><a href="#" onclick="showLegal('disclosure');return false">Disclosure</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Powered By</h4>
+        <ul>
+          <li><a href="#">Claude (Anthropic)</a></li>
+          <li><a href="#">Groq LLaMA 3.3</a></li>
+          <li><a href="#">Gemini (Google)</a></li>
+          <li><a href="#">Slither (Crytic)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bot">
+      <p>© 2026 Xorion Network LLC · AuditSmart</p>
+      <p class="disc">AI security screening tool · Not a substitute for professional manual audits<br>⚠️ Always verify findings with a certified auditor before deploying to mainnet</p>
+    </div>
+  </div>
+</footer>
+
+</div><!-- /landing -->
+
+<!-- ══════════ APP OVERLAY ══════════ -->
+<div id="appOverlay">
+  <div class="app-nav">
+    <div class="app-logo">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none"><path d="M16 2L4 8v8c0 7.7 5.1 14.9 12 16.5C23 30.9 28 23.7 28 16V8L16 2z" stroke="url(#an)" stroke-width="1.5"/><path d="M16 8l-5 10h3.5l-.7 6L19 14h-3.5L16 8z" fill="url(#an2)"/><defs><linearGradient id="an" x1="4" y1="2" x2="28" y2="30"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient><linearGradient id="an2" x1="11" y1="8" x2="19" y2="24"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7b2fff"/></linearGradient></defs></svg>
+      AuditSmart
+    </div>
+    <div class="app-tabs">
+      <button class="app-tab active" id="tab-audit" onclick="switchTab('audit')">New Audit</button>
+      <button class="app-tab" id="tab-history" onclick="switchTab('history')">History</button>
+      <button class="app-tab" id="tab-dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+    </div>
+    <div class="app-right">
+      <div class="user-info"><strong id="appUserName">User</strong><span id="appUserMeta">FREE · 3 left</span></div>
+      <span id="appPlanBadge" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);color:var(--c);font-family:'Courier New',Courier,monospace">FREE</span>
+      <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="closeApp()">← Back</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar">
+      <button class="btn btn-pri" style="width:100%;margin-bottom:20px;padding:11px;font-size:12px;justify-content:center" onclick="switchTab('audit');resetAudit()">+ New Audit</button>
+      <div class="sidebar-section">
+        <div class="sidebar-lbl">Workspace</div>
+        <button class="sb-item active" id="sb-audit" onclick="switchTab('audit')"><span class="sb-icon">🛡</span>Audit Engine</button>
+        <button class="sb-item" id="sb-history" onclick="switchTab('history')"><span class="sb-icon">📋</span>Scan History</button>
+        <button class="sb-item" id="sb-dashboard" onclick="switchTab('dashboard')"><span class="sb-icon">📊</span>Dashboard</button>
+      </div>
+      <div class="sidebar-section" style="margin-top:12px">
+        <div class="sidebar-lbl">Actions</div>
+        <button class="sb-item" onclick="closeApp();document.getElementById('pricing').scrollIntoView({behavior:'smooth'})"><span class="sb-icon">⬆</span>Upgrade Plan</button>
+        <button class="sb-item" onclick="openDeepModal()"><span class="sb-icon">🧠</span>Deep Audit · $20</button>
+      </div>
+      <div class="sidebar-plan">
+        <div class="sp-name" id="sbPlan">FREE PLAN</div>
+        <div class="sp-left" id="sbLeft">3</div>
+        <div class="sp-sub">audits remaining</div>
+        <div class="sp-bar"><div class="sp-fill" id="sbFill" style="width:100%"></div></div>
+        <button class="sp-upgrade" onclick="closeApp();document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Upgrade Now →</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="app-main">
+
+      <!-- AUDIT VIEW -->
+      <div class="view active" id="view-audit">
+        <!-- FORM -->
+        <div id="auditForm">
+          <h2 class="view-title">New Security Audit</h2>
+          <p class="view-sub">Paste your Solidity contract · 10 AI agents run in parallel</p>
+          <div class="audit-card">
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Contract Name</label><input class="fi" id="cName" value="Contract" placeholder="MyToken.sol"></div>
+              <div class="form-group"><label class="form-label">Chain</label>
+                <select class="fi" id="cChain">
+                  <option value="ethereum">Ethereum</option>
+                  <option value="bsc">BSC / BNB Chain</option>
+                  <option value="polygon">Polygon</option>
+                  <option value="arbitrum">Arbitrum</option>
+                  <option value="base">Base</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group"><label class="form-label">Solidity Contract Code</label><textarea class="fi code-area" id="cCode" placeholder="// SPDX-License-Identifier: MIT&#10;pragma solidity ^0.8.0;&#10;&#10;contract MyToken {&#10;  // Paste your contract here...&#10;}"></textarea></div>
+            <div id="auditErr" class="err-box"></div>
+            <div class="audit-quota" id="quotaBar">
+              <span class="aq-label">AUDITS REMAINING</span>
+              <span class="aq-val" id="quotaVal">3 / 3</span>
+            </div>
+            <button class="run-btn" id="runBtn" onclick="runAudit()">⚡ Run Security Audit</button>
+          </div>
+        </div>
+
+        <!-- SCAN PROGRESS -->
+        <div id="scanView">
+          <div class="scan-ring-wrap">
+            <div class="scan-ring r1"></div>
+            <div class="scan-ring r2"></div>
+            <div class="scan-ring r3"></div>
+            <div class="scan-core" id="scanPct">0%</div>
+          </div>
+          <h3 class="scan-title">Live Security Protocol</h3>
+          <div id="scanAgent">Initializing pipeline...</div>
+          <div class="scan-stages">
+            <div class="stage-item" id="st0"><span class="stage-dot"></span>Vulnerability AI</div>
+            <div class="stage-item" id="st1"><span class="stage-dot"></span>Flow Analyzer</div>
+            <div class="stage-item" id="st2"><span class="stage-dot"></span>Bytecode VM</div>
+            <div class="stage-item" id="st3"><span class="stage-dot"></span>Final Report</div>
+          </div>
+          <div class="scan-progress-wrap">
+            <div class="scan-pbar"><div class="scan-pfill" id="scanFill"></div></div>
+            <div class="scan-pct" id="scanEta">Initializing...</div>
+          </div>
+          <div class="terminal">
+            <div class="term-top">
+              <div class="term-dot" style="background:#ef4444"></div>
+              <div class="term-dot" style="background:#f59e0b"></div>
+              <div class="term-dot" style="background:var(--g)"></div>
+              <span style="font-size:9px;color:var(--g);font-family:'Courier New',Courier,monospace;margin-left:8px;letter-spacing:2px">ENGINE CORE LIVE</span>
+            </div>
+            <div id="termLog"></div>
+          </div>
+        </div>
+
+        <!-- RESULTS -->
+        <div id="resultsView">
+          <div class="results-header">
+            <div class="results-meta">
+              <span class="r-badge rb-live">● LIVE REPORT</span>
+              <span class="r-badge rb-id" id="rReportId"></span>
+            </div>
+            <h2 class="results-title" id="rTitle">Project: Contract.sol</h2>
+            <div class="results-sub">
+              <span class="r-sub-item">📅 <span id="rDate"></span></span>
+              <span class="r-sub-item" id="rAgents">🤖 — agents</span>
+              <span class="r-sub-item" id="rDuration">⏱ —</span>
+            </div>
+          </div>
+          <div class="results-grid" id="resultsGrid">
+            <div class="score-card">
+              <div class="score-gauge">
+                <svg class="gauge-svg" viewBox="0 0 120 120"><circle class="gauge-track" cx="60" cy="60" r="52"/><circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="52" stroke="url(#gg)"/><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#7b2fff"/><stop offset="100%" stop-color="#00d4ff"/></linearGradient></defs></svg>
+                <div class="gauge-center"><div class="gauge-num" id="gaugeNum">0</div><div class="gauge-lbl" id="gaugeLbl">Scanning</div></div>
+              </div>
+              <div class="score-meta">
+                <div class="sm-item"><div class="sm-val" id="smRisk">—</div><div class="sm-key">Risk</div></div>
+                <div class="sm-item"><div class="sm-val" id="smDur">—</div><div class="sm-key">Duration</div></div>
+              </div>
+            </div>
+            <div class="risk-card">
+              <h3>Risk Profile <span id="totalBadge" style="font-size:11px;font-family:'Courier New',Courier,monospace;color:var(--t3)">0 issues</span></h3>
+              <div class="risk-bars" id="riskBars"></div>
+            </div>
+          </div>
+          <div id="verdictEl" style="display:none" class="verdict-banner"></div>
+          <div class="findings-toolbar">
+            <h3 class="findings-title" id="findingsTitle">Findings (0)</h3>
+            <div class="toolbar-btns">
+              <button class="t-btn" id="btnPDF" style="display:none" onclick="dlPDF()">📄 PDF</button>
+              <button class="t-btn" id="btnJSON" style="display:none" onclick="dlJSON()">⬇ JSON</button>
+              <button class="t-btn" id="btnShare" style="display:none" onclick="copyLink()">🔗 Share</button>
+              <button class="t-btn" onclick="resetAudit()">+ New Audit</button>
+            </div>
+          </div>
+          <div id="findingsList"></div>
+          <div id="shareSection" style="display:none" class="share-section">
+            <div class="share-title">Share This Report</div>
+            <div class="share-btns">
+              <button class="s-btn" id="pubLink" onclick="window.open(this.dataset.url,'_blank')">🌐 View Public Report</button>
+              <button class="s-btn" onclick="copyLink()">📋 Copy Link</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY VIEW -->
+      <div class="view" id="view-history">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;flex-wrap:wrap;gap:12px">
+          <div><h2 class="view-title">Audit History</h2><p class="view-sub">All your past security scans</p></div>
+          <button class="btn btn-pri" onclick="switchTab('audit');resetAudit()" style="font-size:13px">+ New Audit</button>
+        </div>
+        <div id="historyList"><div style="text-align:center;padding:60px 20px;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">📋</div><p style="font-size:14px;font-weight:700;margin-bottom:6px">No audits yet</p><p style="font-size:12px">Run your first audit to see history here</p></div></div>
+      </div>
+
+      <!-- DASHBOARD VIEW -->
+      <div class="view" id="view-dashboard">
+        <h2 class="view-title">Security Operations</h2>
+        <p class="view-sub">Your audit activity and threat intelligence</p>
+        <div class="dash-stats">
+          <div class="dash-stat"><div class="ds-val" id="ds-audits" style="color:var(--c)">0</div><div class="ds-lbl">Total Audits</div></div>
+          <div class="dash-stat"><div class="ds-val" id="ds-crit" style="color:#f87171">0</div><div class="ds-lbl">Critical</div></div>
+          <div class="dash-stat"><div class="ds-val" id="ds-high" style="color:#fbbf24">0</div><div class="ds-lbl">High</div></div>
+          <div class="dash-stat"><div class="ds-val" id="ds-total" style="color:var(--g)">0</div><div class="ds-lbl">Total Vulns</div></div>
+          <div class="dash-stat"><div class="ds-val" id="ds-avg" style="color:var(--p)">0</div><div class="ds-lbl">Avg Score</div></div>
+          <div class="dash-stat"><div class="ds-val" id="ds-time" style="color:var(--t1)">0s</div><div class="ds-lbl">Avg Time</div></div>
+        </div>
+        <div class="upgrade-banner" id="upgBanner" style="display:none">
+          <div class="ub-text"><h4>Upgrade to Pro</h4><p>Get 15 audits/month with Claude Haiku — fix code, deployment verdict, and more.</p></div>
+          <button class="btn btn-pri" onclick="closeApp();document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Upgrade — $29/mo</button>
+        </div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--t1)">Recent Audits</h3>
+        <div id="dashRecent"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════ MODALS ══════════ -->
+<!-- AUTH -->
+<div class="modal-bg" id="authModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeAuth()">✕</button>
+    <h2>AuditSmart</h2>
+    <p class="modal-sub">AI Smart Contract Security</p>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="mt-login" onclick="switchAuthTab('login')">Login</button>
+      <button class="modal-tab" id="mt-reg" onclick="switchAuthTab('register')">Register</button>
+    </div>
+    <div id="loginForm">
+      <div class="m-form">
+        <div class="form-group"><label class="form-label">Email</label><input class="fi" id="lEmail" type="email" placeholder="you@example.com"></div>
+        <div class="form-group"><label class="form-label">Password</label><div class="pw-wrap"><input class="fi" id="lPass" type="password" placeholder="••••••••"><button class="pw-toggle" onclick="togglePw('lPass',this)" type="button">👁</button></div></div>
+        <button class="m-link" onclick="forgotPw()">Forgot password?</button>
+        <div class="m-err" id="lErr"></div>
+        <button class="m-btn" id="lBtn" onclick="doLogin()">Login</button>
+      </div>
+    </div>
+    <div id="regForm" style="display:none">
+      <div class="m-form">
+        <div class="form-group"><label class="form-label">Full Name</label><input class="fi" id="rName" type="text" placeholder="Your Name"></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="fi" id="rEmail" type="email" placeholder="you@example.com"></div>
+        <div class="form-group"><label class="form-label">Password (min 8 chars)</label><div class="pw-wrap"><input class="fi" id="rPass" type="password" placeholder="••••••••"><button class="pw-toggle" onclick="togglePw('rPass',this)" type="button">👁</button></div></div>
+        <div class="m-err" id="rErr"></div>
+        <button class="m-btn" id="rBtn" onclick="doRegister()">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT -->
+<div class="modal-bg" id="payModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closePayModal()">✕</button>
+    <h2>Upgrade Plan</h2>
+    <p class="modal-sub">Secure payment via Razorpay</p>
+    <div class="pay-plan-box">
+      <div class="pay-plan-name" id="payPlanName">PRO</div>
+      <div class="pay-price" id="payPlanPrice">$29/mo</div>
+      <ul class="pay-feats" id="payFeats"></ul>
+    </div>
+    <div class="m-err" id="payErr"></div>
+    <button class="m-btn" id="payBtn" onclick="doPayment()" style="background:linear-gradient(135deg,var(--pk),var(--p))">Pay Now</button>
+    <p style="text-align:center;font-size:11px;color:var(--t3);margin-top:10px;font-family:'Courier New',Courier,monospace">🔒 Secured by Razorpay</p>
+  </div>
+</div>
+
+<!-- DEEP AUDIT -->
+<div class="modal-bg" id="deepModal">
+  <div class="modal" style="border-color:rgba(255,61,154,.2)">
+    <button class="close-btn" onclick="closeDeepModal()">✕</button>
+    <h2 style="background:linear-gradient(90deg,var(--pk),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Deep Audit</h2>
+    <p class="modal-sub">Claude Opus + Extended Thinking — $20</p>
+    <div style="background:rgba(255,61,154,.04);border:1px solid rgba(255,61,154,.1);border-radius:10px;padding:14px;margin-bottom:16px;font-size:12px;color:rgba(255,61,154,.7);font-family:'Courier New',Courier,monospace;display:flex;flex-direction:column;gap:6px">
+      <span>🧠 Extended Thinking — see full reasoning chain</span>
+      <span>✦ Claude Opus — Anthropic's most intelligent model</span>
+      <span>✦ Full exploit scenarios + patched code</span>
+      <span>✦ SAFE / CAUTION / DO NOT DEPLOY verdict</span>
+    </div>
+    <div class="m-form">
+      <div class="form-group"><label class="form-label">Contract Name</label><input class="fi" id="deepName" placeholder="MyToken.sol"></div>
+      <div class="form-group"><label class="form-label">Contract Code</label><textarea class="fi code-area" id="deepCode" style="min-height:120px" placeholder="// Paste your Solidity contract..."></textarea></div>
+      <div class="m-err" id="deepErr"></div>
+      <button class="m-btn" id="deepBtn" onclick="doDeepAudit()" style="background:linear-gradient(135deg,var(--pk),var(--p))">Pay $20 — Start Deep Audit</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEGAL -->
+<div class="modal-bg" id="legalModal">
+  <div class="modal" style="max-width:560px;max-height:75vh;overflow-y:auto">
+    <button class="close-btn" onclick="closeLegal()">✕</button>
+    <div class="legal-content" id="legalContent"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+// ═══ CONFIG ═══
+const API = 'https://web-production-de7ca.up.railway.app';
+const isIndia = (()=>{ try{ const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''; return tz.includes('Kolkata')||tz.includes('Calcutta'); }catch(e){return false} })();
+const PLANS = {
+  pro: isIndia ? {price:'₹2,399/mo',amount:239900,label:'PRO'} : {price:'$29/mo',amount:2900,label:'PRO'},
+  enterprise: isIndia ? {price:'₹3,999/mo',amount:399900,label:'ENTERPRISE'} : {price:'$49/mo',amount:4900,label:'ENTERPRISE'}
+};
+const PLAN_FEATS = {
+  pro:['15 audits / month','Claude Haiku (Anthropic)','Fix code in PDF','Deployment verdict','Email support'],
+  enterprise:['20 audits / month','Claude Sonnet (Anthropic)','Full exploit scenarios','Patched code in PDF','API access','Priority support']
+};
+
+// ═══ STATE ═══
+let token=null, currentUser=null, selectedPlan=null, currentAuditId=null, currentAuditData=null;
+
+// ═══ INIT ═══
+// ═══ DARK/LIGHT MODE ═══
+function toggleMode(){
+  const html = document.documentElement;
+  const body = document.body;
+  const isNowLight = !html.classList.contains('light');
+  if(isNowLight){
+    html.classList.add('light');
+    body.setAttribute('data-theme','light');
+  } else {
+    html.classList.remove('light');
+    body.removeAttribute('data-theme');
+  }
+  localStorage.setItem('as_mode', isNowLight ? 'light' : 'dark');
+  const btn = document.getElementById('modeToggle');
+  if(btn) btn.textContent = isNowLight ? '☀️' : '🌙';
+  // Force bg color directly for reliability
+  applyModeColors(isNowLight);
+}
+function applyModeColors(isLight){
+  const root = document.documentElement;
+  if(isLight){
+    root.style.setProperty('--bg','#f8f9ff');
+    root.style.setProperty('--s1','#ffffff');
+    root.style.setProperty('--s2','#f0f2ff');
+    root.style.setProperty('--s3','#e8eaf8');
+    root.style.setProperty('--t1','#0a0a1a');
+    root.style.setProperty('--t2','#2a2a4a');
+    root.style.setProperty('--t3','#555577');
+    root.style.setProperty('--border','rgba(100,100,200,0.15)');
+    root.style.setProperty('--border2','rgba(100,100,200,0.35)');
+    root.style.setProperty('--nav-bg','rgba(248,249,255,0.95)');
+    document.getElementById('bgCanvas').style.opacity = '0.1';
+  } else {
+    root.style.setProperty('--bg','#050508');
+    root.style.setProperty('--s1','#0a0a12');
+    root.style.setProperty('--s2','#0f0f1a');
+    root.style.setProperty('--s3','#141428');
+    root.style.setProperty('--t1','#f0f0ff');
+    root.style.setProperty('--t2','#b0b0cc');
+    root.style.setProperty('--t3','#777799');
+    root.style.setProperty('--border','rgba(0,212,255,0.12)');
+    root.style.setProperty('--border2','rgba(0,212,255,0.3)');
+    root.style.setProperty('--nav-bg','rgba(5,5,8,0.88)');
+    document.getElementById('bgCanvas').style.opacity = '0.6';
+  }
+}
+function applyMode(){
+  const saved = localStorage.getItem('as_mode');
+  if(saved === 'light'){
+    document.documentElement.classList.add('light');
+    applyModeColors(true);
+    const btn = document.getElementById('modeToggle');
+    if(btn) btn.textContent = '☀️';
+  } else {
+    applyModeColors(false);
+  }
+}
+
+function initAll(){
+  applyMode();
+  token = localStorage.getItem('as_token');
+  const u = localStorage.getItem('as_user');
+  if(token && u){ currentUser = JSON.parse(u); updateNavUser(); }
+  // Pricing display
+  document.getElementById('proPriceEl').innerHTML = PLANS.pro.price + ' <span>/ month</span>';
+  document.getElementById('entPriceEl').innerHTML = PLANS.enterprise.price + ' <span>/ month</span>';
+  // Modal backdrops
+  ['authModal','payModal','deepModal','legalModal'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('open'); });
+  });
+  // Particle bg
+  initBg();
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', initAll);
+} else { initAll(); }
+
+// ═══ BG CANVAS ═══
+function initBg(){
+  const c = document.getElementById('bgCanvas'); if(!c) return;
+  const ctx = c.getContext('2d');
+  let W, H;
+  const resize = ()=>{ W=c.width=window.innerWidth; H=c.height=window.innerHeight; };
+  resize(); window.addEventListener('resize', resize);
+  const cols = ['#00d4ff','#7b2fff','#ff3d9a','#00ff94'];
+  const pts = Array.from({length:80},()=>({
+    x:Math.random()*3000, y:Math.random()*2000,
+    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+    col:cols[Math.floor(Math.random()*cols.length)], r:.8+Math.random()*1.2
+  }));
+  const draw = ()=>{
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>W) p.vx*=-1;
+      if(p.y<0||p.y>H) p.vy*=-1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.col; ctx.fill();
+    });
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){ ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y);
+        ctx.strokeStyle=`rgba(0,212,255,${.04*(1-d/120)})`; ctx.lineWidth=.5; ctx.stroke(); }
+    }
+    requestAnimationFrame(draw);
+  };
+  draw();
+}
+
+// ═══ NAV ═══
+function updateNavUser(){
+  if(!currentUser) return;
+  document.getElementById('navGuest').style.display='none';
+  document.getElementById('navUser').style.display='flex';
+  const plan = currentUser.plan||'free';
+  document.getElementById('navPlan').textContent = plan.toUpperCase();
+  document.getElementById('navQuota').textContent = (currentUser.free_audits_remaining||0)+' left';
+  document.getElementById('appUserName').textContent = currentUser.name||currentUser.email;
+  document.getElementById('appUserMeta').textContent = plan.toUpperCase()+' · '+(currentUser.free_audits_remaining||0)+' left';
+  document.getElementById('appPlanBadge').textContent = plan.toUpperCase();
+  updateSidebar();
+}
+function updateSidebar(){
+  if(!currentUser) return;
+  const plan = currentUser.plan||'free';
+  const left = currentUser.free_audits_remaining||0;
+  const max = {free:3,pro:15,enterprise:20}[plan]||3;
+  document.getElementById('sbPlan').textContent = plan.toUpperCase()+' PLAN';
+  document.getElementById('sbLeft').textContent = left;
+  document.getElementById('sbFill').style.width = (left/max*100)+'%';
+  document.getElementById('quotaVal').textContent = left+' / '+max;
+  if(plan==='free') document.getElementById('upgBanner').style.display='flex';
+}
+function openApp(){ if(!currentUser){openAuth('login');return;} document.getElementById('appOverlay').style.display='flex'; document.body.style.overflow='hidden'; loadHistory(); loadDash(); switchTab('audit'); }
+function closeApp(){ document.getElementById('appOverlay').style.display='none'; document.body.style.overflow=''; }
+function doLogout(){ localStorage.removeItem('as_token'); localStorage.removeItem('as_user'); token=null; currentUser=null; document.getElementById('navGuest').style.display='flex'; document.getElementById('navUser').style.display='none'; closeApp(); toast('Logged out','info'); }
+function toggleMob(){
+  const m = document.getElementById('mobMenu');
+  const open = m.style.display!=='flex';
+  m.style.display = open?'flex':'none';
+  const [h1,h2,h3] = ['h1','h2','h3'].map(id=>document.getElementById(id));
+  if(open){ h1.style.transform='rotate(45deg) translate(3px,4px)'; h2.style.opacity='0'; h3.style.transform='rotate(-45deg) translate(3px,-4px)'; }
+  else { h1.style.transform=''; h2.style.opacity='1'; h3.style.transform=''; }
+}
+function closeMob(){ document.getElementById('mobMenu').style.display='none'; ['h1','h2','h3'].forEach(id=>{ const el=document.getElementById(id); if(el){el.style.transform='';el.style.opacity='1';} }); }
+
+// ═══ APP TABS ═══
+function switchTab(t){
+  ['audit','history','dashboard'].forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('active', v===t);
+    document.getElementById('tab-'+v).classList.toggle('active', v===t);
+    document.getElementById('sb-'+v)?.classList.toggle('active', v===t);
+  });
+}
+
+// ═══ AUTH ═══
+function openAuth(tab='login'){ switchAuthTab(tab); document.getElementById('authModal').classList.add('open'); }
+function closeAuth(){ document.getElementById('authModal').classList.remove('open'); }
+function switchAuthTab(t){
+  document.getElementById('loginForm').style.display = t==='login'?'block':'none';
+  document.getElementById('regForm').style.display = t==='register'?'block':'none';
+  document.getElementById('mt-login').classList.toggle('active',t==='login');
+  document.getElementById('mt-reg').classList.toggle('active',t==='register');
+}
+async function doLogin(){
+  const email=document.getElementById('lEmail').value.trim(), pass=document.getElementById('lPass').value;
+  const err=document.getElementById('lErr'), btn=document.getElementById('lBtn');
+  hideErr(err); if(!email||!pass){showErr(err,'Please enter email and password');return;}
+  btn.disabled=true; btn.textContent='Logging in...';
+  try{
+    const r=await fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const d=await r.json();
+    if(!r.ok){showErr(err,d.detail||'Login failed');return;}
+    saveSession(d); closeAuth(); openApp(); toast('Welcome back, '+d.user.name+'!','ok');
+  }catch(e){showErr(err,'Connection error');}
+  finally{btn.disabled=false;btn.textContent='Login';}
+}
+async function doRegister(){
+  const name=document.getElementById('rName').value.trim(), email=document.getElementById('rEmail').value.trim(), pass=document.getElementById('rPass').value;
+  const err=document.getElementById('rErr'), btn=document.getElementById('rBtn');
+  hideErr(err); if(!name||!email||!pass){showErr(err,'Please fill all fields');return;} if(pass.length<8){showErr(err,'Password min 8 characters');return;}
+  btn.disabled=true; btn.textContent='Creating account...';
+  try{
+    const r=await fetch(API+'/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass})});
+    const d=await r.json();
+    if(!r.ok){showErr(err,d.detail||'Registration failed');return;}
+    saveSession(d); closeAuth(); openApp(); toast('Welcome, '+d.user.name+'! 🎉','ok');
+  }catch(e){showErr(err,'Connection error');}
+  finally{btn.disabled=false;btn.textContent='Create Account';}
+}
+function saveSession(d){ token=d.access_token; currentUser=d.user; localStorage.setItem('as_token',token); localStorage.setItem('as_user',JSON.stringify(d.user)); updateNavUser(); }
+function forgotPw(){ const e=document.getElementById('lEmail').value.trim(); if(!e){toast('Enter email first','info');return;} toast('Reset link sent to '+e,'ok'); }
+function togglePw(id,btn){ const el=document.getElementById(id); el.type=el.type==='password'?'text':'password'; btn.textContent=el.type==='password'?'👁':'🙈'; }
+
+// ═══ AUDIT ═══
+const AGENT_MSGS=['🔄 Reentrancy agent scanning...','🔢 Overflow detector running...','🔐 Access control analysis...','🧩 Business logic inspection...','⛽ Gas/DoS agent running...','💰 DeFi vulnerability scanner...','🚪 Backdoor detection engine...','✍️ Signature replay checker...','🌟 Gemini cross-validator...','🐍 Slither static analysis...'];
+const TERM_MSGS=['[INFO] Initializing audit pipeline...','[SCAN] Loading reentrancy agent...','[SCAN] Overflow detector active...','[SCAN] Access control running...','[SCAN] Logic inspector started...','[WARN] Backdoor detection running...','[AI] Gemini cross-validator...','[STATIC] Slither analysis...','[OK] Dedup engine processing...','[OK] Severity calibration done...','[REPORT] Generating findings...'];
+
+function setStage(i, s){
+  const el = document.getElementById('st'+i); if(!el) return;
+  el.className = 'stage-item' + (s==='active'?' active':s==='done'?' done':'');
+}
+function addLog(msg){
+  const el = document.getElementById('termLog'); if(!el) return;
+  const p = document.createElement('p');
+  p.className = msg.includes('[OK]')?'tl-ok':msg.includes('[WARN]')?'tl-warn':msg.includes('[INFO]')||msg.includes('[SCAN]')?'tl-info':'';
+  p.textContent = '['+new Date().toTimeString().slice(0,8)+'] '+msg;
+  el.appendChild(p); if(el.children.length>12) el.removeChild(el.firstChild);
+}
+
+async function runAudit(){
+  if(!currentUser){openAuth('login');return;}
+  const code=document.getElementById('cCode').value.trim(), name=document.getElementById('cName').value.trim()||'Contract', chain=document.getElementById('cChain').value;
+  const err=document.getElementById('auditErr'), btn=document.getElementById('runBtn');
+  hideErr(err); if(!code||code.length<20){showErr(err,'Please paste your Solidity contract code');return;}
+  // Show scan UI
+  document.getElementById('auditForm').style.display='none';
+  document.getElementById('scanView').style.display='block';
+  document.getElementById('resultsView').style.display='none';
+  [0,1,2,3].forEach(i=>setStage(i,''));
+  document.getElementById('termLog').innerHTML='';
+  let pct=0, logIdx=0, stDone=[false,false,false,false];
+  const iv = setInterval(()=>{
+    pct = Math.min(pct+Math.random()*2.8, 92);
+    const p = Math.floor(pct);
+    document.getElementById('scanPct').textContent = p+'%';
+    document.getElementById('scanFill').style.width = pct+'%';
+    document.getElementById('scanEta').textContent = 'Scanning... '+p+'% complete';
+    document.getElementById('scanAgent').textContent = AGENT_MSGS[Math.floor(pct/10)%AGENT_MSGS.length];
+    if(pct>15&&!stDone[0]){setStage(0,'active');stDone[0]=true;}
+    if(pct>35&&!stDone[1]){setStage(0,'done');setStage(1,'active');stDone[1]=true;}
+    if(pct>60&&!stDone[2]){setStage(1,'done');setStage(2,'active');stDone[2]=true;}
+    if(pct>80&&!stDone[3]){setStage(2,'done');setStage(3,'active');stDone[3]=true;}
+    if(logIdx<TERM_MSGS.length && Math.random()>.4) addLog(TERM_MSGS[logIdx++]);
+  }, 700);
+  try{
+    const r = await fetch(API+'/audit/scan',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({contract_code:code,contract_name:name,chain})});
+    const d = await r.json();
+    clearInterval(iv);
+    if(!r.ok){
+      document.getElementById('scanView').style.display='none';
+      document.getElementById('auditForm').style.display='block';
+      if(r.status===402) showErr(err,'Free audit limit reached. Please upgrade to Pro.');
+      else showErr(err, d.detail||'Audit failed. Please try again.');
+      return;
+    }
+    document.getElementById('scanPct').textContent='100%';
+    document.getElementById('scanFill').style.width='100%';
+    [0,1,2,3].forEach(i=>setStage(i,'done'));
+    addLog('[OK] Audit complete. Generating report...');
+    await new Promise(res=>setTimeout(res,600));
+    if(currentUser.plan==='free'){ currentUser.free_audits_remaining=Math.max(0,(currentUser.free_audits_remaining||0)-1); localStorage.setItem('as_user',JSON.stringify(currentUser)); updateNavUser(); }
+    currentAuditId=d.id; currentAuditData=d;
+    renderResults(d);
+    document.getElementById('scanView').style.display='none';
+    document.getElementById('resultsView').style.display='block';
+    toast('Audit complete · '+d.total_findings+' findings','ok');
+  } catch(e){
+    clearInterval(iv);
+    document.getElementById('scanView').style.display='none';
+    document.getElementById('auditForm').style.display='block';
+    showErr(err,'Connection error. Please try again.');
+  }
+}
+
+function renderResults(d){
+  const score = d.risk_score||0;
+  // Gauge
+  const circumference = 2*Math.PI*52;
+  const offset = circumference - (score/100)*circumference;
+  const gf = document.getElementById('gaugeFill'); if(gf){ gf.style.strokeDasharray=circumference; gf.style.strokeDashoffset=offset; }
+  document.getElementById('gaugeNum').textContent = score;
+  const scoreCol = score<40?'#00ff94':score<70?'#fbbf24':'#f87171';
+  const scoreLbl = score<40?'HEALTHY':score<70?'WARNING':'CRITICAL';
+  const gLbl = document.getElementById('gaugeLbl'); if(gLbl){gLbl.textContent=scoreLbl; gLbl.style.color=scoreCol;}
+  document.getElementById('gaugeNum').style.color = scoreCol;
+  // Meta
+  document.getElementById('rTitle').textContent = 'Project: '+(d.contract_name||'Contract')+'.sol';
+  document.getElementById('rReportId').textContent = d.report_id||'';
+  document.getElementById('rDate').textContent = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('rAgents').textContent = '🤖 '+(d.agents_used||[]).length+' agents';
+  document.getElementById('rDuration').textContent = '⏱ '+(d.scan_duration_ms?Math.round(d.scan_duration_ms/1000)+'s':'—');
+  document.getElementById('smRisk').textContent = (d.risk_level||'—').toUpperCase();
+  document.getElementById('smDur').textContent = d.scan_duration_ms?Math.round(d.scan_duration_ms/1000)+'s':'—';
+  document.getElementById('totalBadge').textContent = (d.total_findings||0)+' issues';
+  // Risk bars
+  const bars=[{l:'CRITICAL',n:d.critical_count||0,c:'#f87171'},{l:'HIGH',n:d.high_count||0,c:'#fbbf24'},{l:'MEDIUM',n:d.medium_count||0,c:'#fde047'},{l:'LOW/INFO',n:(d.low_count||0)+(d.info_count||0),c:'#6ee7b7'}];
+  const maxN = Math.max(...bars.map(b=>b.n),1);
+  document.getElementById('riskBars').innerHTML = bars.map(b=>`<div class="rb-row"><div class="rb-lbl" style="color:${b.c}">${b.l}</div><div class="rb-track"><div class="rb-bar" style="width:${b.n/maxN*100}%;background:${b.c}"></div></div><div class="rb-count" style="color:${b.c}">${b.n}</div></div>`).join('');
+  // Verdict
+  if(d.deployment_verdict){
+    const vc={'SAFE TO DEPLOY':'background:rgba(0,255,148,.06);border:1px solid rgba(0,255,148,.2);color:#6ee7b7','DEPLOY WITH CAUTION':'background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);color:#fbbf24','DO NOT DEPLOY':'background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#f87171'};
+    const vb=document.getElementById('verdictEl'); vb.style.display='block'; vb.style.cssText+=';'+(vc[d.deployment_verdict]||''); vb.innerHTML='<strong>Verdict:</strong> '+esc(d.deployment_verdict);
+  }
+  // Toolbar buttons
+  document.getElementById('findingsTitle').textContent = 'Findings ('+d.total_findings+')';
+  document.getElementById('btnPDF').style.display = d.pdf_available?'flex':'none';
+  document.getElementById('btnJSON').style.display = 'flex';
+  document.getElementById('btnShare').style.display = d.report_id?'flex':'none';
+  // Share section
+  if(d.report_id){
+    const ss=document.getElementById('shareSection'); ss.style.display='block';
+    const pl=document.getElementById('pubLink'); pl.dataset.url=API+'/public/report/'+d.report_id;
+  }
+  // Findings
+  const list = document.getElementById('findingsList');
+  if(!d.findings||d.findings.length===0){
+    list.innerHTML='<div class="no-findings"><div class="nf-icon">🛡️</div><div class="nf-title">No Vulnerabilities Found</div><div class="nf-sub">Contract passed all 10 agent checks</div></div>';
+    return;
+  }
+  const sevOrd={critical:0,high:1,medium:2,low:3,info:4};
+  list.innerHTML = [...(d.findings||[])].sort((a,b)=>(sevOrd[a.severity?.toLowerCase()]??4)-(sevOrd[b.severity?.toLowerCase()]??4)).map((f,i)=>{
+    const sev=(f.severity||'INFO').toUpperCase();
+    const fid='fd'+i;
+    const hasMore=(f.description||'').length>150||f.recommendation||f.auto_fix?.fixed_code;
+    return`<div class="finding">
+      <div class="finding-top">
+        <div class="finding-title">${esc(f.title||f.type||'Finding')}</div>
+        <div class="finding-badges">
+          ${f.confidence?`<span class="conf-badge conf-${f.confidence}">${f.confidence}</span>`:''}
+          <span class="sev-badge sev-${sev}">${sev}</span>
+        </div>
+      </div>
+      <div class="finding-desc">${esc((f.description||'').substring(0,160))}${(f.description||'').length>160?'...':''}</div>
+      <div class="finding-metas">
+        ${f.source?`<span class="finding-meta">${esc(f.source)}</span>`:''}
+        ${f.function?`<span class="finding-meta">fn: ${esc(f.function)}</span>`:''}
+        ${f.line?`<span class="finding-meta">line ${esc(String(f.line))}</span>`:''}
+      </div>
+      ${hasMore?`<button class="finding-toggle" onclick="toggleDetail('${fid}',this)">Show details ↓</button>
+      <div class="finding-detail" id="${fid}">
+        ${(f.description||'').length>150?`<p style="font-size:12px;color:var(--t2);font-family:'Courier New',Courier,monospace;line-height:1.7;margin-bottom:8px">${esc(f.description)}</p>`:''}
+        ${f.recommendation?`<p style="font-size:12px;color:var(--c);font-family:'Courier New',Courier,monospace;margin-bottom:8px">💡 ${esc(f.recommendation)}</p>`:''}
+        ${f.auto_fix?.fixed_code?`<div class="detail-fix"><div class="detail-fix-label">✅ Fix Code</div><pre>${esc(f.auto_fix.fixed_code)}</pre></div>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function toggleDetail(id,btn){
+  const el=document.getElementById(id); if(!el) return;
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open')?'Hide details ↑':'Show details ↓';
+}
+function resetAudit(){
+  currentAuditId=null; currentAuditData=null;
+  document.getElementById('cCode').value='';
+  document.getElementById('auditErr').style.display='none';
+  document.getElementById('auditForm').style.display='block';
+  document.getElementById('scanView').style.display='none';
+  document.getElementById('resultsView').style.display='none';
+  document.getElementById('findingsList').innerHTML='';
+  document.getElementById('shareSection').style.display='none';
+  document.getElementById('verdictEl').style.display='none';
+}
+
+// ═══ DOWNLOADS ═══
+async function dlPDF(){
+  if(!currentAuditId||!token)return; toast('Preparing PDF...','info');
+  try{
+    const r=await fetch(API+'/audit/report/'+currentAuditId+'/pdf',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok){toast('PDF not available','err');return;}
+    const blob=await r.blob(), url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url; a.download='AuditSmart_Report.pdf'; a.click(); URL.revokeObjectURL(url); toast('PDF downloaded!','ok');
+  }catch(e){toast('PDF download failed','err');}
+}
+function dlJSON(){
+  if(!currentAuditData)return;
+  const d=currentAuditData;
+  const out={report_id:d.report_id,contract_name:d.contract_name,scanned_at:new Date().toISOString(),risk_level:(d.risk_level||'').toUpperCase(),risk_score:d.risk_score,total_findings:d.total_findings,critical:d.critical_count,high:d.high_count,medium:d.medium_count,low:d.low_count,deployment_verdict:d.deployment_verdict,agents_used:d.agents_used,findings:(d.findings||[]).map(f=>({type:f.title||f.type,severity:f.severity,function:f.function,line:f.line,description:f.description,recommendation:f.recommendation})),disclaimer:'AI-generated assessment. Not a certified manual audit.'};
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download='AuditSmart_'+(d.contract_name||'report')+'.json'; a.click(); URL.revokeObjectURL(url); toast('JSON exported!','ok');
+}
+function copyLink(){
+  if(!currentAuditData?.report_id)return;
+  navigator.clipboard.writeText(API+'/public/report/'+currentAuditData.report_id);
+  toast('Link copied!','ok');
+}
+
+// ═══ HISTORY ═══
+async function loadHistory(){
+  if(!token)return;
+  try{
+    const r=await fetch(API+'/audit/history',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok)return; const d=await r.json();
+    renderHistory(d.audits||[],'historyList');
+    renderHistory((d.audits||[]).slice(0,4),'dashRecent');
+  }catch(e){}
+}
+function renderHistory(audits,cid){
+  const el=document.getElementById(cid); if(!el)return;
+  if(!audits.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)"><p style="font-size:14px;font-weight:700;margin-bottom:6px">No audits yet</p><p style="font-size:12px">Run your first audit</p></div>';return;}
+  const rc={critical:'#f87171',high:'#fbbf24',medium:'#fde047',low:'#6ee7b7',unknown:'var(--t2)'};
+  el.innerHTML=audits.map(a=>{
+    const rl=(a.risk_level||'unknown').toLowerCase();
+    const dt=new Date(a.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    return`<div class="history-item" onclick="loadAuditDetail('${a.id}')">
+      <div><div class="hi-name">${esc(a.contract_name||'Contract')}</div><div class="hi-meta">${dt} · ${a.total_findings} findings · ${a.chain||'ethereum'}</div></div>
+      <div class="hi-right"><span class="hi-rl" style="color:${rc[rl]||'var(--t2)'}">${(a.risk_level||'UNKNOWN').toUpperCase()}</span><span class="hi-crit">${a.critical_count||0} crit</span></div>
+    </div>`;
+  }).join('');
+}
+async function loadAuditDetail(id){
+  if(!token)return;
+  try{
+    const r=await fetch(API+'/audit/report/'+id,{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok)return; const d=await r.json();
+    currentAuditId=d.id; currentAuditData=d;
+    switchTab('audit');
+    document.getElementById('auditForm').style.display='none';
+    document.getElementById('scanView').style.display='none';
+    renderResults(d);
+    document.getElementById('resultsView').style.display='block';
+  }catch(e){toast('Failed to load','err');}
+}
+
+// ═══ DASHBOARD ═══
+async function loadDash(){
+  if(!token)return;
+  try{
+    const r=await fetch(API+'/dashboard/stats',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok)return; const d=await r.json();
+    document.getElementById('ds-audits').textContent=d.total_audits||0;
+    document.getElementById('ds-crit').textContent=d.critical_findings||0;
+    document.getElementById('ds-high').textContent=d.high_findings||0;
+    document.getElementById('ds-total').textContent=d.total_vulnerabilities||0;
+    document.getElementById('ds-avg').textContent=Math.round(d.avg_risk_score||0);
+    document.getElementById('ds-time').textContent=d.avg_scan_duration_ms?Math.round(d.avg_scan_duration_ms/1000)+'s':'0s';
+  }catch(e){}
+}
+
+// ═══ PAYMENTS ═══
+function openPayment(plan){
+  if(!currentUser){openAuth('login');return;}
+  selectedPlan=plan;
+  const p=PLANS[plan];
+  document.getElementById('payPlanName').textContent=p.label;
+  document.getElementById('payPlanPrice').textContent=p.price;
+  document.getElementById('payFeats').innerHTML=(PLAN_FEATS[plan]||[]).map(f=>`<li>${esc(f)}</li>`).join('');
+  hideErr(document.getElementById('payErr'));
+  document.getElementById('payModal').classList.add('open');
+}
+function closePayModal(){ document.getElementById('payModal').classList.remove('open'); }
+async function doPayment(){
+  if(!selectedPlan||!token)return;
+  const btn=document.getElementById('payBtn'), err=document.getElementById('payErr');
+  btn.disabled=true; btn.textContent='Creating order...'; hideErr(err);
+  try{
+    const r=await fetch(API+'/payment/razorpay/create-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({plan:selectedPlan})});
+    const d=await r.json();
+    if(!r.ok){showErr(err,d.detail||'Order failed');return;}
+    new Razorpay({key:d.key_id||d.key,amount:d.amount,currency:'INR',name:'AuditSmart',description:PLANS[selectedPlan].label+' Plan',order_id:d.order_id,
+      handler:async(resp)=>{
+        const vr=await fetch(API+'/payment/razorpay/verify',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({razorpay_order_id:resp.razorpay_order_id,razorpay_payment_id:resp.razorpay_payment_id,razorpay_signature:resp.razorpay_signature,plan:selectedPlan})});
+        const vd=await vr.json();
+        if(vr.ok){currentUser.plan=selectedPlan;currentUser.free_audits_remaining=selectedPlan==='pro'?15:20;localStorage.setItem('as_user',JSON.stringify(currentUser));updateNavUser();closePayModal();toast('🎉 Upgraded to '+PLANS[selectedPlan].label+'!','ok');}
+        else toast('Payment verification failed','err');
+      },
+      prefill:{name:currentUser.name,email:currentUser.email},theme:{color:'#7b2fff'}
+    }).open();
+    closePayModal();
+  }catch(e){showErr(err,'Payment error');}
+  finally{btn.disabled=false;btn.textContent='Pay Now';}
+}
+
+// ═══ DEEP AUDIT ═══
+function openDeepModal(){if(!currentUser){openAuth('login');return;} document.getElementById('deepModal').classList.add('open');}
+function closeDeepModal(){document.getElementById('deepModal').classList.remove('open');}
+async function doDeepAudit(){
+  const code=document.getElementById('deepCode').value.trim(), name=document.getElementById('deepName').value.trim()||'Contract';
+  if(!code){toast('Paste your contract code first','err');return;}
+  if(!token){openAuth('login');return;}
+  const btn=document.getElementById('deepBtn'), err=document.getElementById('deepErr');
+  btn.disabled=true; btn.textContent='Creating order...'; hideErr(err);
+  try{
+    const r=await fetch(API+'/audit/deep/create-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({contract_code:code,contract_name:name})});
+    const d=await r.json();
+    if(!r.ok){showErr(err,d.detail||'Order failed');return;}
+    new Razorpay({key:d.key_id,amount:d.amount,currency:'INR',name:'Deep Audit',description:'Claude Opus + Extended Thinking',order_id:d.order_id,
+      handler:async(resp)=>{
+        toast('Payment confirmed! Starting Deep Audit...','ok'); closeDeepModal(); openApp(); switchTab('audit');
+        document.getElementById('auditForm').style.display='none';
+        document.getElementById('scanView').style.display='block';
+        try{
+          const r2=await fetch(API+'/audit/deep/verify-and-run',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({razorpay_order_id:resp.razorpay_order_id,razorpay_payment_id:resp.razorpay_payment_id,razorpay_signature:resp.razorpay_signature,contract_code:code,contract_name:name})});
+          const d2=await r2.json();
+          document.getElementById('scanView').style.display='none';
+          if(r2.ok){currentAuditId=d2.id;currentAuditData=d2;renderResults(d2);document.getElementById('resultsView').style.display='block';toast('Deep Audit complete!','ok');}
+          else{document.getElementById('auditForm').style.display='block';toast(d2.detail||'Deep audit failed','err');}
+        }catch(e){document.getElementById('scanView').style.display='none';document.getElementById('auditForm').style.display='block';toast('Deep audit error','err');}
+      },
+      prefill:{name:currentUser?.name,email:currentUser?.email},theme:{color:'#ff3d9a'}
+    }).open();
+    closeDeepModal();
+  }catch(e){showErr(err,'Payment error');}
+  finally{btn.disabled=false;btn.textContent='Pay $20 — Start Deep Audit';}
+}
+
+// ═══ LEGAL ═══
+const LEGAL = {
+  terms:`<h2>Terms of Service</h2><p>AuditSmart is an AI-assisted security screening tool by Xorion Network LLC. This tool provides automated vulnerability scanning as a preliminary screening service only.</p><p>It does NOT constitute a certified security audit. AI-generated reports may contain false positives or miss certain vulnerabilities. For production contracts, a professional manual audit is strongly recommended.</p><p>Xorion Network LLC accepts no liability for losses arising from vulnerabilities not detected by this tool.</p>`,
+  privacy:`<h2>Privacy Policy</h2><p>Your contract code is NEVER stored. Only a SHA256 hash is retained for report verification purposes.</p><p>We collect: email address, name, and audit metadata (risk score, finding counts) for your account.</p><p>We do not sell your data to third parties. API keys are used only to process your audit requests.</p><p>For data deletion requests, contact: support@zylithium.org</p>`,
+  disclosure:`<h2>Risk Disclosure</h2><p>AuditSmart uses AI models (Groq LLaMA, Claude, Gemini) and static analysis (Slither) to detect vulnerabilities. Current detection rate is approximately 50–60%.</p><p>This tool is intended as a pre-audit triage tool to catch obvious issues before spending on a manual audit. It is NOT a replacement for professional manual security auditing.</p><p>Never deploy high-value contracts based solely on an AuditSmart report.</p>`
+};
+function showLegal(type){ document.getElementById('legalContent').innerHTML=LEGAL[type]||''; document.getElementById('legalModal').classList.add('open'); }
+function closeLegal(){ document.getElementById('legalModal').classList.remove('open'); }
+
+// ═══ UTILS ═══
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showErr(el,msg){if(!el)return;el.textContent=msg;el.style.display='block';}
+function hideErr(el){if(el)el.style.display='none';}
+function toast(msg,type='info'){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast t-'+(type==='ok'?'ok':type==='err'?'err':'info');
+  t.innerHTML=(type==='ok'?'✓':type==='err'?'✕':'→')+' '+msg;
+  c.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3200);
+}
+</script>
+</body>
+</html>

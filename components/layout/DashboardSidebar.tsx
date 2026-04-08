@@ -12,55 +12,134 @@ import {
   Shield,
   PlusCircle,
   Activity,
-  Sparkles,
+  Zap,
   X,
+  TrendingUp,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Overview",      href: "/dashboard",          icon: LayoutDashboard },
-  { label: "Scan Contract", href: "/dashboard/scan",      icon: PlusCircle },
-  { label: "Monitor",       href: "/dashboard/monitor",   icon: Activity },
-  { label: "Audit History", href: "/dashboard/history",   icon: History },
-  { label: "Billing",       href: "/dashboard/billing",   icon: CreditCard },
-  { label: "Settings",      href: "/dashboard/settings",  icon: Settings },
+  { label: "Scan Contract", href: "/dashboard/scan",      icon: PlusCircle     },
+  { label: "Monitor",       href: "/dashboard/monitor",   icon: Activity       },
+  { label: "Audit History", href: "/dashboard/history",   icon: History        },
+  { label: "Billing",       href: "/dashboard/billing",   icon: CreditCard     },
+  { label: "Settings",      href: "/dashboard/settings",  icon: Settings       },
 ];
 
-function SidebarContent() {
+interface SidebarProps {
+  user?: {
+    plan?: string;
+    auditsRemaining?: number;
+    maxAudits?: number;
+  };
+}
+
+function SidebarContent({ user }: SidebarProps) {
   const pathname = usePathname();
+  const plan = (user?.plan || "free").toUpperCase();
+  const left = user?.auditsRemaining ?? 3;
+  const max = user?.maxAudits ?? 3;
+  const pct = Math.min(100, (left / max) * 100);
 
   return (
     <aside
-      className="flex h-full flex-col"
-      style={{ background: "var(--sidebar)", borderRight: "1px solid var(--border)" }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        background: "var(--surface-1)",
+        borderRight: "1px solid var(--border)",
+        fontFamily: "'Satoshi', sans-serif",
+      }}
     >
       {/* Logo */}
       <div
-        className="flex h-16 items-center gap-2.5 px-5 shrink-0"
-        style={{ borderBottom: "1px solid var(--border)" }}
+        style={{
+          display: "flex",
+          height: 60,
+          alignItems: "center",
+          gap: 8,
+          padding: "0 20px",
+          borderBottom: "1px solid var(--border)",
+          flexShrink: 0,
+        }}
       >
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-lg"
-          style={{ background: "var(--brand-faint)" }}
+          style={{
+            width: 30, height: 30,
+            borderRadius: 8,
+            background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(123,47,255,0.12))",
+            border: "1px solid rgba(0,212,255,0.20)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          <Shield className="h-4 w-4" style={{ color: "var(--brand)" }} />
+          <Shield size={15} style={{ color: "var(--brand)" }} />
         </div>
         <span
-          className="text-[17px] font-bold"
-          style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
+          style={{
+            fontWeight: 800,
+            fontSize: 15,
+            letterSpacing: "-0.025em",
+            background: "linear-gradient(90deg, var(--text-primary) 60%, var(--brand))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
         >
-          Audit<span style={{ color: "var(--brand)" }}>Smart</span>
+          AuditSmart
         </span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
-        <p
-          className="px-2 mb-2 text-[10px] font-semibold uppercase tracking-widest"
-          style={{ fontFamily: "'DM Mono', monospace", color: "var(--text-disabled)" }}
+      {/* New audit button */}
+      <div style={{ padding: "16px 12px 8px" }}>
+        <Link
+          href="/dashboard/scan"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            width: "100%",
+            padding: "10px",
+            borderRadius: 8,
+            background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: 12,
+            textDecoration: "none",
+            transition: "opacity 0.2s",
+          }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
         >
-          Navigation
+          <PlusCircle size={13} />
+          New Audit
+        </Link>
+      </div>
+
+      {/* Navigation */}
+      <nav
+        style={{
+          flex: 1,
+          padding: "8px 12px",
+          overflowY: "auto",
+        }}
+      >
+        <p
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            color: "var(--text-disabled)",
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            padding: "0 10px",
+            marginBottom: 6,
+            fontFamily: "'Satoshi', sans-serif",
+          }}
+        >
+          Workspace
         </p>
 
         {NAV_ITEMS.map((item) => {
@@ -73,76 +152,211 @@ function SidebarContent() {
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2.5 text-[13.5px] font-medium transition-all",
-                isActive
-                  ? "text-[var(--brand)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              )}
               style={{
-                fontFamily: "'Satoshi', sans-serif",
-                background: isActive ? "var(--brand-faint)" : "transparent",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 12px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                textDecoration: "none",
+                color: isActive ? "var(--brand)" : "var(--text-secondary)",
+                background: isActive ? "rgba(0,212,255,0.07)" : "transparent",
+                border: isActive ? "1px solid rgba(0,212,255,0.12)" : "1px solid transparent",
+                marginBottom: 2,
+                transition: "background 0.15s, color 0.15s",
               }}
               onMouseEnter={(e) => {
-                if (!isActive)
-                  (e.currentTarget as HTMLElement).style.background =
-                    "var(--accent)";
+                if (!isActive) {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)";
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
+                }
               }}
               onMouseLeave={(e) => {
-                if (!isActive)
-                  (e.currentTarget as HTMLElement).style.background =
-                    "transparent";
+                if (!isActive) {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
+                }
               }}
             >
               <Icon
-                className="h-4 w-4 shrink-0"
-                style={{ color: isActive ? "var(--brand)" : "var(--text-disabled)" }}
+                size={16}
+                style={{ color: isActive ? "var(--brand)" : "var(--text-disabled)", flexShrink: 0 }}
               />
               {item.label}
             </Link>
           );
         })}
-      </nav>
 
-      {/* Upgrade card */}
-      <div className="p-4 mt-auto shrink-0">
-        <div
-          className="rounded-xl p-4"
+        <div style={{ height: 1, background: "var(--border)", margin: "12px 0" }} />
+
+        <p
           style={{
-            background: "var(--brand-faint)",
-            border: "1px solid rgba(99,102,241,0.15)",
+            fontSize: 9,
+            fontWeight: 700,
+            color: "var(--text-disabled)",
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            padding: "0 10px",
+            marginBottom: 6,
+            fontFamily: "'Satoshi', sans-serif",
           }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4" style={{ color: "var(--brand)" }} />
-            <span
-              className="text-sm font-semibold"
-              style={{ fontFamily: "'Syne', sans-serif", color: "var(--text-primary)" }}
-            >
-              Upgrade to Pro
-            </span>
+          Actions
+        </p>
+        <Link
+          href="/pricing"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 12px",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            textDecoration: "none",
+            color: "var(--text-secondary)",
+            background: "transparent",
+            border: "1px solid transparent",
+            marginBottom: 2,
+            transition: "background 0.15s, color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)";
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
+          }}
+        >
+          <TrendingUp size={16} style={{ color: "var(--text-disabled)", flexShrink: 0 }} />
+          Upgrade Plan
+        </Link>
+        <Link
+          href="/dashboard/deep-audit"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 12px",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            textDecoration: "none",
+            color: "var(--text-secondary)",
+            background: "transparent",
+            border: "1px solid transparent",
+            marginBottom: 2,
+            transition: "background 0.15s, color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)";
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
+          }}
+        >
+          <Zap size={16} style={{ color: "var(--brand-pink)", flexShrink: 0 }} />
+          Deep Audit · $20
+        </Link>
+      </nav>
+
+      {/* Plan usage card */}
+      <div style={{ padding: "12px", flexShrink: 0 }}>
+        <div
+          style={{
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: "var(--brand)",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              marginBottom: 6,
+              fontFamily: "'Satoshi', sans-serif",
+            }}
+          >
+            {plan} Plan
           </div>
-          <p
-            className="text-xs leading-relaxed mb-3"
-            style={{ color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: "var(--text-primary)",
+              fontFamily: "'Satoshi', sans-serif",
+              letterSpacing: "-0.025em",
+              lineHeight: 1,
+            }}
           >
-            Get 20 audits/month and access advanced AI models.
-          </p>
-          <Button
-            size="sm"
-            className="w-full text-white shadow-sm"
-            style={{ background: "var(--brand)" }}
-            asChild
+            {left}
+          </div>
+          <div
+            style={{
+              fontSize: 10,
+              color: "var(--text-disabled)",
+              fontFamily: "'Satoshi', sans-serif",
+              marginBottom: 10,
+            }}
           >
-            <Link href="/pricing">Upgrade now</Link>
-          </Button>
+            audits remaining
+          </div>
+          {/* Usage bar */}
+          <div
+            style={{
+              height: 3,
+              background: "rgba(255,255,255,0.05)",
+              borderRadius: 2,
+              overflow: "hidden",
+              marginBottom: 10,
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${pct}%`,
+                background: "linear-gradient(90deg, var(--brand), var(--brand-green))",
+                borderRadius: 2,
+                transition: "width 0.5s ease",
+              }}
+            />
+          </div>
+          <Link
+            href="/pricing"
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "8px",
+              borderRadius: 6,
+              background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
+              color: "#fff",
+              fontSize: 11,
+              fontWeight: 700,
+              textAlign: "center",
+              textDecoration: "none",
+              transition: "opacity 0.2s",
+            }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
+          >
+            Upgrade Now →
+          </Link>
         </div>
       </div>
     </aside>
   );
 }
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ user }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
@@ -152,40 +366,65 @@ export function DashboardSidebar() {
     return () => window.removeEventListener("toggle-sidebar", handler);
   }, []);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  useEffect(() => setMobileOpen(false), [pathname]);
 
   return (
     <>
       {/* Desktop */}
-      <div className="hidden md:flex md:w-60 lg:w-64 flex-col shrink-0 h-screen sticky top-0">
-        <SidebarContent />
+      <div
+        style={{ width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0 }}
+        className="hidden md:flex md:flex-col"
+      >
+        <SidebarContent user={user} />
       </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 40,
+            background: "rgba(5,5,8,0.7)",
+            backdropFilter: "blur(4px)",
+          }}
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Mobile drawer */}
       <div
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 md:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
+        style={{
+          position: "fixed",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          zIndex: 50,
+          width: 220,
+          transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.3s ease",
+        }}
+        className="md:hidden"
       >
-        <div className="relative h-full">
+        <div style={{ position: "relative", height: "100%" }}>
           <button
-            className="absolute right-3 top-3 z-10 p-1.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--accent)]"
+            style={{
+              position: "absolute",
+              right: 12,
+              top: 12,
+              zIndex: 10,
+              padding: 6,
+              borderRadius: 6,
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+            }}
             onClick={() => setMobileOpen(false)}
           >
-            <X className="h-4 w-4" />
+            <X size={14} />
           </button>
-          <SidebarContent />
+          <SidebarContent user={user} />
         </div>
       </div>
     </>

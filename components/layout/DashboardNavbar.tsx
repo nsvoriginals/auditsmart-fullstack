@@ -122,7 +122,8 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
                   style={{
                     background: "var(--brand-faint)",
                     color: "var(--brand)",
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontWeight: 700,
                   }}
                 >
                   {getInitials(user?.name, user?.email)}
@@ -136,7 +137,7 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
               <div className="flex flex-col gap-1">
                 <p
                   className="text-sm font-semibold"
-                  style={{ color: "var(--text-primary)", fontFamily: "'Syne', sans-serif" }}
+                  style={{ color: "var(--text-primary)", fontFamily: "'Satoshi', sans-serif", fontWeight: 700, letterSpacing: "-0.025em" }}
                 >
                   {user?.name || "User"}
                 </p>
