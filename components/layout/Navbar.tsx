@@ -29,6 +29,18 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
+  // Get dynamic background based on scroll and theme
+  const getNavBackground = () => {
+    if (scrolled) {
+      return resolvedTheme === "dark" 
+        ? "rgba(5,5,8,0.92)" 
+        : "rgba(248,249,255,0.92)";
+    }
+    return resolvedTheme === "dark"
+      ? "rgba(5,5,8,0.75)"
+      : "rgba(248,249,255,0.75)";
+  };
+
   return (
     <nav
       style={{
@@ -42,9 +54,7 @@ export function Navbar() {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "0 40px",
-        background: scrolled
-          ? "rgba(5,5,8,0.92)"
-          : "rgba(5,5,8,0.75)",
+        background: getNavBackground(),
         backdropFilter: "blur(20px)",
         borderBottom: "1px solid var(--border)",
         transition: "background 0.3s ease",
@@ -109,6 +119,7 @@ export function Navbar() {
               color: "var(--text-secondary)",
               textDecoration: "none",
               transition: "color 0.2s",
+              fontFamily: "'Satoshi', sans-serif",
             }}
             onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
             onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)")}
@@ -127,8 +138,8 @@ export function Navbar() {
             style={{
               width: 38, height: 38,
               borderRadius: 8,
-              background: "rgba(0,212,255,0.06)",
-              border: "1px solid rgba(0,212,255,0.15)",
+              background: resolvedTheme === "dark" ? "rgba(0,212,255,0.06)" : "rgba(123,47,255,0.06)",
+              border: `1px solid ${resolvedTheme === "dark" ? "rgba(0,212,255,0.15)" : "rgba(123,47,255,0.15)"}`,
               color: "var(--text-secondary)",
               cursor: "pointer",
               display: "flex",
@@ -142,7 +153,7 @@ export function Navbar() {
               (e.currentTarget as HTMLButtonElement).style.color = "var(--brand)";
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,212,255,0.15)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor = resolvedTheme === "dark" ? "rgba(0,212,255,0.15)" : "rgba(123,47,255,0.15)";
               (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
             }}
             aria-label="Toggle theme"
@@ -165,6 +176,7 @@ export function Navbar() {
             transition: "border-color 0.2s, color 0.2s",
             display: "inline-flex",
             alignItems: "center",
+            fontFamily: "'Satoshi', sans-serif",
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--brand)";
@@ -191,6 +203,7 @@ export function Navbar() {
             alignItems: "center",
             transition: "opacity 0.2s, box-shadow 0.2s",
             border: "none",
+            fontFamily: "'Satoshi', sans-serif",
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLAnchorElement).style.opacity = "0.9";
@@ -230,7 +243,7 @@ export function Navbar() {
             inset: 0,
             top: 64,
             zIndex: 90,
-            background: "rgba(5,5,8,0.97)",
+            background: resolvedTheme === "dark" ? "rgba(5,5,8,0.97)" : "rgba(248,249,255,0.97)",
             backdropFilter: "blur(20px)",
             padding: 24,
             display: "flex",
@@ -252,6 +265,7 @@ export function Navbar() {
                 borderBottom: "1px solid var(--border)",
                 textDecoration: "none",
                 transition: "color 0.2s",
+                fontFamily: "'Satoshi', sans-serif",
               }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)")}
@@ -273,6 +287,7 @@ export function Navbar() {
               fontSize: 14,
               textDecoration: "none",
               display: "block",
+              fontFamily: "'Satoshi', sans-serif",
             }}
           >
             Start Free Audit →
