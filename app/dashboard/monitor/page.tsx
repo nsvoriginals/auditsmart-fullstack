@@ -1,5 +1,5 @@
 "use client";
-// src/app/dashboard/monitor/page.tsx — Contract Monitor
+// app/dashboard/monitor/page.tsx — Contract Monitor (Responsive)
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -170,45 +170,53 @@ export default function MonitorPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
+      <style>{`
+        @media (max-width: 640px) {
+          .stats-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .event-card { padding: 12px !important; }
+          .event-header { flex-wrap: wrap !important; }
+        }
+      `}</style>
+
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Contract Monitor</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Contract Monitor</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           Enter any deployed contract address to watch for suspicious activity in real time.
         </p>
       </div>
 
       {/* Configuration Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Monitoring Configuration</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Monitoring Configuration</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Configure the contract address and network to monitor
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <div className="sm:col-span-2 space-y-2">
-              <Label htmlFor="contract-address">Contract Address</Label>
+              <Label htmlFor="contract-address" className="text-xs sm:text-sm">Contract Address</Label>
               <Input
                 id="contract-address"
                 placeholder="0x742d35Cc6634C0532925a3b8D4C9C5f2..."
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 disabled={active}
-                className="font-mono"
+                className="font-mono text-xs sm:text-sm"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="network">Network</Label>
+              <Label htmlFor="network" className="text-xs sm:text-sm">Network</Label>
               <Select value={chain} onValueChange={setChain} disabled={active}>
-                <SelectTrigger>
+                <SelectTrigger className="text-xs sm:text-sm">
                   <SelectValue placeholder="Select network" />
                 </SelectTrigger>
                 <SelectContent>
                   {["ethereum", "polygon", "arbitrum", "optimism", "bsc", "base"].map((c) => (
-                    <SelectItem key={c} value={c}>
+                    <SelectItem key={c} value={c} className="text-xs sm:text-sm">
                       {c.charAt(0).toUpperCase() + c.slice(1)}
                     </SelectItem>
                   ))}
@@ -218,32 +226,32 @@ export default function MonitorPage() {
           </div>
 
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="text-sm">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {!active ? (
-              <Button onClick={startMonitor} size="lg">
+              <Button onClick={startMonitor} size="lg" className="w-full sm:w-auto">
                 <Play className="mr-2 h-4 w-4" />
                 Start Monitoring
               </Button>
             ) : (
-              <Button onClick={stopMonitor} size="lg" variant="destructive">
+              <Button onClick={stopMonitor} size="lg" variant="destructive" className="w-full sm:w-auto">
                 <Square className="mr-2 h-4 w-4" />
                 Stop Monitoring
               </Button>
             )}
             
             {active && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
                 <div className="relative">
                   <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                 </div>
-                <span className="text-sm text-green-600 dark:text-green-400">
+                <span className="text-xs sm:text-sm text-green-600 dark:text-green-400">
                   Live · {chain.charAt(0).toUpperCase() + chain.slice(1)}
                 </span>
               </div>
@@ -252,43 +260,43 @@ export default function MonitorPage() {
         </CardContent>
       </Card>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Responsive Grid */}
       {(active || events.length > 0) && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="stats-grid grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-2 p-4 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Events Captured
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-foreground">
                 {alertCount.total}
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-600 dark:text-yellow-400">
+            <CardHeader className="pb-2 p-4 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-yellow-600 dark:text-yellow-400">
                 Warnings
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                 {alertCount.warning}
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-600 dark:text-red-400">
+            <CardHeader className="pb-2 p-4 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-red-600 dark:text-red-400">
                 Critical Alerts
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                 {alertCount.critical}
               </div>
             </CardContent>
@@ -299,30 +307,30 @@ export default function MonitorPage() {
       {/* Live Feed */}
       {events.length > 0 && (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>Live Feed</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base sm:text-lg">Live Feed</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Real-time monitoring events for {address ? formatAddress(address) : "contract"}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 {active && (
-                  <Badge variant="outline" className="border-green-500/50 text-green-600 dark:text-green-400">
+                  <Badge variant="outline" className="border-green-500/50 text-green-600 dark:text-green-400 text-[10px] sm:text-xs">
                     <Activity className="mr-1 h-3 w-3" />
                     LIVE
                   </Badge>
                 )}
-                <Button variant="ghost" size="sm" onClick={clearEvents}>
+                <Button variant="ghost" size="sm" onClick={clearEvents} className="h-8 sm:h-9 text-xs">
                   <Trash2 className="mr-2 h-3 w-3" />
                   Clear
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[500px] pr-4" ref={scrollRef}>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <ScrollArea className="h-[400px] sm:h-[500px] pr-2 sm:pr-4" ref={scrollRef}>
               <div className="space-y-3">
                 {events.map((event) => {
                   const severity = SEVERITY_CONFIG[event.severity];
@@ -334,15 +342,15 @@ export default function MonitorPage() {
                     <div
                       key={event.id}
                       className={cn(
-                        "p-4 rounded-lg border transition-all hover:bg-accent/50",
+                        "event-card p-3 sm:p-4 rounded-lg border transition-all hover:bg-accent/50",
                         event.severity === "critical" && "border-red-500/30 bg-red-500/5",
                         event.severity === "warning" && "border-yellow-500/30 bg-yellow-500/5",
                         event.severity === "info" && "border-gray-500/30"
                       )}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="event-header flex flex-col sm:flex-row sm:items-start gap-3">
                         <div className={cn(
-                          "p-1.5 rounded-md",
+                          "p-1.5 rounded-md w-fit",
                           event.severity === "critical" && "bg-red-500/10",
                           event.severity === "warning" && "bg-yellow-500/10",
                           event.severity === "info" && "bg-gray-500/10"
@@ -356,37 +364,37 @@ export default function MonitorPage() {
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className={severity.className}>
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <Badge variant="outline" className={cn(severity.className, "text-[10px] sm:text-xs")}>
                               {severity.label}
                             </Badge>
-                            <Badge variant="secondary" className="gap-1">
+                            <Badge variant="secondary" className="gap-1 text-[10px] sm:text-xs">
                               <TypeIcon className="h-3 w-3" />
                               {typeConfig?.label}
                             </Badge>
                             {event.blockNum && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
                                 <Hash className="h-3 w-3" />
                                 Block {event.blockNum.toLocaleString()}
                               </div>
                             )}
                           </div>
                           
-                          <p className="text-sm text-foreground mb-2">
+                          <p className="text-xs sm:text-sm text-foreground mb-2 break-words">
                             {event.message}
                           </p>
                           
                           {event.txHash && (
-                            <div className="flex items-center gap-1">
-                              <LinkIcon className="h-3 w-3 text-muted-foreground" />
-                              <code className="text-xs text-muted-foreground font-mono">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <LinkIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <code className="text-[10px] sm:text-xs text-muted-foreground font-mono break-all">
                                 {event.txHash.slice(0, 10)}...{event.txHash.slice(-8)}
                               </code>
                             </div>
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                           <Clock className="h-3 w-3" />
                           {new Date(event.timestamp).toLocaleTimeString()}
                         </div>
@@ -402,16 +410,16 @@ export default function MonitorPage() {
 
       {/* Empty State */}
       {!active && events.length === 0 && (
-        <Card className="py-16 text-center">
+        <Card className="py-12 sm:py-16 text-center">
           <CardContent>
-            <div className="flex flex-col items-center justify-center">
-              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Eye className="h-8 w-8 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center px-4">
+              <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Eye className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">
                 Start Monitoring
               </h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-sm">
                 Enter a contract address above to begin real-time monitoring for large transfers, 
                 ownership changes, and exploit patterns.
               </p>

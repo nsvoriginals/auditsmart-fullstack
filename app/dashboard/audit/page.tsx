@@ -1,4 +1,5 @@
 "use client";
+// app/dashboard/audit/page.tsx (Responsive)
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -19,17 +20,17 @@ interface UserLimits {
 const css = `
   .audit-root { font-family: 'Satoshi', sans-serif; color: #f0f0f5; }
   .page-header { margin-bottom: 32px; }
-  .page-title { font-family: 'Satoshi', sans-serif; font-size: 28px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.025em; }
-  .page-sub { font-size: 12px; color: #6b6b85; margin-top: 6px; font-family: 'Satoshi', sans-serif; }
+  .page-title { font-family: 'Satoshi', sans-serif; font-size: clamp(24px, 6vw, 28px); font-weight: 800; color: #f0f0f5; letter-spacing: -0.025em; }
+  .page-sub { font-size: clamp(11px, 3vw, 12px); color: #6b6b85; margin-top: 6px; font-family: 'Satoshi', sans-serif; }
   .audit-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
-  .card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; padding: 28px; }
-  .card-title { font-family: 'Satoshi', sans-serif; font-size: 15px; font-weight: 700; color: #e0e0f0; margin-bottom: 24px; }
+  .card { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 14px; padding: clamp(20px, 5vw, 28px); }
+  .card-title { font-family: 'Satoshi', sans-serif; font-size: clamp(14px, 3.5vw, 15px); font-weight: 700; color: #e0e0f0; margin-bottom: 24px; }
   .field { margin-bottom: 20px; }
-  .field label { display: block; font-size: 10px; color: #6b6b85; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; font-family: 'Satoshi', sans-serif; }
+  .field label { display: block; font-size: clamp(9px, 2.5vw, 10px); color: #6b6b85; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; font-family: 'Satoshi', sans-serif; }
   .field input, .field textarea {
     width: 100%; padding: 11px 14px; background: #111118;
     border: 1px solid #1e1e2e; border-radius: 8px;
-    color: #f0f0f5; font-family: 'Satoshi', monospace; font-size: 12px;
+    color: #f0f0f5; font-family: 'Satoshi', monospace; font-size: clamp(11px, 2.5vw, 12px);
     outline: none; transition: border-color 0.15s; resize: vertical;
   }
   .field input:focus, .field textarea:focus { border-color: #6366f1; }
@@ -38,35 +39,38 @@ const css = `
   .btn-run {
     width: 100%; padding: 13px; background: #6366f1; color: #fff;
     border: none; border-radius: 8px; font-family: 'Satoshi', sans-serif;
-    font-size: 13px; font-weight: 500; cursor: pointer;
+    font-size: clamp(12px, 3vw, 13px); font-weight: 500; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 8px;
     transition: background 0.15s; margin-top: 24px;
   }
   .btn-run:hover { background: #5254cc; }
   .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
-  .alert-box { border-radius: 10px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; font-size: 12px; font-family: 'Satoshi', sans-serif; }
+  .alert-box { border-radius: 10px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; font-size: clamp(11px, 2.5vw, 12px); font-family: 'Satoshi', sans-serif; flex-wrap: wrap; }
   .alert-warn { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.15); color: #fbbf24; }
   .alert-ok { background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.15); color: #6ee7b7; }
   .alert-err { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); color: #fca5a5; }
   .alert-info { background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.15); color: #a5b4fc; }
   .progress-bar-bg { background: rgba(99,102,241,0.15); height: 2px; border-radius: 2px; overflow: hidden; margin-top: 8px; }
   .progress-bar-fill { height: 2px; background: #6ee7b7; border-radius: 2px; transition: width 0.3s; }
-  .plans-title { font-family: 'Satoshi', sans-serif; font-size: 13px; font-weight: 700; color: #e0e0f0; margin-bottom: 14px; }
+  .plans-title { font-family: 'Satoshi', sans-serif; font-size: clamp(12px, 3vw, 13px); font-weight: 700; color: #e0e0f0; margin-bottom: 14px; }
   .plan-option { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 10px; padding: 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; position: relative; }
   .plan-option.selected { border-color: #6366f1; background: rgba(99,102,241,0.04); }
   .plan-option:hover:not(.selected) { border-color: #2e2e45; }
-  .plan-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .plan-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
   .plan-name-row { display: flex; align-items: center; gap: 8px; }
   .plan-icon { width: 28px; height: 28px; border-radius: 7px; background: rgba(99,102,241,0.1); display: flex; align-items: center; justify-content: center; color: #a5b4fc; }
-  .plan-nm { font-family: 'Satoshi', sans-serif; font-size: 13px; font-weight: 700; color: #e0e0f0; }
-  .plan-pr { font-family: 'Satoshi', sans-serif; font-size: 16px; font-weight: 800; color: #f0f0f5; }
-  .plan-feat { font-size: 10px; color: #6b6b85; margin-top: 2px; line-height: 1.6; font-family: 'Satoshi', sans-serif; }
-  .popular-pill { position: absolute; top: -8px; right: 12px; background: #6366f1; color: #fff; font-size: 9px; padding: 2px 8px; border-radius: 100px; letter-spacing: 0.06em; text-transform: uppercase; font-family: 'Satoshi', sans-serif; }
-  .privacy-note { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 10px; padding: 14px; text-align: center; font-size: 10px; color: #3a3a55; line-height: 1.7; margin-top: 4px; font-family: 'Satoshi', sans-serif; }
-  .upgrade-link { background: none; border: none; color: #fbbf24; font-family: 'Satoshi', sans-serif; font-size: 12px; cursor: pointer; padding: 0; text-decoration: underline; margin-top: 4px; }
+  .plan-nm { font-family: 'Satoshi', sans-serif; font-size: clamp(12px, 3vw, 13px); font-weight: 700; color: #e0e0f0; }
+  .plan-pr { font-family: 'Satoshi', sans-serif; font-size: clamp(14px, 3.5vw, 16px); font-weight: 800; color: #f0f0f5; }
+  .plan-feat { font-size: clamp(9px, 2.5vw, 10px); color: #6b6b85; margin-top: 2px; line-height: 1.6; font-family: 'Satoshi', sans-serif; }
+  .popular-pill { position: absolute; top: -8px; right: 12px; background: #6366f1; color: #fff; font-size: clamp(8px, 2vw, 9px); padding: 2px 8px; border-radius: 100px; letter-spacing: 0.06em; text-transform: uppercase; font-family: 'Satoshi', sans-serif; }
+  .privacy-note { background: #0e0e18; border: 1px solid #1e1e2e; border-radius: 10px; padding: 14px; text-align: center; font-size: clamp(9px, 2.5vw, 10px); color: #3a3a55; line-height: 1.7; margin-top: 4px; font-family: 'Satoshi', sans-serif; }
+  .upgrade-link { background: none; border: none; color: #fbbf24; font-family: 'Satoshi', sans-serif; font-size: clamp(11px, 2.5vw, 12px); cursor: pointer; padding: 0; text-decoration: underline; margin-top: 4px; }
   .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (max-width: 768px) { .audit-layout { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) { 
+    .audit-layout { grid-template-columns: 1fr; gap: 20px; }
+    .plan-option { padding: 12px; }
+  }
 `;
 
 export default function AuditPage() {
@@ -204,7 +208,7 @@ export default function AuditPage() {
                     <div className="plan-icon"><Icon size={14} /></div>
                     <div className="plan-nm">{plan.name}</div>
                   </div>
-                  <div className="plan-pr">{plan.price}<span style={{ fontSize: 10, color: "#6b6b85", fontWeight: 400 }}>/mo</span></div>
+                  <div className="plan-pr">{plan.price}<span style={{ fontSize: "clamp(9px, 2vw, 10px)", color: "#6b6b85", fontWeight: 400 }}>/mo</span></div>
                 </div>
                 <div className="plan-feat">{plan.features.join(" · ")}</div>
                 {selected && <CheckCircle size={14} color="#6366f1" style={{ position: "absolute", top: 14, right: 12 }} />}

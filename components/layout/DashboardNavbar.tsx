@@ -1,7 +1,8 @@
+// components/layout/DashboardNavbar.tsx (Updated)
 "use client";
-// components/layout/DashboardNavbar.tsx
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import {
   Bell,
   Search,
@@ -48,14 +49,24 @@ function getInitials(name?: string | null, email?: string | null) {
 }
 
 export function DashboardNavbar({ user }: DashboardNavbarProps) {
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const plan = (user?.plan || "FREE").toUpperCase();
   const planStyle = PLAN_STYLES[plan] ?? PLAN_STYLES.FREE;
 
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handler);
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
   return (
     <header
-      className="sticky top-0 z-30 flex h-14 items-center gap-4 px-5"
+      className={`sticky top-0 z-30 flex h-14 items-center gap-2 md:gap-4 px-3 md:px-5 transition-all duration-200 ${
+        scrolled ? "shadow-sm" : ""
+      }`}
       style={{
-        background: "var(--card)",
+        background: scrolled ? "var(--card)" : "var(--card)",
         borderBottom: "1px solid var(--border)",
         backdropFilter: "blur(10px)",
       }}
@@ -64,14 +75,14 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden h-8 w-8 text-[var(--text-muted)]"
+        className="md:hidden h-8 w-8 text-[var(--text-muted)] flex-shrink-0"
         onClick={() => window.dispatchEvent(new CustomEvent("toggle-sidebar"))}
       >
         <Menu className="h-4 w-4" />
       </Button>
 
-      {/* Search */}
-      <div className="flex-1 max-w-sm">
+      {/* Search - Hidden on mobile, show as icon */}
+      <div className="hidden sm:block flex-1 max-w-xs lg:max-w-sm">
         <div className="relative">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5"
@@ -79,7 +90,7 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
           />
           <Input
             type="search"
-            placeholder="Search audits…"
+            placeholder="Search audits..."
             className="pl-9 h-8 text-sm border-0 focus-visible:ring-1"
             style={{
               background: "var(--elevated)",
@@ -90,13 +101,22 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
         </div>
       </div>
 
-      {/* Right */}
-      <div className="flex items-center gap-1.5 ml-auto">
+      {/* Mobile search button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="sm:hidden h-8 w-8 text-[var(--text-muted)]"
+      >
+        <Search className="h-4 w-4" />
+      </Button>
+
+      {/* Right section */}
+      <div className="flex items-center gap-1 md:gap-2 ml-auto">
         {/* Notification bell */}
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-8 w-8 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          className="relative h-8 w-8 text-[var(--text-muted)] hover:text-[var(--text-primary)] flex-shrink-0"
         >
           <Bell className="h-4 w-4" />
           <span
@@ -107,6 +127,16 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
           </span>
         </Button>
 
+        {/* Plan badge - show on desktop only */}
+        <div className="hidden md:block">
+          <span
+            className={`inline-flex w-fit rounded px-2 py-0.5 text-[11px] font-medium ${planStyle}`}
+            style={{ fontFamily: "'Satoshi', sans-serif" }}
+          >
+            {plan} Plan
+          </span>
+        </div>
+
         <ThemeToggle />
 
         {/* User dropdown */}
@@ -114,7 +144,7 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="relative h-8 w-8 rounded-full p-0 hover:ring-2 hover:ring-[var(--border-strong)]"
+              className="relative h-8 w-8 rounded-full p-0 hover:ring-2 hover:ring-[var(--border-strong)] flex-shrink-0"
             >
               <Avatar className="h-8 w-8">
                 <AvatarFallback
@@ -142,7 +172,7 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
                   {user?.name || "User"}
                 </p>
                 <p
-                  className="text-xs"
+                  className="text-xs truncate max-w-[200px]"
                   style={{ color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}
                 >
                   {user?.email}

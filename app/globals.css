@@ -502,6 +502,53 @@
   from { stroke-dashoffset: 408; }
 }
 
+.container-responsive {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+  h1 { font-size: clamp(1.75rem, 8vw, 2.5rem) !important; }
+  h2 { font-size: clamp(1.5rem, 6vw, 2rem) !important; }
+  body { font-size: 0.9375rem; }
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 768px) {
+  button, 
+  a, 
+  [role="button"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Better scrolling on mobile */
+@media (max-width: 768px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+}
 .animate-fade-in    { animation: fadeIn 0.3s ease-out forwards; }
 .animate-slide-up   { animation: slideUp 0.4s ease-out forwards; }
 .animate-slide-down { animation: slideDown 0.25s ease-out forwards; }
