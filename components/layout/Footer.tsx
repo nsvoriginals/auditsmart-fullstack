@@ -1,7 +1,8 @@
+// components/layout/Footer.tsx (Updated)
 "use client";
-// components/layout/Footer.tsx
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   FaTwitter, FaGithub, FaLinkedin, FaEnvelope,
   FaShieldAlt, FaClock, FaCheckCircle, FaBolt,
@@ -9,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import toast from "react-hot-toast";
 
 const FOOTER_SECTIONS = [
   {
@@ -67,7 +69,23 @@ const BADGES = [
 ];
 
 export function Footer() {
+  const [email, setEmail] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
   const year = new Date().getFullYear();
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email");
+      return;
+    }
+    setSubscribing(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    toast.success("Subscribed successfully!");
+    setEmail("");
+    setSubscribing(false);
+  };
 
   return (
     <footer
@@ -79,11 +97,11 @@ export function Footer() {
     >
       {/* Newsletter */}
       <div style={{ borderBottom: "1px solid var(--border)" }}>
-        <div className="max-w-6xl mx-auto px-6 py-14">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-center">
             <div>
               <h3
-                className="text-2xl font-bold mb-2"
+                className="text-xl md:text-2xl font-bold mb-2"
                 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}
               >
                 Stay ahead of threats
@@ -92,35 +110,39 @@ export function Footer() {
                 className="text-sm"
                 style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--text-muted)" }}
               >
-                Get the latest vulnerability reports and security best practices in your inbox.
+                Get the latest vulnerability reports and security best practices.
               </p>
             </div>
-            <div className="flex gap-2">
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
               <Input
                 type="email"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 h-10 text-sm border-[var(--border)] bg-[var(--elevated)] focus-visible:ring-[var(--brand)]"
                 style={{ color: "var(--text-primary)", fontFamily: "'Satoshi', sans-serif" }}
               />
               <Button
+                type="submit"
+                disabled={subscribing}
                 className="h-10 gap-2 text-white shrink-0"
                 style={{ background: "var(--brand)" }}
               >
-                Subscribe
+                {subscribing ? "Subscribing..." : "Subscribe"}
                 <FaArrowRight className="h-3 w-3" />
               </Button>
-            </div>
+            </form>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-14">
-        {/* Link grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14">
+        {/* Link grid - responsive columns */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:gap-10 mb-10 md:mb-12">
           {FOOTER_SECTIONS.map((section) => (
             <div key={section.title}>
               <h4
-                className="text-xs font-semibold uppercase tracking-widest mb-4"
+                className="text-[10px] md:text-xs font-bold uppercase tracking-wider mb-3 md:mb-4"
                 style={{
                   fontFamily: "'Satoshi', sans-serif",
                   fontWeight: 700,
@@ -130,12 +152,12 @@ export function Footer() {
               >
                 {section.title}
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2">
                 {section.links.map((link) => (
                   <li key={link.name}>
                     <Link
                       href={link.href}
-                      className="text-[13px] transition-colors hover:text-[var(--brand)]"
+                      className="text-xs md:text-[13px] transition-colors hover:text-[var(--brand)]"
                       style={{
                         color: "var(--text-muted)",
                         fontFamily: "'Satoshi', sans-serif",
@@ -150,9 +172,9 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Security badges */}
+        {/* Security badges - responsive wrap */}
         <div
-          className="flex flex-wrap items-center justify-between gap-4 rounded-xl px-6 py-4 mb-10"
+          className="flex flex-wrap items-center justify-center md:justify-between gap-3 rounded-xl px-4 md:px-6 py-4 mb-8 md:mb-10"
           style={{
             background: "var(--elevated)",
             border: "1px solid var(--border)",
@@ -161,19 +183,19 @@ export function Footer() {
           <div className="flex items-center gap-2">
             <FaShieldAlt className="h-4 w-4" style={{ color: "var(--brand)" }} />
             <span
-              className="text-sm font-medium"
+              className="text-xs md:text-sm font-medium"
               style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--text-secondary)" }}
             >
               Enterprise-grade security
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 justify-center">
             {BADGES.map((b) => {
               const Icon = b.icon;
               return (
                 <span
                   key={b.label}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-full"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] md:text-xs rounded-full"
                   style={{
                     fontFamily: "'Satoshi', sans-serif",
                     color: "var(--text-muted)",
@@ -182,7 +204,8 @@ export function Footer() {
                   }}
                 >
                   <Icon className="h-3 w-3" style={{ color: "var(--brand)" }} />
-                  {b.label}
+                  <span className="hidden sm:inline">{b.label}</span>
+                  <span className="sm:hidden">{b.label.split(" ")[0]}</span>
                 </span>
               );
             })}
@@ -191,8 +214,8 @@ export function Footer() {
 
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "2rem" }} />
 
-        {/* Bottom bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+        {/* Bottom bar - responsive stacking */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-5">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group shrink-0">
             <div
@@ -202,8 +225,8 @@ export function Footer() {
               <FaShieldAlt className="h-3.5 w-3.5" style={{ color: "var(--brand)" }} />
             </div>
             <span
-              className="text-base font-bold"
-              style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}
+              className="text-sm md:text-base font-extrabold tracking-tight"
+              style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, color: "var(--text-primary)" }}
             >
               Audit<span style={{ color: "var(--brand)" }}>Smart</span>
             </span>
@@ -211,14 +234,14 @@ export function Footer() {
 
           {/* Copyright */}
           <p
-            className="text-xs text-center"
+            className="text-[11px] md:text-xs text-center order-3 md:order-2"
             style={{ color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}
           >
-            © {year} AuditSmart. All rights reserved. Securing the future of smart contracts.
+            © {year} AuditSmart. All rights reserved.
           </p>
 
-          {/* Social */}
-          <div className="flex gap-3.5">
+          {/* Social - responsive spacing */}
+          <div className="flex gap-3 md:gap-3.5 order-2 md:order-3">
             {SOCIAL_LINKS.map((s) => {
               const Icon = s.icon;
               return (
@@ -231,7 +254,7 @@ export function Footer() {
                   className="transition-colors hover:text-[var(--brand)]"
                   style={{ color: "var(--text-disabled)" }}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 </Link>
               );
             })}

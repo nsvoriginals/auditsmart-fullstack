@@ -1,5 +1,5 @@
+// components/layout/Navbar.tsx (Updated)
 "use client";
-// components/layout/Navbar.tsx
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,67 +29,56 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Get dynamic background based on scroll and theme
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   const getNavBackground = () => {
     if (scrolled) {
       return resolvedTheme === "dark" 
-        ? "rgba(5,5,8,0.92)" 
-        : "rgba(248,249,255,0.92)";
+        ? "rgba(5,5,8,0.95)" 
+        : "rgba(248,249,255,0.95)";
     }
     return resolvedTheme === "dark"
-      ? "rgba(5,5,8,0.75)"
-      : "rgba(248,249,255,0.75)";
+      ? "rgba(5,5,8,0.8)"
+      : "rgba(248,249,255,0.8)";
   };
 
   return (
     <nav
+      className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 sm:px-6 md:px-10 transition-all duration-300`}
       style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        height: 64,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 40px",
         background: getNavBackground(),
         backdropFilter: "blur(20px)",
         borderBottom: "1px solid var(--border)",
-        transition: "background 0.3s ease",
         fontFamily: "'Satoshi', sans-serif",
       }}
     >
       {/* Logo */}
       <Link
         href="/"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          textDecoration: "none",
-          flexShrink: 0,
-        }}
+        className="flex items-center gap-2 md:gap-2.5 flex-shrink-0"
       >
         <div
+          className="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center"
           style={{
-            width: 34, height: 34,
-            borderRadius: 9,
             background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(123,47,255,0.12))",
             border: "1px solid rgba(0,212,255,0.20)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
           <Shield size={18} style={{ color: "var(--brand)" }} />
         </div>
         <span
+          className="text-base md:text-lg font-extrabold tracking-tight"
           style={{
-            fontWeight: 800,
-            fontSize: 17,
-            letterSpacing: "-0.025em",
             background: "linear-gradient(90deg, var(--text-primary) 60%, var(--brand))",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
@@ -101,26 +90,13 @@ export function Navbar() {
       </Link>
 
       {/* Desktop links */}
-      <div
-        style={{
-          display: "flex",
-          gap: 32,
-          fontSize: 13,
-          fontWeight: 500,
-          color: "var(--text-secondary)",
-        }}
-        className="hidden md:flex"
-      >
+      <div className="hidden md:flex gap-6 lg:gap-8 text-sm font-medium">
         {NAV_ITEMS.map((item) => (
           <a
             key={item.name}
             href={item.href}
-            style={{
-              color: "var(--text-secondary)",
-              textDecoration: "none",
-              transition: "color 0.2s",
-              fontFamily: "'Satoshi', sans-serif",
-            }}
+            className="transition-colors duration-200"
+            style={{ color: "var(--text-secondary)" }}
             onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
             onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)")}
           >
@@ -130,33 +106,16 @@ export function Navbar() {
       </div>
 
       {/* Right actions */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }} className="hidden md:flex">
-        {/* Theme toggle */}
+      <div className="hidden md:flex gap-2 items-center">
         {mounted && (
           <button
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
             style={{
-              width: 38, height: 38,
-              borderRadius: 8,
               background: resolvedTheme === "dark" ? "rgba(0,212,255,0.06)" : "rgba(123,47,255,0.06)",
               border: `1px solid ${resolvedTheme === "dark" ? "rgba(0,212,255,0.15)" : "rgba(123,47,255,0.15)"}`,
               color: "var(--text-secondary)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "border-color 0.2s, color 0.2s",
-              flexShrink: 0,
             }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand)";
-              (e.currentTarget as HTMLButtonElement).style.color = "var(--brand)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = resolvedTheme === "dark" ? "rgba(0,212,255,0.15)" : "rgba(123,47,255,0.15)";
-              (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
-            }}
-            aria-label="Toggle theme"
           >
             {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -164,54 +123,21 @@ export function Navbar() {
 
         <Link
           href="/login"
+          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all border"
           style={{
-            padding: "9px 20px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 700,
             color: "var(--text-secondary)",
-            border: "1px solid var(--border-strong)",
+            borderColor: "var(--border-strong)",
             background: "transparent",
-            textDecoration: "none",
-            transition: "border-color 0.2s, color 0.2s",
-            display: "inline-flex",
-            alignItems: "center",
-            fontFamily: "'Satoshi', sans-serif",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--brand)";
-            (e.currentTarget as HTMLAnchorElement).style.color = "var(--brand)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--border-strong)";
-            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
           }}
         >
           Login
         </Link>
+        
         <Link
           href="/register"
+          className="px-5 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 hover:shadow-lg"
           style={{
-            padding: "9px 20px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 700,
-            color: "#fff",
             background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            transition: "opacity 0.2s, box-shadow 0.2s",
-            border: "none",
-            fontFamily: "'Satoshi', sans-serif",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.opacity = "0.9";
-            (e.currentTarget as HTMLAnchorElement).style.boxShadow = "var(--shadow-purple)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
-            (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none";
           }}
         >
           Start Free Audit
@@ -221,34 +147,21 @@ export function Navbar() {
       {/* Mobile toggle */}
       <button
         onClick={() => setOpen(!open)}
-        style={{
-          padding: 8,
-          background: "none",
-          border: "none",
-          color: "var(--text-secondary)",
-          cursor: "pointer",
-          display: "none",
-        }}
-        className="md:hidden flex"
+        className="md:hidden p-2 rounded-lg transition-colors"
+        style={{ color: "var(--text-secondary)" }}
         aria-label="Toggle menu"
       >
-        {open ? <X size={20} /> : <Menu size={20} />}
+        {open ? <X size={22} /> : <Menu size={22} />}
       </button>
 
       {/* Mobile menu */}
       {open && (
         <div
+          className="fixed inset-x-0 top-16 z-40 p-5 flex flex-col gap-2 md:hidden"
           style={{
-            position: "fixed",
-            inset: 0,
-            top: 64,
-            zIndex: 90,
-            background: resolvedTheme === "dark" ? "rgba(5,5,8,0.97)" : "rgba(248,249,255,0.97)",
+            background: resolvedTheme === "dark" ? "rgba(5,5,8,0.98)" : "rgba(248,249,255,0.98)",
             backdropFilter: "blur(20px)",
-            padding: 24,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
+            borderBottom: "1px solid var(--border)",
           }}
         >
           {NAV_ITEMS.map((item) => (
@@ -256,42 +169,39 @@ export function Navbar() {
               key={item.name}
               href={item.href}
               onClick={() => setOpen(false)}
+              className="block py-3 px-2 text-base font-semibold border-b transition-colors"
               style={{
-                display: "block",
-                padding: 14,
-                fontSize: 14,
-                fontWeight: 600,
                 color: "var(--text-secondary)",
-                borderBottom: "1px solid var(--border)",
-                textDecoration: "none",
-                transition: "color 0.2s",
-                fontFamily: "'Satoshi', sans-serif",
+                borderColor: "var(--border)",
               }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)")}
             >
               {item.name}
             </a>
           ))}
-          <Link
-            href="/register"
-            onClick={() => setOpen(false)}
-            style={{
-              marginTop: 16,
-              padding: 14,
-              background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-              color: "#fff",
-              borderRadius: 10,
-              textAlign: "center",
-              fontWeight: 800,
-              fontSize: 14,
-              textDecoration: "none",
-              display: "block",
-              fontFamily: "'Satoshi', sans-serif",
-            }}
-          >
-            Start Free Audit →
-          </Link>
+          
+          <div className="pt-4 flex gap-3">
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="flex-1 py-3 rounded-lg text-center font-semibold border"
+              style={{
+                color: "var(--text-secondary)",
+                borderColor: "var(--border-strong)",
+              }}
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              onClick={() => setOpen(false)}
+              className="flex-1 py-3 rounded-lg text-center font-bold text-white"
+              style={{
+                background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
+              }}
+            >
+              Sign Up
+            </Link>
+          </div>
         </div>
       )}
     </nav>

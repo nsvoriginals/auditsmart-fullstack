@@ -1,5 +1,5 @@
+// components/layout/DashboardSidebar.tsx (Updated)
 "use client";
-// components/layout/DashboardSidebar.tsx
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import {
   Zap,
   X,
   TrendingUp,
+  Menu,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -31,22 +32,26 @@ interface SidebarProps {
     plan?: string;
     auditsRemaining?: number;
     maxAudits?: number;
+    name?: string | null;
+    email?: string | null;
   };
 }
 
-function SidebarContent({ user }: SidebarProps) {
+function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void }) {
   const pathname = usePathname();
   const plan = (user?.plan || "free").toUpperCase();
   const left = user?.auditsRemaining ?? 3;
   const max = user?.maxAudits ?? 3;
   const pct = Math.min(100, (left / max) * 100);
 
+  const handleLinkClick = () => {
+    if (onClose) onClose();
+  };
+
   return (
     <aside
+      className="flex flex-col h-full"
       style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
         background: "var(--surface-1)",
         borderRight: "1px solid var(--border)",
         fontFamily: "'Satoshi', sans-serif",
@@ -54,34 +59,21 @@ function SidebarContent({ user }: SidebarProps) {
     >
       {/* Logo */}
       <div
-        style={{
-          display: "flex",
-          height: 60,
-          alignItems: "center",
-          gap: 8,
-          padding: "0 20px",
-          borderBottom: "1px solid var(--border)",
-          flexShrink: 0,
-        }}
+        className="flex h-14 md:h-16 items-center gap-2 px-4 md:px-5 flex-shrink-0"
+        style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div
+          className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
           style={{
-            width: 30, height: 30,
-            borderRadius: 8,
             background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(123,47,255,0.12))",
             border: "1px solid rgba(0,212,255,0.20)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
-          <Shield size={15} style={{ color: "var(--brand)" }} />
+          <Shield size={16} style={{ color: "var(--brand)" }} />
         </div>
         <span
+          className="text-sm md:text-base font-extrabold tracking-tight"
           style={{
-            fontWeight: 800,
-            fontSize: 15,
-            letterSpacing: "-0.025em",
             background: "linear-gradient(90deg, var(--text-primary) 60%, var(--brand))",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
@@ -93,52 +85,25 @@ function SidebarContent({ user }: SidebarProps) {
       </div>
 
       {/* New audit button */}
-      <div style={{ padding: "16px 12px 8px" }}>
+      <div className="p-3 md:p-4">
         <Link
           href="/dashboard/scan"
+          onClick={handleLinkClick}
+          className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-lg text-white font-bold text-xs md:text-sm transition-opacity hover:opacity-85"
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            width: "100%",
-            padding: "10px",
-            borderRadius: 8,
             background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: 12,
-            textDecoration: "none",
-            transition: "opacity 0.2s",
           }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
         >
-          <PlusCircle size={13} />
-          New Audit
+          <PlusCircle size={14} />
+          <span className="hidden sm:inline">New Audit</span>
+          <span className="sm:hidden">Scan</span>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav
-        style={{
-          flex: 1,
-          padding: "8px 12px",
-          overflowY: "auto",
-        }}
-      >
-        <p
-          style={{
-            fontSize: 9,
-            fontWeight: 700,
-            color: "var(--text-disabled)",
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            padding: "0 10px",
-            marginBottom: 6,
-            fontFamily: "'Satoshi', sans-serif",
-          }}
-        >
+      <nav className="flex-1 overflow-y-auto px-2 md:px-3">
+        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2"
+           style={{ color: "var(--text-disabled)" }}>
           Workspace
         </p>
 
@@ -152,203 +117,90 @@ function SidebarContent({ user }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={handleLinkClick}
+              className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all mb-0.5
+                ${isActive 
+                  ? "bg-[rgba(0,212,255,0.07)] border border-[rgba(0,212,255,0.12)]" 
+                  : "border border-transparent"}`}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 12px",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                textDecoration: "none",
                 color: isActive ? "var(--brand)" : "var(--text-secondary)",
-                background: isActive ? "rgba(0,212,255,0.07)" : "transparent",
-                border: isActive ? "1px solid rgba(0,212,255,0.12)" : "1px solid transparent",
-                marginBottom: 2,
-                transition: "background 0.15s, color 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
-                }
               }}
             >
-              <Icon
-                size={16}
-                style={{ color: isActive ? "var(--brand)" : "var(--text-disabled)", flexShrink: 0 }}
-              />
-              {item.label}
+              <Icon size={16} style={{ color: isActive ? "var(--brand)" : "var(--text-disabled)" }} />
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
 
-        <div style={{ height: 1, background: "var(--border)", margin: "12px 0" }} />
+        <div className="h-px my-3" style={{ background: "var(--border)" }} />
 
-        <p
-          style={{
-            fontSize: 9,
-            fontWeight: 700,
-            color: "var(--text-disabled)",
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            padding: "0 10px",
-            marginBottom: 6,
-            fontFamily: "'Satoshi', sans-serif",
-          }}
-        >
+        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2"
+           style={{ color: "var(--text-disabled)" }}>
           Actions
         </p>
+        
         <Link
           href="/pricing"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 12px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 600,
-            textDecoration: "none",
-            color: "var(--text-secondary)",
-            background: "transparent",
-            border: "1px solid transparent",
-            marginBottom: 2,
-            transition: "background 0.15s, color 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)";
-            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
-          }}
+          onClick={handleLinkClick}
+          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5"
+          style={{ color: "var(--text-secondary)" }}
         >
-          <TrendingUp size={16} style={{ color: "var(--text-disabled)", flexShrink: 0 }} />
-          Upgrade Plan
+          <TrendingUp size={16} style={{ color: "var(--text-disabled)" }} />
+          <span>Upgrade Plan</span>
         </Link>
+        
         <Link
           href="/dashboard/deep-audit"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 12px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 600,
-            textDecoration: "none",
-            color: "var(--text-secondary)",
-            background: "transparent",
-            border: "1px solid transparent",
-            marginBottom: 2,
-            transition: "background 0.15s, color 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)";
-            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-            (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
-          }}
+          onClick={handleLinkClick}
+          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5"
+          style={{ color: "var(--text-secondary)" }}
         >
-          <Zap size={16} style={{ color: "var(--brand-pink)", flexShrink: 0 }} />
-          Deep Audit · $20
+          <Zap size={16} style={{ color: "var(--brand-pink)" }} />
+          <span>Deep Audit · $20</span>
         </Link>
       </nav>
 
       {/* Plan usage card */}
-      <div style={{ padding: "12px", flexShrink: 0 }}>
+      <div className="p-3 md:p-4 flex-shrink-0">
         <div
+          className="rounded-xl p-3 md:p-4"
           style={{
             background: "var(--surface-2)",
             border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: 16,
           }}
         >
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "var(--brand)",
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              marginBottom: 6,
-              fontFamily: "'Satoshi', sans-serif",
-            }}
-          >
+          <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider mb-1"
+               style={{ color: "var(--brand)" }}>
             {plan} Plan
           </div>
-          <div
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: "var(--text-primary)",
-              fontFamily: "'Satoshi', sans-serif",
-              letterSpacing: "-0.025em",
-              lineHeight: 1,
-            }}
-          >
+          <div className="text-xl md:text-2xl font-extrabold tracking-tight"
+               style={{ color: "var(--text-primary)" }}>
             {left}
           </div>
-          <div
-            style={{
-              fontSize: 10,
-              color: "var(--text-disabled)",
-              fontFamily: "'Satoshi', sans-serif",
-              marginBottom: 10,
-            }}
-          >
+          <div className="text-[10px] md:text-[11px] mb-2"
+               style={{ color: "var(--text-disabled)" }}>
             audits remaining
           </div>
-          {/* Usage bar */}
-          <div
-            style={{
-              height: 3,
-              background: "rgba(255,255,255,0.05)",
-              borderRadius: 2,
-              overflow: "hidden",
-              marginBottom: 10,
-            }}
-          >
+          <div className="h-1 rounded-full overflow-hidden mb-2"
+               style={{ background: "rgba(255,255,255,0.05)" }}>
             <div
+              className="h-full rounded-full transition-all duration-500"
               style={{
-                height: "100%",
                 width: `${pct}%`,
                 background: "linear-gradient(90deg, var(--brand), var(--brand-green))",
-                borderRadius: 2,
-                transition: "width 0.5s ease",
               }}
             />
           </div>
           <Link
             href="/pricing"
+            onClick={handleLinkClick}
+            className="block w-full py-2 rounded-md text-center text-xs font-bold transition-opacity hover:opacity-85"
             style={{
-              display: "block",
-              width: "100%",
-              padding: "8px",
-              borderRadius: 6,
               background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
               color: "#fff",
-              fontSize: 11,
-              fontWeight: 700,
-              textAlign: "center",
-              textDecoration: "none",
-              transition: "opacity 0.2s",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.85")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "1")}
           >
-            Upgrade Now →
+            Upgrade →
           </Link>
         </div>
       </div>
@@ -358,7 +210,6 @@ function SidebarContent({ user }: SidebarProps) {
 
 export function DashboardSidebar({ user }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     const handler = () => setMobileOpen((p) => !p);
@@ -366,65 +217,58 @@ export function DashboardSidebar({ user }: SidebarProps) {
     return () => window.removeEventListener("toggle-sidebar", handler);
   }, []);
 
-  useEffect(() => setMobileOpen(false), [pathname]);
+  // Close on route change
+  const pathname = usePathname();
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   return (
     <>
       {/* Desktop */}
-      <div
-        style={{ width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0 }}
-        className="hidden md:flex md:flex-col"
-      >
+      <div className="hidden md:block w-64 flex-shrink-0 h-screen sticky top-0">
         <SidebarContent user={user} />
       </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 40,
-            background: "rgba(5,5,8,0.7)",
-            backdropFilter: "blur(4px)",
-          }}
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Mobile drawer */}
       <div
-        style={{
-          position: "fixed",
-          top: 0,
-          bottom: 0,
-          left: 0,
-          zIndex: 50,
-          width: 220,
-          transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s ease",
-        }}
-        className="md:hidden"
+        className={`fixed top-0 left-0 z-50 w-72 h-full transform transition-transform duration-300 ease-in-out md:hidden ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        <div style={{ position: "relative", height: "100%" }}>
+        <div className="relative h-full">
           <button
+            onClick={() => setMobileOpen(false)}
+            className="absolute top-3 right-3 z-10 p-2 rounded-lg"
             style={{
-              position: "absolute",
-              right: 12,
-              top: 12,
-              zIndex: 10,
-              padding: 6,
-              borderRadius: 6,
               background: "var(--surface-2)",
               border: "1px solid var(--border)",
               color: "var(--text-muted)",
-              cursor: "pointer",
             }}
-            onClick={() => setMobileOpen(false)}
           >
-            <X size={14} />
+            <X size={16} />
           </button>
-          <SidebarContent user={user} />
+          <SidebarContent user={user} onClose={() => setMobileOpen(false)} />
         </div>
       </div>
     </>

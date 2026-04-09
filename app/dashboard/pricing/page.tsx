@@ -1,5 +1,5 @@
 "use client";
-// app/pricing/page.tsx
+// app/pricing/page.tsx (Responsive)
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -98,44 +98,50 @@ export default function PricingPage() {
     finally { setPaying(null); }
   };
 
-  /* ── shared token-driven styles ── */
-  const card: React.CSSProperties = { background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 28, display: "flex", flexDirection: "column", position: "relative", boxShadow: "var(--shadow-card)", transition: "box-shadow 0.2s" };
-  const featuredCard: React.CSSProperties = { ...card, border: "1px solid rgba(99,102,241,0.35)", boxShadow: "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" };
-  const btnPrimary: React.CSSProperties  = { width: "100%", padding: "11px 0", background: "var(--brand)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 };
-  const btnGhost: React.CSSProperties   = { ...btnPrimary, background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)" };
-
   return (
     <div style={{ background: "var(--background)", minHeight: "100vh", color: "var(--text-primary)" }}>
       <Navbar />
 
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "80px 24px" }}>
+      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "clamp(60px, 10vh, 80px) clamp(16px, 5vw, 24px)" }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .pricing-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+            .deep-audit-grid { grid-template-columns: 1fr !important; gap: 32px !important; text-align: center; }
+            .faq-grid { grid-template-columns: 1fr !important; }
+            .toggle-buttons button { padding: 6px 12px !important; font-size: 12px !important; }
+          }
+          @media (max-width: 480px) {
+            .plan-card { padding: 20px !important; }
+            .plan-price { font-size: 28px !important; }
+          }
+        `}</style>
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 18 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: "clamp(10px, 2.5vw, 11px)", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 18 }}>
             Pricing
           </div>
-          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,5vw,52px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 12 }}>Simple, transparent pricing</h1>
-          <p style={{ fontSize: 14, color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(28px, 6vw, 52px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 12 }}>Simple, transparent pricing</h1>
+          <p style={{ fontSize: "clamp(13px, 3vw, 14px)", color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>
             Start free with 3 audits. Upgrade when your contracts need more protection.
           </p>
         </div>
 
         {/* Toggle */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 48 }}>
-          <div style={{ display: "inline-flex", background: "var(--elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 4, gap: 4 }}>
+          <div className="toggle-buttons" style={{ display: "inline-flex", background: "var(--elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 4, gap: 4, flexWrap: "wrap", justifyContent: "center" }}>
             {(["monthly", "yearly"] as const).map(v => (
               <button key={v} onClick={() => setBillingInterval(v)}
-                style={{ padding: "8px 20px", borderRadius: "var(--radius-sm)", border: "none", background: billingInterval === v ? "var(--card)" : "transparent", color: billingInterval === v ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, cursor: "pointer", boxShadow: billingInterval === v ? "var(--shadow-xs)" : "none", fontWeight: billingInterval === v ? 500 : 400 }}>
+                style={{ padding: "clamp(6px, 2vw, 8px) clamp(16px, 4vw, 20px)", borderRadius: "var(--radius-sm)", border: "none", background: billingInterval === v ? "var(--card)" : "transparent", color: billingInterval === v ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(12px, 3vw, 13px)", cursor: "pointer", boxShadow: billingInterval === v ? "var(--shadow-xs)" : "none", fontWeight: billingInterval === v ? 500 : 400 }}>
                 {v.charAt(0).toUpperCase() + v.slice(1)}
-                {v === "yearly" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--brand)", background: "var(--brand-faint)", borderRadius: 100, padding: "2px 7px" }}>Save 20%</span>}
+                {v === "yearly" && <span style={{ marginLeft: 6, fontSize: "clamp(9px, 2vw, 10px)", color: "var(--brand)", background: "var(--brand-faint)", borderRadius: 100, padding: "2px 7px" }}>Save 20%</span>}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Plans grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 56 }}>
+        {/* Plans grid - Responsive */}
+        <div className="pricing-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 56 }}>
           {PLANS.map(plan => {
             const Icon      = plan.icon;
             const isCurrent = session?.user?.plan === plan.id;
@@ -143,12 +149,14 @@ export default function PricingPage() {
             const period    = billingInterval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
 
             return (
-              <div key={plan.id} style={plan.featured ? featuredCard : card}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card-hover)"}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = plan.featured ? "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" : "var(--shadow-card)"}
-              >
+              <div key={plan.id} className="plan-card" style={{ 
+                background: "var(--card)", border: plan.featured ? "1px solid rgba(99,102,241,0.35)" : "1px solid var(--border)", 
+                borderRadius: "var(--radius-lg)", padding: "clamp(20px, 4vw, 28px)", display: "flex", flexDirection: "column", 
+                position: "relative", boxShadow: plan.featured ? "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" : "var(--shadow-card)",
+                transition: "box-shadow 0.2s"
+              }}>
                 {plan.featured && (
-                  <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", background: "var(--brand)", color: "#fff", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100, fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}>
+                  <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", background: "var(--brand)", color: "#fff", fontSize: "clamp(9px, 2vw, 10px)", letterSpacing: "0.08em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100, fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}>
                     Most Popular
                   </div>
                 )}
@@ -156,21 +164,21 @@ export default function PricingPage() {
                 <div style={{ width: 36, height: 36, borderRadius: 9, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brand)", marginBottom: 18 }}>
                   <Icon size={16} />
                 </div>
-                <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4, fontFamily: "'Satoshi', sans-serif" }}>{plan.name}</div>
-                <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 34, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
-                  {price}<span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)", marginLeft: 3, fontFamily: "'Satoshi', sans-serif" }}>{period}</span>
+                <div style={{ fontSize: "clamp(9px, 2vw, 10px)", color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4, fontFamily: "'Satoshi', sans-serif" }}>{plan.name}</div>
+                <div className="plan-price" style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px, 5vw, 34px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
+                  {price}<span style={{ fontSize: "clamp(11px, 2.5vw, 13px)", fontWeight: 400, color: "var(--text-muted)", marginLeft: 3, fontFamily: "'Satoshi', sans-serif" }}>{period}</span>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 22px", fontFamily: "'Satoshi', sans-serif" }}>{plan.description}</div>
+                <div style={{ fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", margin: "6px 0 22px", fontFamily: "'Satoshi', sans-serif" }}>{plan.description}</div>
                 <div style={{ height: 1, background: "var(--border)", marginBottom: 18 }} />
 
                 <div style={{ flex: 1 }}>
                   {plan.features.map(f => (
-                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: 12, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
+                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
                       <Check size={12} style={{ color: "var(--success)", flexShrink: 0, marginTop: 2 }} />{f}
                     </div>
                   ))}
                   {plan.missing.map(f => (
-                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: 12, color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}>
+                    <div key={f} style={{ display: "flex", gap: 9, marginBottom: 9, alignItems: "flex-start", fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}>
                       <X size={12} style={{ flexShrink: 0, marginTop: 2 }} />{f}
                     </div>
                   ))}
@@ -179,12 +187,12 @@ export default function PricingPage() {
                 <div style={{ marginTop: 24 }}>
                   {plan.id === "free" ? (
                     isCurrent
-                      ? <button style={btnGhost} disabled>Current Plan</button>
-                      : <Link href={plan.ctaHref!} style={{ ...btnPrimary, textDecoration: "none" }}>{plan.cta}</Link>
+                      ? <button style={{ width: "100%", padding: "11px 0", background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 600, cursor: "default" }} disabled>Current Plan</button>
+                      : <Link href={plan.ctaHref!} style={{ width: "100%", padding: "11px 0", background: "var(--brand)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 600, textDecoration: "none", display: "inline-block", textAlign: "center" }}>{plan.cta}</Link>
                   ) : isCurrent
-                    ? <button style={btnGhost} disabled>Current Plan</button>
+                    ? <button style={{ width: "100%", padding: "11px 0", background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 600, cursor: "default" }} disabled>Current Plan</button>
                     : (
-                      <button style={plan.featured ? btnPrimary : btnGhost} onClick={() => handleUpgrade(plan.id)} disabled={paying !== null}>
+                      <button style={{ width: "100%", padding: "11px 0", background: plan.featured ? "var(--brand)" : "transparent", color: plan.featured ? "#fff" : "var(--text-muted)", border: plan.featured ? "none" : "1px solid var(--border)", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => handleUpgrade(plan.id)} disabled={paying !== null}>
                         {paying === plan.id ? <><Loader2 size={13} className="animate-spin" /> Processing…</> : plan.cta}
                       </button>
                     )}
@@ -194,45 +202,45 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* Deep Audit */}
-        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 40, marginBottom: 72, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center", boxShadow: "var(--shadow-card)" }}>
+        {/* Deep Audit - Responsive Grid */}
+        <div className="deep-audit-grid" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "clamp(24px, 5vw, 40px)", marginBottom: 72, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "clamp(24px, 5vw, 48px)", alignItems: "center", boxShadow: "var(--shadow-card)" }}>
           <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 100, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: "#d97706", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 100, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: "#d97706", fontSize: "clamp(9px, 2vw, 10px)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>
               <Sparkles size={10} /> Add-on
             </div>
-            <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 10 }}>Deep Audit</h3>
-            <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 38, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
-              ₹1,650 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
+            <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, fontSize: "clamp(20px, 5vw, 22px)", letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 10 }}>Deep Audit</h3>
+            <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(32px, 6vw, 38px)", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em" }}>
+              ₹1,650 <span style={{ fontSize: "clamp(12px, 3vw, 14px)", fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
             </div>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>~$20 USD · Available on any plan</p>
-            <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "var(--brand)", color: "#fff", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textDecoration: "none" }}>
+            <p style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>~$20 USD · Available on any plan</p>
+            <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "var(--brand)", color: "#fff", borderRadius: "var(--radius)", fontSize: "clamp(12px, 3vw, 13px)", fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textDecoration: "none" }}>
               Request Deep Audit <ArrowRight size={13} />
             </Link>
           </div>
           <div>
             {DEEP_AUDIT_FEATURES.map(f => (
-              <div key={f} style={{ display: "flex", gap: 9, marginBottom: 10, alignItems: "flex-start", fontSize: 13, color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
+              <div key={f} style={{ display: "flex", gap: 9, marginBottom: 10, alignItems: "flex-start", fontSize: "clamp(12px, 3vw, 13px)", color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif" }}>
                 <Check size={12} style={{ color: "var(--brand)", flexShrink: 0, marginTop: 2 }} />{f}
               </div>
             ))}
           </div>
         </div>
 
-        {/* FAQ */}
+        {/* FAQ - Responsive Grid */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>FAQ</div>
-          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>Frequently asked questions</h2>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: "clamp(10px, 2.5vw, 11px)", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>FAQ</div>
+          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(24px, 5vw, 28px)", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>Frequently asked questions</h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 56 }}>
+        <div className="faq-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 56 }}>
           {FAQS.map(faq => (
-            <div key={faq.q} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 24 }}>
-              <h4 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>{faq.q}</h4>
-              <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>{faq.a}</p>
+            <div key={faq.q} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "clamp(16px, 4vw, 24px)" }}>
+              <h4 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(13px, 3vw, 14px)", fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>{faq.q}</h4>
+              <p style={{ fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>{faq.a}</p>
             </div>
           ))}
         </div>
 
-        <div style={{ textAlign: "center", paddingTop: 24, borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+        <div style={{ textAlign: "center", paddingTop: 24, borderTop: "1px solid var(--border)", fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
           Questions? Email us at{" "}
           <a href="mailto:hello@auditsmart.io" style={{ color: "var(--brand)" }}>hello@auditsmart.io</a>
           {" "}— we respond within 24 hours.
