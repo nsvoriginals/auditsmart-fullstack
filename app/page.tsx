@@ -10,7 +10,9 @@ import {
   DoorOpen,
   FileText,
   Zap,
+  Check,
   Lock,
+  X,
   RefreshCw,
   Hash,
   ShieldCheck,
@@ -79,23 +81,23 @@ const FEATURES = [
 ];
 
 const AGENTS = [
-  { icon: RefreshCw, label: "Reentrancy",   model: "Groq LLaMA" },
-  { icon: Hash,       label: "Overflow",     model: "Groq LLaMA" },
-  { icon: ShieldCheck,label: "Access Ctrl",  model: "Groq LLaMA" },
-  { icon: Puzzle,     label: "Logic",        model: "Groq LLaMA" },
-  { icon: Gauge,      label: "Gas / DoS",    model: "Groq LLaMA" },
-  { icon: Coins,      label: "DeFi",         model: "Groq LLaMA" },
-  { icon: DoorOpen,   label: "Backdoor",     model: "Groq LLaMA" },
-  { icon: PenTool,    label: "Signature",    model: "Groq LLaMA" },
-  { icon: Star,       label: "Gemini",       model: "Google AI"  },
-  { icon: Bug,        label: "Slither",      model: "Crytic"     },
+  { icon: RefreshCw, label: "Reentrancy", model: "Groq LLaMA" },
+  { icon: Hash, label: "Overflow", model: "Groq LLaMA" },
+  { icon: ShieldCheck, label: "Access Ctrl", model: "Groq LLaMA" },
+  { icon: Puzzle, label: "Logic", model: "Groq LLaMA" },
+  { icon: Gauge, label: "Gas / DoS", model: "Groq LLaMA" },
+  { icon: Coins, label: "DeFi", model: "Groq LLaMA" },
+  { icon: DoorOpen, label: "Backdoor", model: "Groq LLaMA" },
+  { icon: PenTool, label: "Signature", model: "Groq LLaMA" },
+  { icon: Star, label: "Gemini", model: "Google AI" },
+  { icon: Bug, label: "Slither", model: "Crytic" },
 ];
 
 const STEPS = [
-  { num: "01", title: "Paste Code",        desc: "Paste your Solidity contract in the editor. No setup, no installation required." },
-  { num: "02", title: "10 Agents Scan",    desc: "Parallel AI + static analysis runs simultaneously across all vulnerability classes." },
-  { num: "03", title: "Dedup & Validate",  desc: "Engine removes duplicates and false positives. Only real, unique findings remain." },
-  { num: "04", title: "Download PDF",      desc: "Branded report with severity breakdown, fix code, and public share link." },
+  { num: "01", title: "Paste Code", desc: "Paste your Solidity contract in the editor. No setup, no installation required." },
+  { num: "02", title: "10 Agents Scan", desc: "Parallel AI + static analysis runs simultaneously across all vulnerability classes." },
+  { num: "03", title: "Dedup & Validate", desc: "Engine removes duplicates and false positives. Only real, unique findings remain." },
+  { num: "04", title: "Download PDF", desc: "Branded report with severity breakdown, fix code, and public share link." },
 ];
 
 const PLANS = [
@@ -149,9 +151,9 @@ const PLANS = [
 
 const POWERED = [
   { name: "Claude", sub: "by Anthropic" },
-  { name: "Groq",   sub: "LLaMA 3.3 70B" },
+  { name: "Groq", sub: "LLaMA 3.3 70B" },
   { name: "Gemini", sub: "by Google" },
-  { name: "Slither",sub: "by Crytic" },
+  { name: "Slither", sub: "by Crytic" },
 ];
 
 /* ─── Component ─── */
@@ -721,6 +723,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PRICING ── */}
+      {/* ── PRICING ── */}
       <section style={{ padding: "100px 40px" }} id="pricing">
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <span className="sec-label">Pricing</span>
@@ -786,8 +789,8 @@ export default function LandingPage() {
                     color: plan.deep
                       ? "var(--brand-pink)"
                       : plan.featured
-                      ? "var(--text-primary)"
-                      : "var(--text-primary)",
+                        ? "var(--text-primary)"
+                        : "var(--text-primary)",
                   }}
                 >
                   {plan.price}{" "}
@@ -852,17 +855,17 @@ export default function LandingPage() {
                     transition: "opacity var(--base), box-shadow var(--base), border-color var(--base), color var(--base)",
                     ...(plan.featured
                       ? {
-                          background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-                          color: "#fff",
-                          border: "none",
-                        }
+                        background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
+                        color: "#fff",
+                        border: "none",
+                      }
                       : plan.deep
-                      ? {
+                        ? {
                           background: "transparent",
                           border: `1px solid rgba(255,61,154,0.35)`,
                           color: "var(--brand-pink)",
                         }
-                      : {
+                        : {
                           background: "transparent",
                           border: "1px solid var(--border-strong)",
                           color: "var(--text-secondary)",
@@ -892,9 +895,231 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* ✅ U-02: Pricing Comparison Table */}
+          <div style={{ marginTop: 72 }}>
+            <div style={{ textAlign: "center", marginBottom: 36 }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 12px",
+                borderRadius: 100,
+                background: "var(--brand-faint)",
+                border: "1px solid rgba(99,102,241,0.2)",
+                color: "var(--brand)",
+                fontSize: "clamp(10px, 2.5vw, 11px)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                fontFamily: "'Satoshi', sans-serif",
+                marginBottom: 14
+              }}>
+                Compare Features
+              </div>
+              <h3 style={{
+                fontFamily: "'Satoshi', sans-serif",
+                fontSize: "clamp(20px, 4vw, 24px)",
+                fontWeight: 700,
+                letterSpacing: "-0.025em",
+                color: "var(--text-primary)"
+              }}>
+                What's included in each plan
+              </h3>
+              <p style={{
+                fontSize: "clamp(12px, 3vw, 13px)",
+                color: "var(--text-muted)",
+                maxWidth: 520,
+                margin: "12px auto 0",
+                fontFamily: "'Satoshi', sans-serif"
+              }}>
+                Everything you need to secure your smart contracts
+              </p>
+            </div>
+
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <table style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                background: "var(--card)",
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+                minWidth: 480,
+                boxShadow: "var(--shadow-card)"
+              }}>
+                <thead>
+                  <tr style={{ background: "var(--elevated)", borderBottom: "1px solid var(--border)" }}>
+                    <th style={{
+                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                      textAlign: "left",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      fontWeight: 700,
+                      color: "var(--text-primary)"
+                    }}>
+                      Feature
+                    </th>
+                    <th style={{
+                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      fontWeight: 700,
+                      color: "var(--text-primary)"
+                    }}>
+                      Free
+                    </th>
+                    <th style={{
+                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      fontWeight: 700,
+                      color: "var(--text-primary)",
+                      background: "rgba(99,102,241,0.04)",
+                      borderLeft: "1px solid var(--border)",
+                      borderRight: "1px solid var(--border)"
+                    }}>
+                      Pro <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$29</span>
+                    </th>
+                    <th style={{
+                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      fontWeight: 700,
+                      color: "var(--text-primary)"
+                    }}>
+                      Enterprise <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$49</span>
+                    </th>
+                    <th style={{
+                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      fontWeight: 700,
+                      color: "var(--text-primary)"
+                    }}>
+                      Deep Audit <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$20/audit</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { feature: "Audits", free: "10 lifetime", pro: "15/mo", enterprise: "20/mo", deep: "Unlimited" },
+                    { feature: "AI Models", free: "Groq", pro: "Groq + Haiku", enterprise: "Groq + Sonnet", deep: "Opus + Thinking" },
+                    { feature: "PDF Report", free: "Yes", pro: "Yes", enterprise: "Yes", deep: "Yes" },
+                    { feature: "Fix Suggestions", free: "No", pro: "Yes", enterprise: "Yes", deep: "Yes" },
+                    { feature: "Exploit Scenarios", free: "No", pro: "No", enterprise: "Yes", deep: "Yes" },
+                    { feature: "API Access", free: "No", pro: "No", enterprise: "Yes", deep: "No" },
+                    { feature: "Priority Support", free: "No", pro: "No", enterprise: "Yes", deep: "No" },
+                  ].map((row, idx) => (
+                    <tr
+                      key={row.feature}
+                      style={{
+                        borderBottom: idx < 6 ? "1px solid var(--border)" : "none",
+                        transition: "background 0.15s"
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "var(--elevated)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                      }}
+                    >
+                      <td style={{
+                        padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontSize: "clamp(12px, 3vw, 13px)",
+                        color: "var(--text-secondary)",
+                        fontWeight: 500
+                      }}>
+                        {row.feature}
+                      </td>
+                      <td style={{
+                        padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                        textAlign: "center",
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontSize: "clamp(12px, 3vw, 13px)",
+                        color: row.free === "Yes" ? "var(--success)" : "var(--text-primary)",
+                        fontWeight: row.free === "Yes" ? 600 : 500
+                      }}>
+                        {row.free === "Yes" ? (
+                          <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                        ) : row.free === "No" ? (
+                          <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                        ) : (
+                          <span style={{ fontWeight: 600 }}>{row.free}</span>
+                        )}
+                      </td>
+                      <td style={{
+                        padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                        textAlign: "center",
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontSize: "clamp(12px, 3vw, 13px)",
+                        color: row.pro === "Yes" ? "var(--success)" : "var(--text-primary)",
+                        fontWeight: row.pro === "Yes" ? 600 : 500,
+                        background: "rgba(99,102,241,0.02)",
+                        borderLeft: "1px solid var(--border)",
+                        borderRight: "1px solid var(--border)"
+                      }}>
+                        {row.pro === "Yes" ? (
+                          <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                        ) : row.pro === "No" ? (
+                          <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                        ) : (
+                          <span style={{ fontWeight: 600 }}>{row.pro}</span>
+                        )}
+                      </td>
+                      <td style={{
+                        padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                        textAlign: "center",
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontSize: "clamp(12px, 3vw, 13px)",
+                        color: row.enterprise === "Yes" ? "var(--success)" : "var(--text-primary)",
+                        fontWeight: row.enterprise === "Yes" ? 600 : 500
+                      }}>
+                        {row.enterprise === "Yes" ? (
+                          <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                        ) : row.enterprise === "No" ? (
+                          <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                        ) : (
+                          <span style={{ fontWeight: 600 }}>{row.enterprise}</span>
+                        )}
+                      </td>
+                      <td style={{
+                        padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                        textAlign: "center",
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontSize: "clamp(12px, 3vw, 13px)",
+                        color: row.deep === "Yes" ? "var(--success)" : "var(--text-primary)",
+                        fontWeight: row.deep === "Yes" ? 600 : 500
+                      }}>
+                        {row.deep === "Yes" ? (
+                          <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                        ) : row.deep === "No" ? (
+                          <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                        ) : (
+                          <span style={{ fontWeight: 600 }}>{row.deep}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p style={{
+              textAlign: "center",
+              fontSize: "clamp(10px, 2.5vw, 11px)",
+              color: "var(--text-muted)",
+              marginTop: 16,
+              fontFamily: "'Satoshi', sans-serif"
+            }}>
+              *All plans include core security analysis. Deep Audit is an add-on available on any plan.
+            </p>
+          </div>
         </div>
       </section>
-
       {/* ── POWERED BY ── */}
       <section
         style={{

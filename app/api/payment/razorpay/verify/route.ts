@@ -5,6 +5,44 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
+// B-07: Verify Razorpay signature
+function verifyRazorpaySignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  secret: string
+): boolean {
+  try {
+    const body = `${orderId}|${paymentId}`;
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(body)
+      .digest("hex");
+    
+    return crypto.timingSafeEqual(
+      Buffer.from(expectedSignature),
+      Buffer.from(signature)
+    );
+  } catch (error) {
+    console.error("Signature verification error:", error);
+    return false;
+  }
+}
+
+// Plan price mapping (in paise)
+const PLAN_PRICES: Record<string, number> = {
+  pro: 100,        // ₹1.00 (TESTING) - Change to 99000 for production
+  enterprise: 200, // ₹2.00 (TESTING) - Change to 499000 for production
+  deep_audit: 300, // ₹3.00 (TESTING) - Change to 165000 for production
+};
+
+// Plan to role mapping (matches your UserRole enum)
+const PLAN_TO_ROLE: Record<string, string> = {
+  pro: "PREMIUM",
+  enterprise: "ENTERPRISE",
+  deep_audit: "PREMIUM",
+};
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,53 +61,90 @@ export async function POST(req: NextRequest) {
       plan,
     } = body;
 
-    // Verify signature
-    const bodyData = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-      .update(bodyData)
-      .digest("hex");
+    // Validate required fields
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !plan) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
 
-    const isValid = expectedSignature === razorpay_signature;
+    // Validate plan is valid
+    if (!PLAN_PRICES[plan]) {
+      return NextResponse.json(
+        { error: "Invalid plan selected" },
+        { status: 400 }
+      );
+    }
+
+    // B-07: Verify signature with timing-safe comparison
+    const isValid = verifyRazorpaySignature(
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      process.env.RAZORPAY_KEY_SECRET!
+    );
 
     if (!isValid) {
+      console.error(`⚠️ Invalid payment signature for order: ${razorpay_order_id}, user: ${session.user.id}`);
+      
+      // Log failed attempt to AuditLog table (using details as string, not JSON)
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: "PAYMENT_VERIFICATION_FAILED",
+            details: `OrderId: ${razorpay_order_id}, Plan: ${plan}, Timestamp: ${new Date().toISOString()}`,
+            ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
+            userAgent: req.headers.get("user-agent") || "unknown",
+          },
+        });
+      } catch (logError) {
+        console.error("Failed to log audit:", logError);
+      }
+      
       return NextResponse.json(
         { error: "Invalid payment signature" },
         { status: 400 }
       );
     }
 
-    // Map plan to UserRole
-    let userRole = "FREE";
-    let amount = 0;
-    
-    if (plan === "pro") {
-      userRole = "PREMIUM";
-      amount = 299900;
-    } else if (plan === "enterprise") {
-      userRole = "ENTERPRISE";
-      amount = 499900;
-    } else if (plan === "deep_audit") {
-      userRole = "PREMIUM";
-      amount = 165000;
+    // Check if payment already processed (prevent double processing)
+    const existingPayment = await prisma.payment.findFirst({
+      where: { razorpayOrderId: razorpay_order_id },
+    });
+
+    if (existingPayment) {
+      console.log(`⚠️ Duplicate payment attempt for order: ${razorpay_order_id}`);
+      return NextResponse.json(
+        { error: "Payment already processed" },
+        { status: 409 }
+      );
     }
 
-    // Update subscription
+    // Get plan details
+    const userRole = PLAN_TO_ROLE[plan] as "FREE" | "PREMIUM" | "ENTERPRISE" | "ADMIN";
+    const amount = PLAN_PRICES[plan];
+
+    // Calculate subscription end date
+    const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    // Update or create subscription
     const subscription = await prisma.subscription.upsert({
       where: { userId: session.user.id },
       update: {
-        plan: userRole as any,
+        plan: userRole,
         status: "ACTIVE",
         currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        currentPeriodEnd: currentPeriodEnd,
         razorpaySubscriptionId: razorpay_order_id,
       },
       create: {
         userId: session.user.id,
-        plan: userRole as any,
+        plan: userRole,
         status: "ACTIVE",
         currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        currentPeriodEnd: currentPeriodEnd,
         razorpaySubscriptionId: razorpay_order_id,
       },
     });
@@ -77,26 +152,39 @@ export async function POST(req: NextRequest) {
     // Update user's role
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: { role: userRole as any },
+      data: { role: userRole },
     });
 
     // Record payment
-    await prisma.payment.create({
+    const payment = await prisma.payment.create({
       data: {
         userId: session.user.id,
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
         amount: amount,
         currency: "INR",
-        status: "completed",
-        plan: userRole as any,
+        status: "paid",
+        plan: userRole,
       },
     });
 
-    // ✅ Return updated user data for session refresh
+    // Log successful upgrade
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "PAYMENT_SUCCESS",
+        details: `Plan: ${plan}, Amount: ${amount}, OrderId: ${razorpay_order_id}`,
+        ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown",
+        userAgent: req.headers.get("user-agent") || "unknown",
+      },
+    }).catch(() => {});
+
+    console.log(`✅ Payment verified: ${razorpay_payment_id} | User: ${session.user.id} | Plan: ${plan}`);
+
+    // Return updated user data for session refresh
     return NextResponse.json({
       success: true,
-      message: `Successfully upgraded to ${userRole} plan`,
+      message: `Successfully upgraded to ${plan} plan`,
       user: {
         id: updatedUser.id,
         email: updatedUser.email,

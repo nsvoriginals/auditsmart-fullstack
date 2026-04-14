@@ -1,10 +1,11 @@
-// components/layout/Footer.tsx (Updated)
+// components/layout/Footer.tsx (Updated - Clean Version)
+
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
 import {
-  FaTwitter, FaGithub, FaLinkedin, FaEnvelope,
+  FaTwitter, FaLinkedin, FaEnvelope,
   FaShieldAlt, FaClock, FaCheckCircle, FaBolt,
   FaArrowRight, FaTelegram, FaDiscord,
 } from "react-icons/fa";
@@ -52,13 +53,13 @@ const FOOTER_SECTIONS = [
   },
 ];
 
+// ✅ ONLY the 4 required social links (no GitHub)
 const SOCIAL_LINKS = [
-  { name: "Twitter",  icon: FaTwitter,  href: "https://twitter.com/auditsmart1" },
-  { name: "GitHub",   icon: FaGithub,   href: "https://github.com/auditsmart" },
-  { name: "LinkedIn", icon: FaLinkedin, href: "https://www.linkedin.com/company/audit-smart/" },
-  { name: "Telegram", icon: FaTelegram, href: "https://t.me/auditsmart1" },
-  { name: "Discord",  icon: FaDiscord,  href: "https://discord.gg/BHJNbEtxBE" },
-  { name: "Email",    icon: FaEnvelope, href: "mailto:hello@auditsmart.io" },
+  { name: "Twitter",   icon: FaTwitter,   href: "https://x.com/auditsmart1" },
+  { name: "LinkedIn",  icon: FaLinkedin,  href: "https://www.linkedin.com/company/audit-smart/" },
+  { name: "Telegram",  icon: FaTelegram,  href: "https://t.me/auditsmart1" },
+  { name: "Discord",   icon: FaDiscord,   href: "https://discord.gg/BHJNbEtxC" },  // ✅ Fixed invite code
+  { name: "Email",     icon: FaEnvelope,  href: "mailto:hello@auditsmart.io" },
 ];
 
 const BADGES = [
@@ -80,7 +81,6 @@ export function Footer() {
       return;
     }
     setSubscribing(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast.success("Subscribed successfully!");
     setEmail("");
@@ -137,7 +137,7 @@ export function Footer() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14">
-        {/* Link grid - responsive columns */}
+        {/* Link grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:gap-10 mb-10 md:mb-12">
           {FOOTER_SECTIONS.map((section) => (
             <div key={section.title}>
@@ -172,7 +172,7 @@ export function Footer() {
           ))}
         </div>
 
-        {/* Security badges - responsive wrap */}
+        {/* Security badges */}
         <div
           className="flex flex-wrap items-center justify-center md:justify-between gap-3 rounded-xl px-4 md:px-6 py-4 mb-8 md:mb-10"
           style={{
@@ -214,7 +214,7 @@ export function Footer() {
 
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "2rem" }} />
 
-        {/* Bottom bar - responsive stacking */}
+        {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-5">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group shrink-0">
@@ -237,11 +237,11 @@ export function Footer() {
             className="text-[11px] md:text-xs text-center order-3 md:order-2"
             style={{ color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}
           >
-            © {year} AuditSmart. All rights reserved.
+            © {year} Xorion Network LLC. All rights reserved.
           </p>
 
-          {/* Social - responsive spacing */}
-          <div className="flex gap-3 md:gap-3.5 order-2 md:order-3">
+          {/* Social links - ONLY 4 required */}
+          <div className="flex gap-4 md:gap-5 order-2 md:order-3">
             {SOCIAL_LINKS.map((s) => {
               const Icon = s.icon;
               return (
@@ -251,10 +251,12 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.name}
-                  className="transition-colors hover:text-[var(--brand)]"
+                  className="transition-all duration-200 hover:scale-110"
                   style={{ color: "var(--text-disabled)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--brand)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-disabled)")}
                 >
-                  <Icon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <Icon className="h-4 w-4 md:h-4.5 md:w-4.5" />
                 </Link>
               );
             })}
