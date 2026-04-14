@@ -1,6 +1,10 @@
-// lib/pdf-generator.ts
+// H-01: LOW-confidence findings are filtered out before the PDF is built.
+//       They remain in the DB and UI but are excluded from the printed report
+//       to avoid credibility issues with paying customers.
+// M-03: AI disclaimer box added on Page 1 (required legal notice).
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { filterForPDF } from "./agents/dedup-engine";
 
 interface PDFData {
   auditId: string;
@@ -108,7 +112,30 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     doc.text("SECURITY REPORT", pageWidth - 35, 28, { align: "center" });
     
     yPos = 65;
-    
+
+    // ============================================
+    // M-03: AI DISCLAIMER BOX — visible on Page 1
+    // ============================================
+    doc.setFillColor(255, 251, 230); // amber-tint background
+    doc.setDrawColor(234, 179, 8);   // amber border
+    doc.setLineWidth(0.8);
+    doc.roundedRect(20, yPos, pageWidth - 40, 14, 3, 3, "FD");
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(120, 90, 0);
+    doc.text("DISCLAIMER:", 25, yPos + 5.5);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      "AI-generated security assessment. Not a professional audit. For informational purposes only. © Xorion Network LLC",
+      65, yPos + 5.5
+    );
+    yPos += 20;
+
+    // H-01: Filter LOW-confidence findings from PDF
+    // (they are still stored in DB and shown in the UI)
+    const pdfFindings = filterForPDF(data.findings);
+    data = { ...data, findings: pdfFindings };
+
     // ============================================
     // REPORT METADATA CARD
     // ============================================
@@ -152,7 +179,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     
     yPos += 35;
     
-    // Contract code preview
+    // Contract code preview (if available)
     if (data.contractCode) {
       doc.setFillColor(lR, lG, lB);
       doc.roundedRect(20, yPos, pageWidth - 40, 50, 5, 5, "F");
@@ -291,9 +318,9 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
       yPos += 15;
       
       const tableData = data.findings.slice(0, 15).map((finding) => [
-        finding.title || "Unknown Issue",
-        finding.severity?.toUpperCase() || "INFO",
-        finding.lineNumber || "N/A",
+        finding.type || "Unknown Issue",
+        (finding.severity?.toUpperCase() || "INFO") + (finding.confidence ? ` [${finding.confidence}]` : ""),
+        finding.line || "N/A",
         (finding.description || "").slice(0, 120) + ((finding.description || "").length > 120 ? "..." : ""),
       ]);
       
@@ -317,19 +344,19 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
         },
         columnStyles: {
           0: { cellWidth: 45 },
-          1: { cellWidth: 25 },
+          1: { cellWidth: 30 },
           2: { cellWidth: 18 },
           3: { cellWidth: "auto" },
         },
         didParseCell: (cellData) => {
           // Color code severity cells
           if (cellData.column.index === 1 && cellData.cell.raw) {
-            const severity = String(cellData.cell.raw).toLowerCase();
+            const severityText = String(cellData.cell.raw).toLowerCase();
             const [cR, cG, cB] = toColor(
-              severity === "critical" ? colors.critical :
-              severity === "high" ? colors.high :
-              severity === "medium" ? colors.medium :
-              severity === "low" ? colors.low :
+              severityText.includes("critical") ? colors.critical :
+              severityText.includes("high") ? colors.high :
+              severityText.includes("medium") ? colors.medium :
+              severityText.includes("low") ? colors.low :
               colors.info
             );
             if (cellData.cell.styles) {
@@ -343,7 +370,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     }
     
     // ============================================
-    // AI THINKING CHAIN
+    // AI THINKING CHAIN (Deep Audit only)
     // ============================================
     if (data.thinkingChain) {
       if (yPos > pageHeight - 60) {

@@ -1,4 +1,3 @@
-// lib/agents/groq-agent.ts
 import Groq from 'groq-sdk';
 import { config } from '../config';
 
@@ -14,15 +13,22 @@ function getClient(): Groq | null {
 const SYSTEM_PROMPT = `You are an expert Solidity smart contract security auditor with 10+ years experience.
 
 CRITICAL RULES:
-1. Only report vulnerabilities that ACTUALLY EXIST in the code.
-2. Each finding MUST reference a specific function name.
-3. Do NOT duplicate findings.
-4. Severity must be accurate: critical (fund theft), high (significant loss), medium (limited risk), low (best practices), info (style).
+1. Only report vulnerabilities that ACTUALLY EXIST in the code with DIRECT evidence.
+2. Do NOT speculate about features not present.
+3. Each finding MUST reference a specific function name.
+4. Do NOT duplicate findings.
+5. Severity must be accurate: critical (fund theft), high (significant loss), medium (limited risk), low (best practices), info (style).
+
+CONFIDENCE RATING:
+- HIGH: Direct evidence in code, exact lines identified
+- MEDIUM: Strong indicators but some assumptions
+- LOW: Speculative or requires external context
 
 Respond ONLY with a valid JSON array. Each finding:
 {
   "type": "Vulnerability Name",
   "severity": "critical|high|medium|low|info",
+  "confidence": "HIGH|MEDIUM|LOW",
   "line": "line number or range",
   "function": "function_name",
   "description": "Detailed explanation with exact exploit path",
@@ -48,7 +54,7 @@ Solidity contract:
 ${contractCode.slice(0, 10000)}
 \`\`\`
 
-Return ONLY a JSON array of findings. Be precise and specific.`;
+Return ONLY a JSON array of findings. Be precise and specific. Include confidence rating.`;
 
     console.log(`🔍 Groq ${agentName}: sending request...`);
 
@@ -96,6 +102,7 @@ function parseFindings(content: string, agentName: string): any[] {
     const validated = findings.filter(f => f.type && f.severity).map(f => ({
       ...f,
       severity: normalizeSeverity(f.severity),
+      confidence: f.confidence || "MEDIUM",
       line: String(f.line || ""),
       source: agentName
     }));

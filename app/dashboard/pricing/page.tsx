@@ -1,5 +1,5 @@
 "use client";
-// app/pricing/page.tsx (Responsive)
+// app/pricing/page.tsx (Responsive with Comparison Table)
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -68,7 +68,7 @@ const annualPrice = (p: string) => {
 export default function PricingPage() {
   const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
-  const [paying, setPaying]     = useState<string | null>(null);
+  const [paying, setPaying] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
 
   const handleUpgrade = async (planId: string) => {
@@ -81,7 +81,7 @@ export default function PricingPage() {
         await new Promise(r => { s.onload = r; });
       }
       const orderRes = await fetch("/api/payment/razorpay/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: planId, interval: billingInterval }) });
-      const order    = await orderRes.json();
+      const order = await orderRes.json();
       if (!orderRes.ok) { toast.error(order.detail ?? "Order creation failed."); setPaying(null); return; }
       const rzp = new window.Razorpay({
         key: order.key_id, amount: order.amount, currency: order.currency,
@@ -104,11 +104,14 @@ export default function PricingPage() {
 
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "clamp(60px, 10vh, 80px) clamp(16px, 5vw, 24px)" }}>
         <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+          .animate-spin { animation: spin 0.7s linear infinite; }
           @media (max-width: 768px) {
             .pricing-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
             .deep-audit-grid { grid-template-columns: 1fr !important; gap: 32px !important; text-align: center; }
             .faq-grid { grid-template-columns: 1fr !important; }
             .toggle-buttons button { padding: 6px 12px !important; font-size: 12px !important; }
+            .comparison-table { font-size: 11px !important; }
           }
           @media (max-width: 480px) {
             .plan-card { padding: 20px !important; }
@@ -143,15 +146,15 @@ export default function PricingPage() {
         {/* Plans grid - Responsive */}
         <div className="pricing-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 56 }}>
           {PLANS.map(plan => {
-            const Icon      = plan.icon;
+            const Icon = plan.icon;
             const isCurrent = session?.user?.plan === plan.id;
-            const price     = billingInterval === "yearly" && plan.id !== "free" ? annualPrice(plan.price) : plan.price;
-            const period    = billingInterval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
+            const price = billingInterval === "yearly" && plan.id !== "free" ? annualPrice(plan.price) : plan.price;
+            const period = billingInterval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
 
             return (
-              <div key={plan.id} className="plan-card" style={{ 
-                background: "var(--card)", border: plan.featured ? "1px solid rgba(99,102,241,0.35)" : "1px solid var(--border)", 
-                borderRadius: "var(--radius-lg)", padding: "clamp(20px, 4vw, 28px)", display: "flex", flexDirection: "column", 
+              <div key={plan.id} className="plan-card" style={{
+                background: "var(--card)", border: plan.featured ? "1px solid rgba(99,102,241,0.35)" : "1px solid var(--border)",
+                borderRadius: "var(--radius-lg)", padding: "clamp(20px, 4vw, 28px)", display: "flex", flexDirection: "column",
                 position: "relative", boxShadow: plan.featured ? "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" : "var(--shadow-card)",
                 transition: "box-shadow 0.2s"
               }}>
@@ -224,6 +227,204 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* ✅ U-02: Pricing Comparison Table */}
+        <div style={{ marginBottom: 72 }}>
+          <div style={{ textAlign: "center", marginBottom: 36 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100, background: "var(--brand-faint)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--brand)", fontSize: "clamp(10px, 2.5vw, 11px)", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Satoshi', sans-serif", marginBottom: 14 }}>
+              Compare Features
+            </div>
+            <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(24px, 5vw, 28px)", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+              What's included in each plan
+            </h2>
+            <p style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "var(--text-muted)", maxWidth: 520, margin: "12px auto 0", fontFamily: "'Satoshi', sans-serif" }}>
+              Everything you need to secure your smart contracts
+            </p>
+          </div>
+
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <table style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              background: "var(--card)",
+              borderRadius: "var(--radius-lg)",
+              overflow: "hidden",
+              minWidth: 480,
+              boxShadow: "var(--shadow-card)"
+            }}>
+              <thead>
+                <tr style={{ background: "var(--elevated)", borderBottom: "1px solid var(--border)" }}>
+                  <th style={{
+                    padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                    textAlign: "left",
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontSize: "clamp(12px, 3vw, 13px)",
+                    fontWeight: 700,
+                    color: "var(--text-primary)"
+                  }}>
+                    Feature
+                  </th>
+                  <th style={{
+                    padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                    textAlign: "center",
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontSize: "clamp(12px, 3vw, 13px)",
+                    fontWeight: 700,
+                    color: "var(--text-primary)"
+                  }}>
+                    Free
+                  </th>
+                  <th style={{
+                    padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                    textAlign: "center",
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontSize: "clamp(12px, 3vw, 13px)",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    background: "rgba(99,102,241,0.04)",
+                    borderLeft: "1px solid var(--border)",
+                    borderRight: "1px solid var(--border)"
+                  }}>
+                    Pro <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$29</span>
+                  </th>
+                  <th style={{
+                    padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                    textAlign: "center",
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontSize: "clamp(12px, 3vw, 13px)",
+                    fontWeight: 700,
+                    color: "var(--text-primary)"
+                  }}>
+                    Enterprise <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$49</span>
+                  </th>
+                  <th style={{
+                    padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                    textAlign: "center",
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontSize: "clamp(12px, 3vw, 13px)",
+                    fontWeight: 700,
+                    color: "var(--text-primary)"
+                  }}>
+                    Deep Audit <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$20/audit</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { feature: "Audits", free: "10 lifetime", pro: "15/mo", enterprise: "20/mo", deep: "Unlimited" },
+                  { feature: "AI Models", free: "Groq", pro: "Groq + Haiku", enterprise: "Groq + Sonnet", deep: "Opus + Thinking" },
+                  { feature: "PDF Report", free: "Yes", pro: "Yes", enterprise: "Yes", deep: "Yes" },
+                  { feature: "Fix Suggestions", free: "No", pro: "Yes", enterprise: "Yes", deep: "Yes" },
+                  { feature: "Exploit Scenarios", free: "No", pro: "No", enterprise: "Yes", deep: "Yes" },
+                  { feature: "API Access", free: "No", pro: "No", enterprise: "Yes", deep: "No" },
+                  { feature: "Priority Support", free: "No", pro: "No", enterprise: "Yes", deep: "No" },
+                ].map((row, idx) => (
+                  <tr
+                    key={row.feature}
+                    style={{
+                      borderBottom: idx < 6 ? "1px solid var(--border)" : "none",
+                      transition: "background 0.15s"
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "var(--elevated)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                    }}
+                  >
+                    <td style={{
+                      padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      color: "var(--text-secondary)",
+                      fontWeight: 500
+                    }}>
+                      {row.feature}
+                    </td>
+                    <td style={{
+                      padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      color: row.free === "Yes" ? "var(--success)" : "var(--text-primary)",
+                      fontWeight: row.free === "Yes" ? 600 : 500
+                    }}>
+                      {row.free === "Yes" ? (
+                        <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                      ) : row.free === "No" ? (
+                        <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                      ) : (
+                        <span style={{ fontWeight: 600 }}>{row.free}</span>
+                      )}
+                    </td>
+                    <td style={{
+                      padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      color: row.pro === "Yes" ? "var(--success)" : "var(--text-primary)",
+                      fontWeight: row.pro === "Yes" ? 600 : 500,
+                      background: "rgba(99,102,241,0.02)",
+                      borderLeft: "1px solid var(--border)",
+                      borderRight: "1px solid var(--border)"
+                    }}>
+                      {row.pro === "Yes" ? (
+                        <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                      ) : row.pro === "No" ? (
+                        <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                      ) : (
+                        <span style={{ fontWeight: 600 }}>{row.pro}</span>
+                      )}
+                    </td>
+                    <td style={{
+                      padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      color: row.enterprise === "Yes" ? "var(--success)" : "var(--text-primary)",
+                      fontWeight: row.enterprise === "Yes" ? 600 : 500
+                    }}>
+                      {row.enterprise === "Yes" ? (
+                        <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                      ) : row.enterprise === "No" ? (
+                        <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                      ) : (
+                        <span style={{ fontWeight: 600 }}>{row.enterprise}</span>
+                      )}
+                    </td>
+                    <td style={{
+                      padding: "clamp(12px, 3vw, 14px) clamp(16px, 4vw, 20px)",
+                      textAlign: "center",
+                      fontFamily: "'Satoshi', sans-serif",
+                      fontSize: "clamp(12px, 3vw, 13px)",
+                      color: row.deep === "Yes" ? "var(--success)" : "var(--text-primary)",
+                      fontWeight: row.deep === "Yes" ? 600 : 500
+                    }}>
+                      {row.deep === "Yes" ? (
+                        <Check size={16} style={{ margin: "0 auto", color: "var(--success)" }} />
+                      ) : row.deep === "No" ? (
+                        <X size={14} style={{ margin: "0 auto", color: "var(--text-disabled)" }} />
+                      ) : (
+                        <span style={{ fontWeight: 600 }}>{row.deep}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Optional note about the comparison */}
+          <p style={{
+            textAlign: "center",
+            fontSize: "clamp(10px, 2.5vw, 11px)",
+            color: "var(--text-muted)",
+            marginTop: 16,
+            fontFamily: "'Satoshi', sans-serif"
+          }}>
+            *All plans include core security analysis. Deep Audit is an add-on available on any plan.
+          </p>
         </div>
 
         {/* FAQ - Responsive Grid */}

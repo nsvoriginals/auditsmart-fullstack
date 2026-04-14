@@ -1,4 +1,3 @@
-// lib/agents/gemini-agent.ts
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { config } from '../config';
 
@@ -12,6 +11,8 @@ function getClient(): GoogleGenerativeAI | null {
 }
 
 const PROMPT = `You are a world-class smart contract security auditor.
+
+CRITICAL RULE: Only report vulnerabilities with DIRECT evidence in the code. Do NOT speculate.
 
 Analyze this Solidity contract for ALL vulnerability types:
 
@@ -30,6 +31,7 @@ Return ONLY a JSON array. Each finding:
 {
   "type": "Vulnerability Name",
   "severity": "critical|high|medium|low|info",
+  "confidence": "HIGH|MEDIUM|LOW",
   "line": "line number",
   "function": "function_name",
   "description": "Detailed explanation with exploit path",
@@ -93,6 +95,7 @@ function parseGeminiFindings(content: string): any[] {
     const validated = findings.filter(f => f.type && f.severity).map(f => ({
       ...f,
       severity: normalizeSeverity(f.severity),
+      confidence: f.confidence || "MEDIUM",
       line: String(f.line || ""),
       source: "gemini_agent"
     }));

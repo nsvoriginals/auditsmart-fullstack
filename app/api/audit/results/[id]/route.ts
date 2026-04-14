@@ -11,15 +11,21 @@ interface RouteContext {
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    
+    // Allow public access for verified reports (H-05)
+    const url = new URL(req.url);
+    const isPublic = url.searchParams.get("public") === "true";
+    
+    if (!isPublic && !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const whereClause = isPublic 
+      ? { id: params.id } 
+      : { id: params.id, userId: session?.user?.id };
+
     const audit = await prisma.audit.findFirst({
-      where: {
-        id: params.id,
-        userId: session.user.id,
-      },
+      where: whereClause,
       include: {
         findings: true,
       },

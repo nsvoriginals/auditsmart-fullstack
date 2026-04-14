@@ -1,9 +1,8 @@
-// lib/agents/pipeline.ts
 import { config, AGENT_CONFIGS } from '../config';
 import { runGroqAnalysis } from './groq-agent';
 import { runGeminiAnalysis } from './gemini-agent';
 import { runClaudeAnalysis } from './claude-agent';
-import { deduplicateAndValidate } from './dedup-engine';
+import { deduplicateAndValidate, filterForPDF } from './dedup-engine';
 
 export interface AuditResult {
   risk_level: string;
@@ -28,19 +27,82 @@ export interface AuditResult {
   pdf_base64?: string;
 }
 
+// C-05: Test file detection - BLOCK test files immediately
+const TEST_IMPORTS = [
+  "forge-std/Test.sol",
+  "hardhat/console.sol", 
+  "ds-test/test.sol",
+  "forge-std/Script.sol",
+  "forge-std/StdInvariant.sol",
+  "forge-std/StdStorage.sol",
+  "forge-std/console.sol",
+  "foundry-test",
+  "@nomicfoundation/hardhat",
+  "@openzeppelin/test-helpers",
+  "truffle/assertions"
+];
+
+const TEST_PATTERNS = [
+  /function test[A-Z]/,
+  /function test[A-Z]\w+\(\)/,
+  /function invariant[A-Z]/,
+  /function setUp\(\)/,
+  /function tearDown\(\)/,
+  /describe\(/,
+  /it\(/,
+  /expect\(/,
+  /assert\./,
+  /chai\./,
+  /expectEmit/,
+  /expectRevert/
+];
+
+function isTestFile(contractCode: string): { isTest: boolean; reason: string } {
+  // Check for test imports
+  for (const testImport of TEST_IMPORTS) {
+    if (contractCode.includes(testImport)) {
+      return { isTest: true, reason: `Contains test import: ${testImport}` };
+    }
+  }
+  
+  // Check for test function patterns
+  const lines = contractCode.split('\n');
+  let testFunctionCount = 0;
+  for (const line of lines) {
+    for (const pattern of TEST_PATTERNS) {
+      if (pattern.test(line)) {
+        testFunctionCount++;
+        if (testFunctionCount >= 2) {
+          return { isTest: true, reason: `Contains test patterns: ${pattern.source}` };
+        }
+      }
+    }
+  }
+  
+  return { isTest: false, reason: "" };
+}
+
 export async function runAuditPipeline(
   contractCode: string,
   contractName: string = "Contract",
   plan: string = "free"
 ): Promise<AuditResult> {
   const startTime = Date.now();
-  let allFindings: any[] = [];
-  const agentsUsed: string[] = [];
-
+  
   console.log("\n" + "=".repeat(65));
   console.log(`🚀 AuditSmart v3.0 | ${contractName} | Plan: ${plan.toUpperCase()}`);
   console.log(`   Contract: ${contractCode.length} chars`);
   console.log("=".repeat(65));
+
+  // C-05: Block test files immediately
+  const testCheck = isTestFile(contractCode);
+  if (testCheck.isTest) {
+    console.log(`❌ BLOCKED: Test file detected - ${testCheck.reason}`);
+    throw new Error(`TEST_FILE_DETECTED: Upload a production contract, not a test file. ${testCheck.reason}`);
+  }
+
+  let allFindings: any[] = [];
+  const agentsUsed: string[] = [];
 
   // Phase 1: 8 Groq agents
   console.log("\n📡 Phase 1: 8 Groq agents (parallel)...");

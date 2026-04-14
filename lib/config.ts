@@ -1,4 +1,4 @@
-// lib/config.ts
+// lib/config.ts - Updated with correct plan limits
 
 // Payment Configuration
 export const config = {
@@ -60,37 +60,35 @@ export const PLAN_PRICES_PAISE = {
 //   deep_audit: 165000, // ₹1,650
 // };
 
-// Plan Features
+// Plan Features - UPDATED with correct limits from briefing
 export const PLAN_FEATURES = {
   free: [
-    "3 audits per month",
-    "Basic security checks",
-    "8 specialized Groq agents",
-    "Gemini orchestrator",
+    "10 audits lifetime",  // ✅ Fixed from "3 audits per month"
+    "Groq AI analysis",
     "Basic vulnerability detection",
+    "PDF audit report",
+    "Community support",
   ],
   pro: [
-    "10 audits per month",
-    "Advanced security checks",
-    "8 specialized Groq agents",
-    "Claude Haiku orchestrator",
-    "Fix suggestions included",
+    "15 audits per month",  // ✅ Fixed from 10
+    "Groq + Claude Haiku AI",
+    "Advanced vulnerability detection",
+    "PDF audit reports",
+    "Fix suggestions with code",
+    "Deployment verdict",
     "Email support",
-    "Priority queue",
   ],
   enterprise: [
-    "Unlimited audits",
-    "Enterprise security checks",
-    "8 specialized Groq agents",
-    "Claude Sonnet orchestrator",
-    "Exploit scenarios included",
+    "20 audits per month",  // ✅ Fixed from unlimited
+    "Groq + Claude Sonnet AI",
+    "Full exploit scenarios",
     "Production-ready fix code",
-    "24/7 priority support",
-    "SLA guarantee",
-    "Custom audit rules",
+    "Deployment verdict",
+    "API access",
+    "Priority 24/7 support",
   ],
   deep_audit: [
-    "One-time deep audit",
+    "Unlimited audits",  // ✅ Deep Audit has unlimited
     "Claude Opus AI (most powerful)",
     "Extended Thinking - see AI reasoning chain",
     "Full exploit scenario for every critical/high finding",
@@ -98,7 +96,6 @@ export const PLAN_FEATURES = {
     "Deployment verdict: SAFE / CAUTION / DO NOT DEPLOY",
     "Priority processing (2x faster)",
     "PDF report with detailed analysis",
-    "8 specialized Groq agents + Claude Opus",
   ],
 };
 
