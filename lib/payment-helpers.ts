@@ -3,8 +3,8 @@ import crypto from 'crypto';
 import { config } from './config';
 
 /**
- * Verify Razorpay payment signature
- * This ensures the payment is authentic and not tampered with
+ * Verify Razorpay payment signature.
+ * Ensures the payment is authentic and not tampered with.
  */
 export function verifyRazorpaySignature(
   orderId: string,
@@ -17,7 +17,7 @@ export function verifyRazorpaySignature(
       .createHmac('sha256', config.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest('hex');
-    
+
     const isValid = expectedSignature === signature;
     if (!isValid) {
       console.error(`⚠️ Signature verification FAILED for order: ${orderId}`);
@@ -30,8 +30,8 @@ export function verifyRazorpaySignature(
 }
 
 /**
- * B-07: Verify Razorpay webhook signature
- * This prevents fake plan upgrade attacks
+ * Verify Razorpay webhook signature (B-07).
+ * Prevents fake plan-upgrade attacks via forged webhook payloads.
  */
 export function verifyWebhookSignature(
   payload: string | Buffer,
@@ -48,15 +48,14 @@ export function verifyWebhookSignature(
       .createHmac('sha256', webhookSecret)
       .update(typeof payload === 'string' ? payload : payload.toString())
       .digest('hex');
-    
-    // Use timing-safe comparison to prevent timing attacks
+
     const expectedBuffer = Buffer.from(expectedSignature);
     const signatureBuffer = Buffer.from(signature);
-    
+
     if (expectedBuffer.length !== signatureBuffer.length) {
       return false;
     }
-    
+
     return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
   } catch (error) {
     console.error('Webhook signature verification error:', error);
@@ -65,8 +64,7 @@ export function verifyWebhookSignature(
 }
 
 /**
- * Verify Razorpay payment signature with additional security
- * Includes order amount validation to prevent amount tampering
+ * Verify payment signature AND validate order amount to prevent price tampering.
  */
 export function verifyPaymentSignatureWithAmount(
   orderId: string,
@@ -75,33 +73,28 @@ export function verifyPaymentSignatureWithAmount(
   orderAmount: number,
   expectedAmount: number
 ): boolean {
-  // First verify the signature
-  const isValidSignature = verifyRazorpaySignature(orderId, paymentId, signature);
-  
-  if (!isValidSignature) {
+  if (!verifyRazorpaySignature(orderId, paymentId, signature)) {
     return false;
   }
-  
-  // Verify the amount matches what we expected
+
   if (orderAmount !== expectedAmount) {
     console.error(`⚠️ Amount mismatch: Expected ${expectedAmount}, got ${orderAmount}`);
     return false;
   }
-  
+
   return true;
 }
 
 /**
- * Get Razorpay client instance
+ * Get a Razorpay client instance.
  */
 export function getRazorpayClient() {
   if (!config.RAZORPAY_KEY_ID || !config.RAZORPAY_KEY_SECRET) {
     console.error('⚠️ Razorpay credentials not configured');
     return null;
   }
-  
+
   try {
-    // Dynamic import to avoid server-side issues
     const Razorpay = require('razorpay');
     return new Razorpay({
       key_id: config.RAZORPAY_KEY_ID,
@@ -114,7 +107,7 @@ export function getRazorpayClient() {
 }
 
 /**
- * Format amount for display
+ * Format a paise amount as an INR string.
  */
 export function formatAmount(paise: number): string {
   const rupees = paise / 100;
@@ -127,26 +120,30 @@ export function formatAmount(paise: number): string {
 }
 
 /**
- * Create a Razorpay order
+ * Create a Razorpay order.
+ *
+ * FIX: Removed `payment_capture: 1` — this is not a valid field in the
+ * Razorpay Orders API. Auto-capture is controlled via your Razorpay
+ * dashboard settings (Settings → Payment Methods → Auto-Capture).
+ * Passing an unknown field silently fails in some SDK versions.
  */
 export async function createRazorpayOrder(
   amount: number,
-  currency: string = 'INR',
+  currency = 'INR',
   receipt: string
 ): Promise<any> {
   const client = getRazorpayClient();
   if (!client) {
     throw new Error('Razorpay client not initialized');
   }
-  
+
   try {
     const order = await client.orders.create({
-      amount: amount,
-      currency: currency,
-      receipt: receipt,
-      payment_capture: 1, // Auto-capture payment
+      amount,
+      currency,
+      receipt,
     });
-    
+
     console.log(`✅ Order created: ${order.id} for amount ${amount}`);
     return order;
   } catch (error) {
@@ -156,17 +153,16 @@ export async function createRazorpayOrder(
 }
 
 /**
- * Fetch payment details from Razorpay
+ * Fetch payment details from Razorpay.
  */
 export async function fetchPaymentDetails(paymentId: string): Promise<any> {
   const client = getRazorpayClient();
   if (!client) {
     throw new Error('Razorpay client not initialized');
   }
-  
+
   try {
-    const payment = await client.payments.fetch(paymentId);
-    return payment;
+    return await client.payments.fetch(paymentId);
   } catch (error) {
     console.error(`Failed to fetch payment ${paymentId}:`, error);
     throw error;
@@ -174,7 +170,7 @@ export async function fetchPaymentDetails(paymentId: string): Promise<any> {
 }
 
 /**
- * Refund a payment
+ * Issue a refund for a payment.
  */
 export async function refundPayment(
   paymentId: string,
@@ -185,20 +181,12 @@ export async function refundPayment(
   if (!client) {
     throw new Error('Razorpay client not initialized');
   }
-  
+
   try {
-    const refundParams: any = {
-      payment_id: paymentId,
-    };
-    
-    if (amount) {
-      refundParams.amount = amount;
-    }
-    
-    if (notes) {
-      refundParams.notes = notes;
-    }
-    
+    const refundParams: any = { payment_id: paymentId };
+    if (amount) refundParams.amount = amount;
+    if (notes) refundParams.notes = notes;
+
     const refund = await client.refunds.create(refundParams);
     console.log(`✅ Refund created for payment: ${paymentId}`);
     return refund;
@@ -209,8 +197,7 @@ export async function refundPayment(
 }
 
 /**
- * Check if webhook is from Razorpay (B-07)
- * Use this middleware in your webhook handler
+ * Middleware helper — check whether a webhook request is genuinely from Razorpay (B-07).
  */
 export function isValidRazorpayWebhook(
   rawBody: string | Buffer,
@@ -221,30 +208,28 @@ export function isValidRazorpayWebhook(
     console.error('⚠️ Missing webhook signature header');
     return false;
   }
-  
+
   if (!webhookSecret || webhookSecret.length === 0) {
     console.error('⚠️ Webhook secret not configured');
     return false;
   }
-  
+
   return verifyWebhookSignature(rawBody, signatureHeader, webhookSecret);
 }
 
 /**
- * Parse webhook event with validation
+ * Parse and validate an incoming Razorpay webhook payload.
  */
 export async function parseAndValidateWebhook(
   rawBody: Buffer,
   signature: string | null,
   webhookSecret: string
 ): Promise<{ valid: boolean; event: any | null }> {
-  // Validate signature first
   const isValid = isValidRazorpayWebhook(rawBody, signature, webhookSecret);
-  
   if (!isValid) {
     return { valid: false, event: null };
   }
-  
+
   try {
     const event = JSON.parse(rawBody.toString());
     return { valid: true, event };

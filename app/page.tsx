@@ -25,7 +25,7 @@ import {
   ArrowRight,
   ChevronRight,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 /* ─── Data ─── */
 const STATS = [
@@ -111,10 +111,11 @@ const PLANS = [
     featured: false,
     action: "Get Started Free",
     href: "/register",
+    authHref: "/dashboard/scan",
   },
   {
     name: "Pro",
-    price: "$29",
+    price: "₹2,499",
     period: "/ month",
     desc: "15 audits / month",
     feats: ["Everything in Free"],
@@ -123,10 +124,11 @@ const PLANS = [
     badge: "POPULAR",
     action: "Upgrade to Pro",
     href: "/register",
+    authHref: "/dashboard/billing",
   },
   {
     name: "Enterprise",
-    price: "$49",
+    price: "₹4,199",
     period: "/ month",
     desc: "20 audits / month",
     feats: ["Everything in Pro"],
@@ -134,10 +136,11 @@ const PLANS = [
     featured: false,
     action: "Upgrade Now",
     href: "/register",
+    authHref: "/dashboard/billing",
   },
   {
     name: "Deep Audit",
-    price: "$20",
+    price: "₹1,699",
     period: "/ audit",
     desc: "One-time · any plan",
     feats: ["Claude Opus (max power)"],
@@ -146,6 +149,7 @@ const PLANS = [
     deep: true,
     action: "Activate Deep Audit",
     href: "/register",
+    authHref: "/dashboard/deep-audit",
   },
 ];
 
@@ -158,12 +162,8 @@ const POWERED = [
 
 /* ─── Component ─── */
 export default function LandingPage() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) {
-    return <div style={{ minHeight: "100vh", background: "var(--background)" }} />;
-  }
+  const { data: session } = useSession();
+  const isAuthed = !!session?.user;
 
   return (
     <div
@@ -392,8 +392,8 @@ export default function LandingPage() {
 
           {/* CTAs */}
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 64 }}>
-            <Link href="/register" className="btn-primary">
-              Start Free Audit
+            <Link href={isAuthed ? "/dashboard/scan" : "/register"} className="btn-primary">
+              {isAuthed ? "Go to Dashboard" : "Start Free Audit"}
               <ArrowRight size={15} />
             </Link>
             <a
@@ -841,7 +841,7 @@ export default function LandingPage() {
                 </ul>
 
                 <Link
-                  href={plan.href}
+                  href={isAuthed ? (plan as any).authHref : plan.href}
                   style={{
                     display: "block",
                     width: "100%",

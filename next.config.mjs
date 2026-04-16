@@ -1,17 +1,30 @@
 // next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Images configuration
+  compress: true,
+
+  // remotePatterns replaces deprecated `domains`
   images: {
-    domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
+    remotePatterns: [
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+    ],
   },
-  
-  // Environment variables that should be exposed to the browser
+
   env: {
     NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
   },
-  
-  // Webpack configuration
+
+  experimental: {
+    // Tree-shake large packages — only imported icons/components end up in the bundle
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "recharts",
+    ],
+    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs", "razorpay"],
+  },
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -22,11 +35,6 @@ const nextConfig = {
       };
     }
     return config;
-  },
-  
-  // Experimental features
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs', 'razorpay'],
   },
 };
 

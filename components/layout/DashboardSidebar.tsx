@@ -1,4 +1,4 @@
-// components/layout/DashboardSidebar.tsx (Updated)
+// components/layout/DashboardSidebar.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,7 +15,6 @@ import {
   Zap,
   X,
   TrendingUp,
-  Menu,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -39,29 +38,35 @@ interface SidebarProps {
 
 function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void }) {
   const pathname = usePathname();
-  const plan = (user?.plan || "free").toUpperCase();
-  const left = user?.auditsRemaining ?? 3;
-  const max = user?.maxAudits ?? 3;
-  const pct = Math.min(100, (left / max) * 100);
+  const plan = (user?.plan || "FREE").toUpperCase();
+  const [remaining, setRemaining] = useState<number | null>(user?.auditsRemaining ?? null);
+  const [maxAudits, setMaxAudits] = useState<number>(user?.maxAudits ?? 3);
+
+  useEffect(() => {
+    // Only fetch if the layout didn't supply hydrated values (e.g. auditsRemaining
+    // is undefined, meaning the server query failed or component is used standalone).
+    if (user?.auditsRemaining !== undefined) return;
+
+    fetch("/api/user/limits")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.remaining !== undefined) setRemaining(d.remaining);
+        if (d.limit    !== undefined) setMaxAudits(d.limit);
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const left = remaining ?? 0;
+  const pct = maxAudits > 0 ? Math.min(100, (left / maxAudits) * 100) : 0;
 
   const handleLinkClick = () => {
     if (onClose) onClose();
   };
 
   return (
-    <aside
-      className="flex flex-col h-full"
-      style={{
-        background: "var(--surface-1)",
-        borderRight: "1px solid var(--border)",
-        fontFamily: "'Satoshi', sans-serif",
-      }}
-    >
+    <aside className="flex flex-col h-full bg-surface-1 border-r border-border font-sans">
       {/* Logo */}
-      <div
-        className="flex h-14 md:h-16 items-center gap-2 px-4 md:px-5 flex-shrink-0"
-        style={{ borderBottom: "1px solid var(--border)" }}
-      >
+      <div className="flex h-14 md:h-16 items-center gap-2 px-4 md:px-5 flex-shrink-0 border-b border-border">
         <div
           className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
           style={{
@@ -69,7 +74,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
             border: "1px solid rgba(0,212,255,0.20)",
           }}
         >
-          <Shield size={16} style={{ color: "var(--brand)" }} />
+          <Shield size={16} className="text-brand" />
         </div>
         <span
           className="text-sm md:text-base font-extrabold tracking-tight"
@@ -90,9 +95,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
           href="/dashboard/scan"
           onClick={handleLinkClick}
           className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-lg text-white font-bold text-xs md:text-sm transition-opacity hover:opacity-85"
-          style={{
-            background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-          }}
+          style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
         >
           <PlusCircle size={14} />
           <span className="hidden sm:inline">New Audit</span>
@@ -102,8 +105,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 md:px-3">
-        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2"
-           style={{ color: "var(--text-disabled)" }}>
+        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2 text-text-disabled">
           Workspace
         </p>
 
@@ -119,70 +121,57 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
               href={item.href}
               onClick={handleLinkClick}
               className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all mb-0.5
-                ${isActive 
-                  ? "bg-[rgba(0,212,255,0.07)] border border-[rgba(0,212,255,0.12)]" 
-                  : "border border-transparent"}`}
-              style={{
-                color: isActive ? "var(--brand)" : "var(--text-secondary)",
-              }}
+                ${isActive
+                  ? "bg-[rgba(0,212,255,0.07)] border border-[rgba(0,212,255,0.12)] text-brand"
+                  : "border border-transparent text-text-secondary"}`}
             >
-              <Icon size={16} style={{ color: isActive ? "var(--brand)" : "var(--text-disabled)" }} />
+              <Icon
+                size={16}
+                className={isActive ? "text-brand" : "text-text-disabled"}
+              />
               <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
 
-        <div className="h-px my-3" style={{ background: "var(--border)" }} />
+        <div className="h-px my-3 bg-border" />
 
-        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2"
-           style={{ color: "var(--text-disabled)" }}>
+        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2 text-text-disabled">
           Actions
         </p>
-        
+
         <Link
-          href="/pricing"
+          href="/dashboard/billing"
           onClick={handleLinkClick}
-          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5"
-          style={{ color: "var(--text-secondary)" }}
+          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5 text-text-secondary"
         >
-          <TrendingUp size={16} style={{ color: "var(--text-disabled)" }} />
+          <TrendingUp size={16} className="text-text-disabled" />
           <span>Upgrade Plan</span>
         </Link>
-        
+
         <Link
           href="/dashboard/deep-audit"
           onClick={handleLinkClick}
-          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5"
-          style={{ color: "var(--text-secondary)" }}
+          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5 text-text-secondary"
         >
-          <Zap size={16} style={{ color: "var(--brand-pink)" }} />
+          <Zap size={16} className="text-brand-pink" />
           <span>Deep Audit · $20</span>
         </Link>
       </nav>
 
       {/* Plan usage card */}
       <div className="p-3 md:p-4 flex-shrink-0">
-        <div
-          className="rounded-xl p-3 md:p-4"
-          style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider mb-1"
-               style={{ color: "var(--brand)" }}>
+        <div className="rounded-xl p-3 md:p-4 bg-surface-2 border border-border">
+          <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider mb-1 text-brand">
             {plan} Plan
           </div>
-          <div className="text-xl md:text-2xl font-extrabold tracking-tight"
-               style={{ color: "var(--text-primary)" }}>
+          <div className="text-xl md:text-2xl font-extrabold tracking-tight text-text-primary">
             {left}
           </div>
-          <div className="text-[10px] md:text-[11px] mb-2"
-               style={{ color: "var(--text-disabled)" }}>
+          <div className="text-[10px] md:text-[11px] mb-2 text-text-disabled">
             audits remaining
           </div>
-          <div className="h-1 rounded-full overflow-hidden mb-2"
-               style={{ background: "rgba(255,255,255,0.05)" }}>
+          <div className="h-1 rounded-full overflow-hidden mb-2 bg-white/5">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -192,13 +181,10 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
             />
           </div>
           <Link
-            href="/pricing"
+            href="/dashboard/billing"
             onClick={handleLinkClick}
-            className="block w-full py-2 rounded-md text-center text-xs font-bold transition-opacity hover:opacity-85"
-            style={{
-              background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-              color: "#fff",
-            }}
+            className="block w-full py-2 rounded-md text-center text-xs font-bold transition-opacity hover:opacity-85 text-white"
+            style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
           >
             Upgrade →
           </Link>
@@ -217,13 +203,11 @@ export function DashboardSidebar({ user }: SidebarProps) {
     return () => window.removeEventListener("toggle-sidebar", handler);
   }, []);
 
-  // Close on route change
   const pathname = usePathname();
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Prevent body scroll when mobile menu is open
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -259,12 +243,7 @@ export function DashboardSidebar({ user }: SidebarProps) {
         <div className="relative h-full">
           <button
             onClick={() => setMobileOpen(false)}
-            className="absolute top-3 right-3 z-10 p-2 rounded-lg"
-            style={{
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              color: "var(--text-muted)",
-            }}
+            className="absolute top-3 right-3 z-10 p-2 rounded-lg bg-surface-2 border border-border text-text-muted"
           >
             <X size={16} />
           </button>

@@ -13,86 +13,135 @@ const config: Config = {
     container: {
       center: true,
       padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
+      screens: { "2xl": "1400px" },
     },
 
     extend: {
+      // ── Colors ─────────────────────────────────────────────────────
+      // CSS variables are hex/rgba (not hsl), so map them directly.
+      // This makes Tailwind utilities like bg-card, text-brand, border-border
+      // actually work — previously they produced invalid hsl(rgba(...)) values.
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        // Semantic surfaces
+        background:  "var(--background)",
+        foreground:  "var(--foreground)",
+        card:        "var(--card)",
+        popover:     "var(--popover)",
+        border:      "var(--border)",
+        input:       "var(--input)",
+        ring:        "var(--ring)",
+        elevated:    "var(--elevated)",
+        "surface-1": "var(--surface-1)",
+        "surface-2": "var(--surface-2)",
 
+        // Text shades
+        "text-primary":   "var(--text-primary)",
+        "text-secondary": "var(--text-secondary)",
+        "text-muted":     "var(--text-muted)",
+        "text-disabled":  "var(--text-disabled)",
+
+        // Brand
+        brand:        "var(--brand)",
+        "brand-hover":"var(--brand-hover)",
+        "brand-purple":"var(--brand-purple)",
+        "brand-pink":  "var(--brand-pink)",
+        "brand-green": "var(--brand-green)",
+        "brand-faint": "var(--brand-faint)",
+
+        // Semantic actions
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT:    "var(--primary)",
+          foreground: "var(--primary-foreground)",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT:    "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
+        },
+        muted: {
+          DEFAULT:    "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        accent: {
+          DEFAULT:    "var(--accent)",
+          foreground: "var(--accent-foreground)",
+        },
+        destructive: {
+          DEFAULT:    "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
         },
 
-        plum: { DEFAULT: '#612D53', dark: '#4a2140', light: '#7a3868' },
-        rose: { DEFAULT: '#853953', light: '#a04868' },
-        obsidian: { DEFAULT: '#2C2C2C', 80: '#444444', 60: '#666666' },
-        frost: { DEFAULT: '#F3F4F4', 80: '#e8e9e9', 60: '#d4d5d5' },
+        // Status
+        success: "var(--success)",
+        warning: "var(--warning)",
+        info:    "var(--info)",
+
+        // Sidebar tokens
+        sidebar: {
+          DEFAULT:            "var(--sidebar)",
+          foreground:         "var(--sidebar-foreground)",
+          primary:            "var(--sidebar-primary)",
+          "primary-foreground":"var(--sidebar-primary-foreground)",
+          accent:             "var(--sidebar-accent)",
+          "accent-foreground":"var(--sidebar-accent-foreground)",
+          border:             "var(--sidebar-border)",
+          ring:               "var(--sidebar-ring)",
+        },
       },
 
+      // ── Typography ──────────────────────────────────────────────────
       fontFamily: {
-        display: ['DM Serif Display', 'Georgia', 'serif'],
-        body: ['Outfit', 'system-ui', 'sans-serif'],
-        mono: ['DM Mono', 'Courier New', 'monospace'],
+        sans:    ["Satoshi", "-apple-system", "sans-serif"],
+        display: ["Satoshi", "sans-serif"],
+        mono:    ["DM Mono", "'Courier New'", "monospace"],
       },
 
       fontSize: {
-        '2xs': ['0.65rem', { lineHeight: '1rem' }],
+        "2xs": ["0.65rem", { lineHeight: "1rem" }],
       },
 
+      // ── Radius ──────────────────────────────────────────────────────
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        xl: '24px',
+        sm:  "var(--radius-sm)",
+        DEFAULT: "var(--radius)",
+        md:  "var(--radius-md)",
+        lg:  "var(--radius-lg)",
+        xl:  "var(--radius-xl)",
+        "2xl":"24px",
       },
 
+      // ── Shadows ─────────────────────────────────────────────────────
+      boxShadow: {
+        card:        "var(--shadow-card)",
+        "card-hover":"var(--shadow-card-hover)",
+        brand:       "var(--shadow-brand)",
+        purple:      "var(--shadow-purple)",
+        sm:          "var(--shadow-sm)",
+        md:          "var(--shadow-md)",
+        lg:          "var(--shadow-lg)",
+      },
+
+      // ── Animations ──────────────────────────────────────────────────
       animation: {
-        'fade-in': 'fadeIn 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'scale-in': 'scaleIn 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'slide-up': 'slideUp 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'pulse-plum': 'pulse-plum 2s ease-in-out infinite',
-        shimmer: 'shimmer 1.5s infinite',
-        scanLine: 'scanLine 2s linear infinite',
+        "fade-in":  "fadeIn 200ms ease-out forwards",
+        "scale-in": "scaleIn 200ms ease-out forwards",
+        "slide-up": "slideUp 250ms cubic-bezier(0.16,1,0.3,1) forwards",
+        "slide-down":"slideDown 200ms ease-out forwards",
+        shimmer:    "shimmer 1.5s infinite",
+        pulse:      "pulse 2s ease-in-out infinite",
+        spin:       "spin 1s linear infinite",
+        blink:      "blink 2s infinite",
+        ticker:     "ticker 30s linear infinite",
       },
 
       keyframes: {
-        // ✅ opacity must be a string in Tailwind keyframes types
-        fadeIn: {
-          from: { opacity: '0' },
-          to:   { opacity: '1' },
-        },
-        scaleIn: {
-          from: { transform: 'scale(0.96)', opacity: '0' },
-          to:   { transform: 'scale(1)',    opacity: '1' },
-        },
-        slideUp: {
-          from: { transform: 'translateY(16px)', opacity: '0' },
-          to:   { transform: 'translateY(0)',    opacity: '1' },
-        },
-        'pulse-plum': {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(97, 45, 83, 0.4)' },
-          '50%':      { boxShadow: '0 0 0 8px rgba(97, 45, 83, 0)' },
-        },
-        shimmer: {
-          '0%':   { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-        scanLine: {
-          '0%':   { top: '0%',   opacity: '0.8' },
-          '100%': { top: '100%', opacity: '0' },
-        },
+        fadeIn:    { from: { opacity: "0" }, to: { opacity: "1" } },
+        scaleIn:   { from: { transform: "scale(0.96)", opacity: "0" }, to: { transform: "scale(1)", opacity: "1" } },
+        slideUp:   { from: { transform: "translateY(14px)", opacity: "0" }, to: { transform: "translateY(0)", opacity: "1" } },
+        slideDown: { from: { transform: "translateY(-8px)", opacity: "0" }, to: { transform: "translateY(0)", opacity: "1" } },
+        shimmer:   { "0%": { backgroundPosition: "-200% 0" }, "100%": { backgroundPosition: "200% 0" } },
+        pulse:     { "0%,100%": { opacity: "1" }, "50%": { opacity: "0.35" } },
+        blink:     { "0%,100%": { opacity: "1" }, "50%": { opacity: "0.3" } },
+        ticker:    { "0%": { transform: "translateX(0)" }, "100%": { transform: "translateX(-50%)" } },
       },
     },
   },

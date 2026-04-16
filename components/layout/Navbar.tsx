@@ -1,25 +1,24 @@
-// components/layout/Navbar.tsx (Updated)
+// components/layout/Navbar.tsx
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, Shield, Moon, Sun } from "lucide-react";
+import { Menu, X, Shield, Moon, Sun, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
 
 const NAV_ITEMS = [
   { name: "Features", href: "/#features" },
   { name: "Agents",   href: "/#agents"   },
   { name: "Pricing",  href: "/#pricing"  },
-  { name: "Docs",     href: "/docs"      },
 ];
 
 export function Navbar() {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { data: session, status } = useSession();
 
   useEffect(() => setMounted(true), []);
 
@@ -29,44 +28,29 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Prevent body scroll when mobile menu is open
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  const getNavBackground = () => {
-    if (scrolled) {
-      return resolvedTheme === "dark" 
-        ? "rgba(5,5,8,0.95)" 
-        : "rgba(248,249,255,0.95)";
-    }
-    return resolvedTheme === "dark"
-      ? "rgba(5,5,8,0.8)"
-      : "rgba(248,249,255,0.8)";
-  };
+  const isAuthed = status === "authenticated";
+
+  const navBg = scrolled
+    ? resolvedTheme === "dark" ? "rgba(5,5,8,0.97)" : "rgba(248,249,255,0.97)"
+    : resolvedTheme === "dark" ? "rgba(5,5,8,0.80)" : "rgba(248,249,255,0.80)";
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 sm:px-6 md:px-10 transition-all duration-300`}
+      className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 sm:px-6 md:px-10 transition-all duration-300"
       style={{
-        background: getNavBackground(),
+        background: navBg,
         backdropFilter: "blur(20px)",
         borderBottom: "1px solid var(--border)",
         fontFamily: "'Satoshi', sans-serif",
       }}
     >
       {/* Logo */}
-      <Link
-        href="/"
-        className="flex items-center gap-2 md:gap-2.5 flex-shrink-0"
-      >
+      <Link href={isAuthed ? "/dashboard" : "/"} className="flex items-center gap-2 flex-shrink-0">
         <div
           className="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center"
           style={{
@@ -107,6 +91,7 @@ export function Navbar() {
 
       {/* Right actions */}
       <div className="hidden md:flex gap-2 items-center">
+        {/* Theme toggle — only render after mount to avoid hydration mismatch */}
         {mounted && (
           <button
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
@@ -116,32 +101,42 @@ export function Navbar() {
               border: `1px solid ${resolvedTheme === "dark" ? "rgba(0,212,255,0.15)" : "rgba(123,47,255,0.15)"}`,
               color: "var(--text-secondary)",
             }}
+            aria-label="Toggle theme"
           >
             {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         )}
 
-        <Link
-          href="/login"
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all border"
-          style={{
-            color: "var(--text-secondary)",
-            borderColor: "var(--border-strong)",
-            background: "transparent",
-          }}
-        >
-          Login
-        </Link>
-        
-        <Link
-          href="/register"
-          className="px-5 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 hover:shadow-lg"
-          style={{
-            background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-          }}
-        >
-          Start Free Audit
-        </Link>
+        {/* Auth-aware CTA block — suppress hydration on this block only */}
+        <div suppressHydrationWarning>
+          {isAuthed ? (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
+            >
+              <LayoutDashboard size={14} />
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all border mr-2"
+                style={{ color: "var(--text-secondary)", borderColor: "var(--border-strong)", background: "transparent" }}
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="px-5 py-2 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90 hover:shadow-lg"
+                style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
+              >
+                Start Free Audit
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Mobile toggle */}
@@ -170,37 +165,42 @@ export function Navbar() {
               href={item.href}
               onClick={() => setOpen(false)}
               className="block py-3 px-2 text-base font-semibold border-b transition-colors"
-              style={{
-                color: "var(--text-secondary)",
-                borderColor: "var(--border)",
-              }}
+              style={{ color: "var(--text-secondary)", borderColor: "var(--border)" }}
             >
               {item.name}
             </a>
           ))}
-          
-          <div className="pt-4 flex gap-3">
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="flex-1 py-3 rounded-lg text-center font-semibold border"
-              style={{
-                color: "var(--text-secondary)",
-                borderColor: "var(--border-strong)",
-              }}
-            >
-              Login
-            </Link>
-            <Link
-              href="/register"
-              onClick={() => setOpen(false)}
-              className="flex-1 py-3 rounded-lg text-center font-bold text-white"
-              style={{
-                background: "linear-gradient(135deg, var(--brand-purple), var(--brand))",
-              }}
-            >
-              Sign Up
-            </Link>
+
+          <div className="pt-4 flex gap-3" suppressHydrationWarning>
+            {isAuthed ? (
+              <Link
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="flex-1 py-3 rounded-lg text-center font-bold text-white flex items-center justify-center gap-2"
+                style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
+              >
+                <LayoutDashboard size={14} /> Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 py-3 rounded-lg text-center font-semibold border"
+                  style={{ color: "var(--text-secondary)", borderColor: "var(--border-strong)" }}
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 py-3 rounded-lg text-center font-bold text-white"
+                  style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

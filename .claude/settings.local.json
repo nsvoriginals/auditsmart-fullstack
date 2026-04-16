@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm type-check *)",
+      "Bash(ls E:/test/auditsmart/next.config*)",
+      "Bash(cat E:/test/auditsmart/next.config.*)",
+      "Bash(cat E:/test/auditsmart/tailwind.config.*)"
+    ]
+  }
+}

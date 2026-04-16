@@ -6,6 +6,8 @@ import "./globals.css";
 import Providers from "./providers";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: {
@@ -41,7 +43,12 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Pre-fetch session on the server so SessionProvider populates its cache
+  // immediately — eliminates the client-side GET /api/auth/session round-trip
+  // that was causing the ~3s blank-page delay on every navigation.
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -61,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ fontFamily: "'Satoshi', 'Outfit', sans-serif" }}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <Providers>
+          <Providers session={session}>
             {children}
             <Toaster
               position="top-right"
