@@ -1,3 +1,4 @@
+// lib/agents/claude-agent.ts - Only update the model function
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../config';
 
@@ -12,31 +13,35 @@ function getClient(): Anthropic | null {
 
 function getModelForPlan(plan: string): string {
   switch (plan) {
-    case "pro": return config.CLAUDE_HAIKU_MODEL;
-    case "enterprise": return config.CLAUDE_SONNET_MODEL;
-    case "deep_audit": return config.CLAUDE_OPUS_MODEL;
+    case "pro": return config.CLAUDE_HAIKU_MODEL;      // ✅ Fixed
+    case "enterprise": return config.CLAUDE_SONNET_MODEL; // ✅ Fixed
+    case "deep_audit": return config.CLAUDE_OPUS_MODEL;   // ✅ Fixed
     default: return config.CLAUDE_HAIKU_MODEL;
   }
 }
 
-const SYSTEM_PROMPT = `You are the world's most advanced Solidity smart contract security auditor.
+const SYSTEM_PROMPT = `You are the world's most advanced Solidity smart contract security auditor, with expert-level knowledge of EVM internals, DeFi protocol mechanics, and every major vulnerability class. You have studied every major exploit in DeFi history — The DAO ($60M reentrancy), Parity Wallet ($150M access control), Euler Finance ($197M flash loan), Nomad Bridge ($190M lack of input validation), Ronin Network ($625M key compromise), and hundreds more.
 
-CRITICAL RULE: Only report vulnerabilities with DIRECT evidence in the provided code.
-Do NOT speculate about features not present in the code.
+CRITICAL RULES:
+1. Only report vulnerabilities with DIRECT, CONCRETE evidence in the provided code.
+2. Do NOT speculate about features not present in the code shown.
+3. Do NOT report generic "might be vulnerable" findings — cite the exact vulnerable line/pattern.
+4. Assign severity based on real-world exploitability, not theoretical risk.
+5. Every finding must include: exact function name, line reference, attack scenario, and corrected code.
 
-SEVERITY GUIDE:
-- critical → Direct fund theft, total compromise
-- high → Significant fund loss, privilege escalation
-- medium → Limited fund risk, logic errors
-- low → Best practices, gas optimizations
-- info → Documentation, style, informational
+SEVERITY CLASSIFICATION:
+  critical → Funds stolen in a single transaction, no preconditions
+  high     → Significant fund loss, complete privilege loss, requires ≤2 steps
+  medium   → Partial loss, locked funds, requires specific conditions or privileges
+  low      → Best-practice violation with negligible direct financial risk
+  info     → Gas optimization, style issue, documentation gap only
 
 CONFIDENCE RATING:
-- HIGH: Direct evidence in code, exact lines identified
-- MEDIUM: Strong indicators but some assumptions
-- LOW: Speculative or requires external context
+  HIGH   → Exact vulnerable code pattern visible, line identified, attack is deterministic
+  MEDIUM → Strong indicator present, minor assumption about external state
+  LOW    → Theoretical, depends on missing context or external contract behavior
 
-Always use the provided tool. Never add prose outside tool calls.`;
+Always use the report_findings tool. Never add prose outside tool calls.`;
 
 function getAuditTool(includeExploit: boolean = false): any {
   const properties: any = {
@@ -95,35 +100,115 @@ export async function runClaudeAnalysis(
   const findingsSummary = formatFindingsForPrompt(groqFindings);
 
   const userPrompt = isDeepAudit
-    ? `DEEP SECURITY AUDIT — Maximum thoroughness required.
+    ? `════════════════════════════════════════════════════════════════
+DEEP AUDIT — PAID PREMIUM ANALYSIS — Maximum Thoroughness Required
+════════════════════════════════════════════════════════════════
 
-This is a paid premium audit. Find EVERY possible vulnerability.
+This is a premium deep audit. The user has paid for the most thorough analysis possible. Miss nothing.
 
-FINDINGS FROM SPECIALIST AGENTS:
+PRELIMINARY FINDINGS FROM SPECIALIST AGENTS (validate + expand these):
 ${findingsSummary}
 
-CONTRACT:
+FULL CONTRACT SOURCE:
 \`\`\`solidity
 ${contractCode}
 \`\`\`
 
-Think deeply before using report_findings tool.`
-    : `Review this Solidity contract security audit.
+════════════════════════════════════════════════════════════════
+YOUR MANDATE — think step by step through each of these:
 
-FINDINGS FROM SPECIALIST AGENTS:
+1. VALIDATE AGENT FINDINGS
+   - Confirm each agent finding with direct code evidence
+   - Escalate or downgrade severity if warranted
+   - Discard any finding that lacks evidence in the code above
+
+2. DEEP VULNERABILITY SWEEP — check each category:
+
+   ACCESS CONTROL
+   □ Every privileged function (mint, burn, withdraw, upgrade, setFee, pause, initialize) has a guard?
+   □ Can initializer be called twice?
+   □ Can ownership be set to address(0)?
+   □ Is two-step ownership transfer enforced?
+
+   REENTRANCY
+   □ Every external call (ETH send, ERC20 transfer, .call()) happens AFTER state updates?
+   □ Cross-function reentrancy: can attacker reenter a different function mid-call?
+   □ Read-only reentrancy: does a view function read state exploitable mid-call?
+
+   ARITHMETIC
+   □ Solidity version and SafeMath usage aligned?
+   □ Every subtraction checked for underflow before execution?
+   □ Multiplication done before division to prevent precision loss?
+   □ unchecked{} blocks — is each one provably safe?
+
+   FLASH LOAN / ORACLE
+   □ Any spot price reads from AMM (manipulable in one tx)?
+   □ Chainlink staleness check present (updatedAt + heartbeat)?
+   □ First-depositor share inflation attack possible?
+
+   DANGEROUS OPERATIONS
+   □ selfdestruct — who can call it?
+   □ delegatecall — is the target address user-controlled?
+   □ tx.origin used for auth?
+   □ block.timestamp / blockhash used for randomness?
+
+   TOKEN LOGIC
+   □ ERC20 return values checked?
+   □ Fee-on-transfer token compatibility?
+   □ Approval race condition exploitable?
+
+   BUSINESS LOGIC
+   □ Can functions be called in wrong order?
+   □ Can user withdraw more than deposited?
+   □ Rounding errors across multiple calls?
+   □ Missing zero-address guards on setters?
+
+3. COMPOSE EXECUTIVE SUMMARY
+   - 3-5 sentence overall assessment
+   - Risk level justification
+   - Deployment recommendation with specific conditions
+
+Use the report_findings tool with all validated + newly discovered findings.`
+    : `════════════════════════════════════════════════════════════════
+SMART CONTRACT SECURITY REVIEW
+════════════════════════════════════════════════════════════════
+
+FINDINGS FROM SPECIALIST AGENTS (validate, expand, fill gaps):
 ${findingsSummary}
-
-YOUR TASK:
-1. Find any critical/high issues the agents missed
-2. Validate existing findings
-3. Rate confidence based on direct evidence in code
 
 CONTRACT:
 \`\`\`solidity
 ${contractCode.slice(0, 8000)}
 \`\`\`
 
-Use report_findings tool.`;
+════════════════════════════════════════════════════════════════
+YOUR TASKS:
+
+1. VALIDATE AGENT FINDINGS
+   Confirm each finding has direct code evidence. Remove or downgrade speculative findings.
+   Escalate severity if the agent underestimated an exploitable bug.
+
+2. FIND MISSED CRITICAL/HIGH ISSUES
+   The specialist agents focus on narrow areas. Look for issues they may have missed:
+   - Business logic flaws unique to this contract's purpose
+   - Interaction bugs between functions (e.g. state set by function A breaks function B)
+   - Missing zero-address checks on parameters that affect fund routing
+   - Incorrect event ordering or state machine transitions
+   - Privilege escalation through indirect paths
+
+3. ASSESS EACH FINDING
+   - Assign HIGH confidence only if: exact vulnerable line visible, attack is deterministic
+   - Assign MEDIUM if: strong indicator but depends on caller behaviour
+   - Assign LOW if: theoretical/requires external context — THESE WILL BE FILTERED FROM REPORTS
+
+4. WRITE CLEAR DESCRIPTIONS
+   Each description must include:
+   - What the vulnerable code pattern is (cite the function/line)
+   - Step-by-step attacker action (what they call, in what order, what happens)
+   - What the attacker gains or what breaks
+   - The corrected code with explanation
+
+Use the report_findings tool now.`;
 
   try {
     console.log(`🤖 Claude ${plan}: sending request...`);

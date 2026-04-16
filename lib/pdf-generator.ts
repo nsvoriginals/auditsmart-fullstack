@@ -1,7 +1,9 @@
-// H-01: LOW-confidence findings are filtered out before the PDF is built.
-//       They remain in the DB and UI but are excluded from the printed report
-//       to avoid credibility issues with paying customers.
-// M-03: AI disclaimer box added on Page 1 (required legal notice).
+// lib/pdf-generator.ts
+//
+// H-01: LOW-confidence findings are filtered before the PDF is built.
+//       They remain in DB and the UI but are excluded from the printed report.
+// M-03: AI disclaimer on Page 1 (required legal notice).
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { filterForPDF } from "./agents/dedup-engine";
@@ -28,416 +30,465 @@ interface PDFData {
   agentsUsed?: string[];
 }
 
-// Type for RGB color values
-type RGBColor = [number, number, number];
+type RGB = [number, number, number];
 
-// Helper function to convert RGB color for jsPDF
-const toColor = (color: RGBColor): RGBColor => [color[0], color[1], color[2]];
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+const C = {
+  navy:     [15,  23,  42]  as RGB,  // slate-900
+  navyMid:  [30,  41,  59]  as RGB,  // slate-800
+  dark:     [51,  65,  85]  as RGB,  // slate-700
+  muted:    [100, 116, 139] as RGB,  // slate-500
+  border:   [226, 232, 240] as RGB,  // slate-200
+  bg:       [248, 250, 252] as RGB,  // slate-50
+  white:    [255, 255, 255] as RGB,
+  blue:     [37,  99,  235] as RGB,  // blue-600
+  blueLight:[59,  130, 246] as RGB,  // blue-500
+  critical: [220, 38,  38]  as RGB,  // red-600
+  high:     [234, 88,  12]  as RGB,  // orange-600
+  medium:   [202, 138, 4]   as RGB,  // amber-600
+  low:      [22,  163, 74]  as RGB,  // green-600
+  info:     [100, 116, 139] as RGB,  // slate-500
+  safe:     [22,  163, 74]  as RGB,  // green-600
+  amberBg:  [255, 251, 235] as RGB,  // amber-50
+  amber:    [217, 119, 6]   as RGB,  // amber-600
+  greenBg:  [240, 253, 244] as RGB,  // green-50
+  redBg:    [254, 242, 242] as RGB,  // red-50
+  indigoFaint: [245, 247, 255] as RGB,
+};
 
 export async function generatePDFReport(data: PDFData): Promise<Buffer> {
   return new Promise((resolve) => {
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-    
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    
-    // Modern Color Palette as RGB tuples
-    const colors = {
-      primary: [97, 45, 83] as RGBColor,
-      primaryLight: [133, 57, 83] as RGBColor,
-      secondary: [237, 100, 166] as RGBColor,
-      accent: [255, 193, 7] as RGBColor,
-      critical: [220, 38, 38] as RGBColor,
-      high: [249, 115, 22] as RGBColor,
-      medium: [234, 179, 8] as RGBColor,
-      low: [59, 130, 246] as RGBColor,
-      info: [107, 114, 128] as RGBColor,
-      success: [34, 197, 94] as RGBColor,
-      dark: [31, 41, 55] as RGBColor,
-      light: [243, 244, 246] as RGBColor,
-      white: [255, 255, 255] as RGBColor,
-    };
-    
-    // Helper: Add colored text
-    const addColoredText = (text: string, x: number, y: number, color: RGBColor, fontSize = 10, fontStyle = "normal") => {
-      doc.setFontSize(fontSize);
-      doc.setFont("helvetica", fontStyle);
-      const [r, g, b] = toColor(color);
-      doc.setTextColor(r, g, b);
-      doc.text(text, x, y);
-    };
-    
-    // Helper: Add horizontal line
-    const addLine = (y: number, color: RGBColor = colors.primary, lineWidth = 0.5) => {
-      const [r, g, b] = toColor(color);
-      doc.setDrawColor(r, g, b);
-      doc.setLineWidth(lineWidth);
-      doc.line(20, y, pageWidth - 20, y);
-    };
-    
-    let yPos = 20;
-    
-    // ============================================
-    // HEADER WITH GRADIENT EFFECT
-    // ============================================
-    const [pR, pG, pB] = toColor(colors.primary);
-    doc.setFillColor(pR, pG, pB);
-    doc.rect(0, 0, pageWidth, 50, "F");
-    
-    // Decorative accent bar
-    const [sR, sG, sB] = toColor(colors.secondary);
-    doc.setFillColor(sR, sG, sB);
-    doc.rect(0, 45, pageWidth, 5, "F");
-    
-    // Logo and Title
-    doc.setFontSize(28);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
-    doc.text("AUDITSMART", 20, 28);
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(200, 200, 200);
-    doc.text("AI-Powered Smart Contract Security Audit", 20, 38);
-    
-    // Report badge
-    doc.setFillColor(sR, sG, sB);
-    doc.roundedRect(pageWidth - 55, 15, 40, 20, 3, 3, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.text("SECURITY REPORT", pageWidth - 35, 28, { align: "center" });
-    
-    yPos = 65;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-    // ============================================
-    // M-03: AI DISCLAIMER BOX — visible on Page 1
-    // ============================================
-    doc.setFillColor(255, 251, 230); // amber-tint background
-    doc.setDrawColor(234, 179, 8);   // amber border
-    doc.setLineWidth(0.8);
-    doc.roundedRect(20, yPos, pageWidth - 40, 14, 3, 3, "FD");
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(120, 90, 0);
-    doc.text("DISCLAIMER:", 25, yPos + 5.5);
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      "AI-generated security assessment. Not a professional audit. For informational purposes only. © Xorion Network LLC",
-      65, yPos + 5.5
-    );
-    yPos += 20;
+    const W  = doc.internal.pageSize.getWidth();   // 210 mm
+    const H  = doc.internal.pageSize.getHeight();  // 297 mm
+    const M  = 15;         // side margin
+    const CW = W - M * 2;  // content width = 180 mm
 
-    // H-01: Filter LOW-confidence findings from PDF
-    // (they are still stored in DB and shown in the UI)
+    // ── Low-level drawing helpers ──────────────────────────────
+    const setFill  = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
+    const setDraw  = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
+    const setColor = (c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
+    const setFont  = (size: number, style: "bold" | "normal" | "italic" = "normal") => {
+      doc.setFontSize(size);
+      doc.setFont("helvetica", style);
+    };
+
+    // ── Page-break guard ──────────────────────────────────────
+    function guardPage(y: number, needed: number): number {
+      if (y + needed > H - 18) {
+        doc.addPage();
+        drawContinuationHeader();
+        return 18;
+      }
+      return y;
+    }
+
+    function drawContinuationHeader(): void {
+      setFill(C.navy);
+      doc.rect(0, 0, W, 7, "F");
+      setFill(C.blue);
+      doc.rect(0, 7, W, 1, "F");
+    }
+
+    // ── Reusable widgets ──────────────────────────────────────
+    /** Draws a left-accent section label and returns the new y below it. */
+    function sectionHeader(y: number, title: string): number {
+      setFill(C.blue);
+      doc.rect(M, y, 3, 7, "F");
+      setColor(C.navy);
+      setFont(9.5, "bold");
+      doc.text(title, M + 7, y + 5.2);
+      return y + 13;
+    }
+
+    /** Draws a card box (filled + border). */
+    function card(y: number, h: number, bg: RGB = C.white): void {
+      setFill(bg);
+      doc.roundedRect(M, y, CW, h, 2, 2, "F");
+      setDraw(C.border);
+      doc.setLineWidth(0.25);
+      doc.roundedRect(M, y, CW, h, 2, 2, "D");
+    }
+
+    /** Returns the severity color. */
+    function sevColor(sev: string): RGB {
+      switch (sev.toLowerCase()) {
+        case "critical": return C.critical;
+        case "high":     return C.high;
+        case "medium":   return C.medium;
+        case "low":      return C.low;
+        default:         return C.info;
+      }
+    }
+
+    // H-01: strip LOW-confidence findings from the printed report
     const pdfFindings = filterForPDF(data.findings);
     data = { ...data, findings: pdfFindings };
 
-    // ============================================
-    // REPORT METADATA CARD
-    // ============================================
-    // Card background
-    const [lR, lG, lB] = toColor(colors.light);
-    doc.setFillColor(lR, lG, lB);
-    doc.roundedRect(20, yPos, pageWidth - 40, 35, 5, 5, "F");
-    doc.setDrawColor(pR, pG, pB);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(20, yPos, pageWidth - 40, 35, 5, 5, "D");
-    
-    // Metadata in table format
-    const metadata = [
-      ["Report ID", data.auditId.slice(0, 16) + "..."],
-      ["Date", new Date(data.createdAt).toLocaleString()],
-      ["Client", `${data.userName} (${data.userEmail})`],
+    // ──────────────────────────────────────────────────────────
+    // PAGE 1 HEADER
+    // ──────────────────────────────────────────────────────────
+    setFill(C.navy);
+    doc.rect(0, 0, W, 50, "F");
+
+    // Blue accent rule under header
+    setFill(C.blue);
+    doc.rect(0, 48, W, 2.5, "F");
+
+    // Brand
+    setColor(C.white);
+    setFont(26, "bold");
+    doc.text("AUDITSMART", M, 26);
+
+    setColor(C.blueLight);
+    setFont(8.5, "normal");
+    doc.text("Smart Contract Security Audit Report", M, 36);
+
+    // Top-right badge
+    setFill(C.blue);
+    doc.roundedRect(W - M - 44, 15, 44, 20, 3, 3, "F");
+    setColor(C.white);
+    setFont(7.5, "bold");
+    doc.text("SECURITY REPORT", W - M - 22, 23, { align: "center" });
+    setColor(C.blueLight);
+    setFont(6.5, "normal");
+    doc.text(
+      new Date(data.createdAt).toLocaleDateString("en-IN"),
+      W - M - 22,
+      29,
+      { align: "center" }
+    );
+
+    let y = 57;
+
+    // ──────────────────────────────────────────────────────────
+    // M-03: DISCLAIMER
+    // ──────────────────────────────────────────────────────────
+    setFill(C.amberBg);
+    doc.roundedRect(M, y, CW, 12, 2, 2, "F");
+    setDraw([217, 180, 60] as RGB);
+    doc.setLineWidth(0.35);
+    doc.roundedRect(M, y, CW, 12, 2, 2, "D");
+
+    setColor(C.amber);
+    setFont(7, "bold");
+    doc.text("DISCLAIMER:", M + 4, y + 7.5);
+    setColor([120, 80, 0] as RGB);
+    setFont(6.5, "normal");
+    doc.text(
+      "AI-generated security assessment. Not a professional audit. For informational purposes only. © Xorion Network LLC",
+      M + 33,
+      y + 7.5
+    );
+    y += 18;
+
+    // ──────────────────────────────────────────────────────────
+    // REPORT INFORMATION
+    // ──────────────────────────────────────────────────────────
+    y = sectionHeader(y, "REPORT INFORMATION");
+    card(y, 30, C.white);
+
+    const meta: Array<[string, string]> = [
+      ["Report ID",  data.auditId.slice(0, 22) + "…"],
+      ["Generated",  new Date(data.createdAt).toLocaleString("en-IN")],
+      ["Client",     `${data.userName}  ·  ${data.userEmail}`],
     ];
-    
-    let metaX = 30;
-    let metaY = yPos + 10;
-    const [dR, dG, dB] = toColor(colors.dark);
-    for (const [label, value] of metadata) {
-      addColoredText(label + ":", metaX, metaY, colors.dark, 9, "bold");
-      addColoredText(value, metaX + 30, metaY, colors.dark, 9, "normal");
-      metaY += 8;
+
+    let my = y + 8.5;
+    for (const [label, value] of meta) {
+      setColor(C.muted);
+      setFont(7, "bold");
+      doc.text(label.toUpperCase(), M + 5, my);
+      setColor(C.navyMid);
+      setFont(8, "normal");
+      doc.text(value, M + 42, my);
+      my += 8;
     }
-    
-    yPos += 45;
-    
-    // ============================================
-    // CONTRACT INFO CARD
-    // ============================================
-    const [wR, wG, wB] = toColor(colors.white);
-    doc.setFillColor(wR, wG, wB);
-    doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "F");
-    doc.setDrawColor(pR, pG, pB);
-    doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "D");
-    
-    addColoredText("CONTRACT INFORMATION", 30, yPos + 8, colors.primary, 11, "bold");
-    addColoredText(data.contractName, 30, yPos + 18, colors.dark, 10, "bold");
-    
-    yPos += 35;
-    
-    // Contract code preview (if available)
-    if (data.contractCode) {
-      doc.setFillColor(lR, lG, lB);
-      doc.roundedRect(20, yPos, pageWidth - 40, 50, 5, 5, "F");
-      
-      addColoredText("CONTRACT CODE PREVIEW", 30, yPos + 8, colors.primary, 10, "bold");
-      
-      const codePreview = data.contractCode.slice(0, 500);
-      const codeLines = codePreview.split("\n").slice(0, 8);
-      let codeY = yPos + 18;
-      for (const line of codeLines) {
-        addColoredText(line.slice(0, 80), 30, codeY, [100, 100, 100], 7, "normal");
-        codeY += 4.5;
+    y += 36;
+
+    // ──────────────────────────────────────────────────────────
+    // CONTRACT
+    // ──────────────────────────────────────────────────────────
+    y = sectionHeader(y, "CONTRACT");
+
+    // Card with left-colored accent strip
+    setFill(C.blue);
+    doc.rect(M, y, 3, 18, "F");
+    setFill(C.white);
+    doc.rect(M + 3, y, CW - 3, 18, "F");
+    setDraw(C.border);
+    doc.setLineWidth(0.25);
+    doc.rect(M + 3, y, CW - 3, 18, "D");
+
+    setColor(C.navy);
+    setFont(11, "bold");
+    doc.text(data.contractName, M + 9, y + 7.5);
+    setColor(C.muted);
+    setFont(7, "normal");
+    doc.text(
+      `${data.findings.length} findings  ·  Scan duration: ${(data.scanDuration / 1000).toFixed(1)}s`,
+      M + 9,
+      y + 14
+    );
+    y += 24;
+
+    // ──────────────────────────────────────────────────────────
+    // RISK ASSESSMENT
+    // ──────────────────────────────────────────────────────────
+    y = guardPage(y, 60);
+    y = sectionHeader(y, "RISK ASSESSMENT");
+    card(y, 52, C.white);
+
+    // ── Score circle ─────────────────────────────────────────
+    const cx = M + 30;
+    const cy = y + 28;
+    const radius = 19;
+
+    const scoreColor =
+      data.riskScore >= 70 ? C.critical :
+      data.riskScore >= 40 ? C.high :
+      data.riskScore >= 20 ? C.medium :
+      data.riskScore >= 10 ? C.blueLight :
+      C.safe;
+
+    setFill([241, 245, 249] as RGB);
+    setDraw(C.border);
+    doc.setLineWidth(0.4);
+    doc.circle(cx, cy, radius, "FD");
+
+    setColor(scoreColor);
+    setFont(19, "bold");
+    doc.text(String(data.riskScore), cx, cy + 3.5, { align: "center" });
+    setColor(C.muted);
+    setFont(6, "normal");
+    doc.text("/ 100", cx, cy + 9, { align: "center" });
+
+    setFill(scoreColor);
+    doc.roundedRect(cx - 17, cy + 12, 34, 7, 2, 2, "F");
+    setColor(C.white);
+    setFont(6.5, "bold");
+    doc.text(data.riskLevel.toUpperCase(), cx, cy + 17, { align: "center" });
+
+    // ── Severity counts with mini-bar ─────────────────────────
+    const sevStats = [
+      { label: "Critical", count: data.criticalCount,    color: C.critical },
+      { label: "High",     count: data.highCount,        color: C.high     },
+      { label: "Medium",   count: data.mediumCount,      color: C.medium   },
+      { label: "Low",      count: data.lowCount,         color: C.low      },
+      { label: "Info",     count: data.infoCount ?? 0,   color: C.info     },
+    ];
+
+    const BAR_START = M + 70;
+    let sy = y + 9;
+    for (const { label, count, color } of sevStats) {
+      // Dot
+      setFill(color);
+      doc.circle(BAR_START, sy - 1.5, 1.8, "F");
+      // Label
+      setColor(C.dark);
+      setFont(7.5, "normal");
+      doc.text(label, BAR_START + 5, sy);
+      // Count
+      setColor(C.navy);
+      setFont(8, "bold");
+      doc.text(String(count), BAR_START + 34, sy, { align: "right" });
+      // Bar track
+      const BAR_X = BAR_START + 37;
+      const BAR_MAX = 38;
+      const barFill = Math.min(BAR_MAX, count * 5);
+      setFill(C.border);
+      doc.rect(BAR_X, sy - 4, BAR_MAX, 3, "F");
+      if (barFill > 0) {
+        setFill(color);
+        doc.rect(BAR_X, sy - 4, barFill, 3, "F");
       }
-      
-      yPos += 60;
+      sy += 8;
     }
-    
-    // ============================================
-    // RISK SCORE GAUGE SECTION
-    // ============================================
-    doc.setFillColor(wR, wG, wB);
-    doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "F");
-    doc.setDrawColor(pR, pG, pB);
-    doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "D");
-    
-    addColoredText("RISK ASSESSMENT", 30, yPos + 8, colors.primary, 11, "bold");
-    
-    // Risk score circle
-    const centerX = 55;
-    const centerY = yPos + 28;
-    const radius = 15;
-    const riskPercent = data.riskScore;
-    
-    // Background circle
-    doc.setDrawColor(200, 200, 200);
-    doc.setFillColor(245, 245, 245);
-    doc.circle(centerX, centerY, radius, "FD");
-    
-    // Score text
-    let scoreColor = colors.success;
-    if (riskPercent >= 70) scoreColor = colors.critical;
-    else if (riskPercent >= 50) scoreColor = colors.high;
-    else if (riskPercent >= 30) scoreColor = colors.medium;
-    else if (riskPercent >= 10) scoreColor = colors.low;
-    
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    const [scR, scG, scB] = toColor(scoreColor);
-    doc.setTextColor(scR, scG, scB);
-    doc.text(`${riskPercent}`, centerX, centerY + 3, { align: "center" });
-    
-    // Risk level badge
-    const riskBadgeX = centerX + 20;
-    doc.setFillColor(scR, scG, scB);
-    doc.roundedRect(riskBadgeX, centerY - 6, 40, 10, 3, 3, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text(data.riskLevel, riskBadgeX + 20, centerY, { align: "center" });
-    
-    // Finding stats
-    const stats = [
-      { label: "Critical", value: data.criticalCount, color: colors.critical },
-      { label: "High", value: data.highCount, color: colors.high },
-      { label: "Medium", value: data.mediumCount, color: colors.medium },
-      { label: "Low", value: data.lowCount, color: colors.low },
-      { label: "Info", value: data.infoCount || 0, color: colors.info },
-    ];
-    
-    let statsX = pageWidth - 100;
-    let statsY = yPos + 12;
-    for (const stat of stats) {
-      addColoredText(`${stat.label}:`, statsX, statsY, stat.color, 9, "bold");
-      addColoredText(`${stat.value}`, statsX + 25, statsY, colors.dark, 9, "bold");
-      statsY += 7;
+
+    // ── Total findings summary ────────────────────────────────
+    const totalX = W - M - 22;
+    setColor(C.muted);
+    setFont(6.5, "normal");
+    doc.text("TOTAL", totalX, y + 18, { align: "center" });
+    setColor(C.navy);
+    setFont(24, "bold");
+    doc.text(String(data.findings.length), totalX, y + 33, { align: "center" });
+    setColor(C.muted);
+    setFont(6, "normal");
+    doc.text("unique issues", totalX, y + 39, { align: "center" });
+
+    y += 58;
+
+    // ──────────────────────────────────────────────────────────
+    // DEPLOYMENT VERDICT
+    // ──────────────────────────────────────────────────────────
+    if (data.deploymentVerdict) {
+      y = guardPage(y, 22);
+
+      const isUnsafe  = data.deploymentVerdict.includes("DO NOT");
+      const isCaution = data.deploymentVerdict.includes("CAUTION");
+      const vColor    = isUnsafe ? C.critical : isCaution ? C.amber : C.safe;
+      const vBg       = isUnsafe ? C.redBg    : isCaution ? C.amberBg : C.greenBg;
+
+      setFill(vBg);
+      doc.roundedRect(M, y, CW, 18, 2, 2, "F");
+      setFill(vColor);
+      doc.rect(M, y, 3, 18, "F");
+      setDraw(vColor);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(M, y, CW, 18, 2, 2, "D");
+
+      setColor(vColor);
+      setFont(7, "bold");
+      doc.text("DEPLOYMENT VERDICT", M + 7, y + 7);
+      setColor(C.navyMid);
+      setFont(10, "bold");
+      doc.text(data.deploymentVerdict, M + 7, y + 14);
+      y += 24;
     }
-    
-    yPos += 55;
-    
-    // ============================================
+
+    // ──────────────────────────────────────────────────────────
     // EXECUTIVE SUMMARY
-    // ============================================
-    doc.setFillColor(pR, pG, pB);
-    doc.roundedRect(20, yPos, pageWidth - 40, 8, 3, 3, "F");
-    addColoredText("EXECUTIVE SUMMARY", 30, yPos + 5.5, colors.white, 10, "bold");
-    
-    yPos += 15;
-    doc.setFillColor(wR, wG, wB);
-    doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "F");
-    doc.setDrawColor(200, 200, 200);
-    doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "D");
-    
-    const summaryLines = doc.splitTextToSize(data.summary, pageWidth - 60);
-    let summaryY = yPos + 10;
-    for (const line of summaryLines.slice(0, 8)) {
-      addColoredText(line, 30, summaryY, colors.dark, 9, "normal");
+    // ──────────────────────────────────────────────────────────
+    y = guardPage(y, 42);
+    y = sectionHeader(y, "EXECUTIVE SUMMARY");
+    // Grow card height to fit summary — estimate ~5mm per line, max 12 lines = 60mm + padding
+    const summaryLineCount = Math.min(12, doc.splitTextToSize(data.summary, CW - 14).length);
+    const summaryCardH = Math.max(38, summaryLineCount * 5 + 14);
+    card(y, summaryCardH, C.white);
+
+    const summaryLines = doc.splitTextToSize(data.summary, CW - 14);
+    let summaryY = y + 8;
+    for (const line of summaryLines.slice(0, 12)) {
+      setColor(C.dark);
+      setFont(8.5, "normal");
+      doc.text(line, M + 6, summaryY);
       summaryY += 5;
     }
-    
-    yPos += 55;
-    
-    // ============================================
-    // DEPLOYMENT VERDICT
-    // ============================================
-    if (data.deploymentVerdict) {
-      let verdictColor = colors.success;
-      let verdictBg: RGBColor = [220, 252, 231];
-      if (data.deploymentVerdict.includes("CAUTION")) {
-        verdictColor = colors.medium;
-        verdictBg = [254, 252, 232];
-      } else if (data.deploymentVerdict.includes("DO NOT")) {
-        verdictColor = colors.critical;
-        verdictBg = [254, 242, 242];
-      }
-      
-      const [vbR, vbG, vbB] = toColor(verdictBg);
-      doc.setFillColor(vbR, vbG, vbB);
-      doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "F");
-      const [vcR, vcG, vcB] = toColor(verdictColor);
-      doc.setDrawColor(vcR, vcG, vcB);
-      doc.roundedRect(20, yPos, pageWidth - 40, 25, 5, 5, "D");
-      
-      addColoredText("DEPLOYMENT VERDICT", 30, yPos + 8, verdictColor, 10, "bold");
-      addColoredText(data.deploymentVerdict, 30, yPos + 18, colors.dark, 11, "bold");
-      
-      yPos += 35;
-    }
-    
-    // ============================================
-    // FINDINGS TABLE
-    // ============================================
-    if (data.findings && data.findings.length > 0) {
-      doc.setFillColor(pR, pG, pB);
-      doc.roundedRect(20, yPos, pageWidth - 40, 8, 3, 3, "F");
-      addColoredText(`SECURITY FINDINGS (${data.findings.length})`, 30, yPos + 5.5, colors.white, 10, "bold");
-      
-      yPos += 15;
-      
-      const tableData = data.findings.slice(0, 15).map((finding) => [
-        finding.type || "Unknown Issue",
-        (finding.severity?.toUpperCase() || "INFO") + (finding.confidence ? ` [${finding.confidence}]` : ""),
-        finding.line || "N/A",
-        (finding.description || "").slice(0, 120) + ((finding.description || "").length > 120 ? "..." : ""),
+    y += summaryCardH + 6;
+
+    // ──────────────────────────────────────────────────────────
+    // SECURITY FINDINGS TABLE
+    // ──────────────────────────────────────────────────────────
+    if (data.findings.length > 0) {
+      y = guardPage(y, 28);
+      y = sectionHeader(y, `SECURITY FINDINGS  (${data.findings.length})`);
+
+      const tableRows = data.findings.slice(0, 30).map((f) => [
+        f.type ?? f.title ?? "Unknown Issue",
+        (f.severity ?? "info").toUpperCase(),
+        f.function ?? f.locations?.split(",")[0]?.split("@")[0]?.trim() ?? "—",
+        f.line ?? f.lineNumber?.toString() ?? "—",
+        // Show full description — autoTable wraps text automatically
+        (f.description ?? "").toString().slice(0, 300) +
+          ((f.description ?? "").toString().length > 300 ? "…" : ""),
       ]);
-      
+
       autoTable(doc, {
-        startY: yPos,
-        head: [["Vulnerability", "Severity", "Line", "Description"]],
-        body: tableData,
-        theme: "striped",
+        startY: y,
+        head: [["Vulnerability", "Severity", "Function", "Line", "Description"]],
+        body: tableRows,
+        margin: { left: M, right: M },
+        theme: "plain",
         headStyles: {
-          fillColor: [pR, pG, pB],
-          textColor: [255, 255, 255],
-          fontSize: 9,
-          fontStyle: "bold",
-          halign: "left",
-        },
-        styles: {
+          fillColor: C.navy,
+          textColor: [255, 255, 255] as [number, number, number],
           fontSize: 8,
-          cellPadding: 4,
-          lineColor: [220, 220, 220],
-          textColor: [50, 50, 50],
+          fontStyle: "bold",
+          cellPadding: { top: 4, bottom: 4, left: 5, right: 4 },
+        },
+        bodyStyles: {
+          fontSize: 7.5,
+          cellPadding: { top: 3.5, bottom: 3.5, left: 5, right: 4 },
+          textColor: C.dark,
+          lineColor: C.border,
+          lineWidth: 0.2,
+        },
+        alternateRowStyles: {
+          fillColor: C.bg,
         },
         columnStyles: {
-          0: { cellWidth: 45 },
-          1: { cellWidth: 30 },
-          2: { cellWidth: 18 },
-          3: { cellWidth: "auto" },
+          0: { cellWidth: 40, fontStyle: "bold" },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 28 },
+          3: { cellWidth: 14 },
+          4: { cellWidth: "auto" },
         },
         didParseCell: (cellData) => {
-          // Color code severity cells
           if (cellData.column.index === 1 && cellData.cell.raw) {
-            const severityText = String(cellData.cell.raw).toLowerCase();
-            const [cR, cG, cB] = toColor(
-              severityText.includes("critical") ? colors.critical :
-              severityText.includes("high") ? colors.high :
-              severityText.includes("medium") ? colors.medium :
-              severityText.includes("low") ? colors.low :
-              colors.info
-            );
+            const sev = String(cellData.cell.raw).toLowerCase();
+            const col = sevColor(sev);
             if (cellData.cell.styles) {
-              cellData.cell.styles.textColor = [cR, cG, cB];
+              cellData.cell.styles.textColor = col;
+              cellData.cell.styles.fontStyle = "bold";
             }
           }
         },
       });
-      
-      yPos = (doc as any).lastAutoTable.finalY + 10;
+
+      const docAny = doc as jsPDF & { lastAutoTable: { finalY: number } };
+      y = docAny.lastAutoTable.finalY + 12;
     }
-    
-    // ============================================
-    // AI THINKING CHAIN (Deep Audit only)
-    // ============================================
+
+    // ──────────────────────────────────────────────────────────
+    // AI THINKING CHAIN  (deep audit only)
+    // ──────────────────────────────────────────────────────────
     if (data.thinkingChain) {
-      if (yPos > pageHeight - 60) {
-        doc.addPage();
-        yPos = 20;
+      y = guardPage(y, 65);
+      y = sectionHeader(y, "AI EXTENDED THINKING  (Claude Opus)");
+      card(y, 60, C.indigoFaint);
+
+      const thinkLines = doc.splitTextToSize(
+        data.thinkingChain.slice(0, 1200),
+        CW - 14
+      );
+      let ty = y + 8;
+      for (const line of thinkLines.slice(0, 18)) {
+        setColor([80, 90, 130] as RGB);
+        setFont(7, "normal");
+        doc.text(line, M + 6, ty);
+        ty += 4.5;
       }
-      
-      const [sR2, sG2, sB2] = toColor(colors.secondary);
-      doc.setFillColor(sR2, sG2, sB2);
-      doc.roundedRect(20, yPos, pageWidth - 40, 8, 3, 3, "F");
-      addColoredText("AI EXTENDED THINKING (Claude Opus)", 30, yPos + 5.5, colors.white, 9, "bold");
-      
-      yPos += 15;
-      doc.setFillColor(245, 245, 250);
-      doc.roundedRect(20, yPos, pageWidth - 40, 45, 5, 5, "F");
-      
-      const thinkingPreview = data.thinkingChain.slice(0, 600);
-      const thinkingLines = doc.splitTextToSize(thinkingPreview, pageWidth - 60);
-      let thinkY = yPos + 10;
-      for (const line of thinkingLines.slice(0, 12)) {
-        addColoredText(line, 30, thinkY, [100, 100, 120], 7, "normal");
-        thinkY += 4;
-      }
-      
-      yPos += 55;
+      y += 66;
     }
-    
-    // ============================================
-    // AGENTS USED
-    // ============================================
+
+    // ──────────────────────────────────────────────────────────
+    // AGENTS DEPLOYED
+    // ──────────────────────────────────────────────────────────
     if (data.agentsUsed && data.agentsUsed.length > 0) {
-      if (yPos > pageHeight - 40) {
-        doc.addPage();
-        yPos = 20;
-      }
-      
-      doc.setFillColor(lR, lG, lB);
-      doc.roundedRect(20, yPos, pageWidth - 40, 20, 5, 5, "F");
-      
-      addColoredText("AI AGENTS DEPLOYED", 30, yPos + 8, colors.primary, 9, "bold");
-      const agentsText = data.agentsUsed.slice(0, 8).join(" • ");
-      addColoredText(agentsText, 30, yPos + 16, colors.dark, 7, "normal");
-      
-      yPos += 30;
+      y = guardPage(y, 20);
+      y = sectionHeader(y, "AI AGENTS DEPLOYED");
+      card(y, 14, C.bg);
+      setColor(C.muted);
+      setFont(7.5, "normal");
+      doc.text(data.agentsUsed.slice(0, 10).join("  ·  "), M + 6, y + 9);
+      y += 20;
     }
-    
-    // ============================================
-    // FOOTER
-    // ============================================
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
+
+    // ──────────────────────────────────────────────────────────
+    // FOOTER  (every page)
+    // ──────────────────────────────────────────────────────────
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.3);
-      doc.line(20, pageHeight - 15, pageWidth - 20, pageHeight - 15);
-      
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(150, 150, 150);
-      doc.text(`AuditSmart Security Report - ${data.contractName}`, 20, pageHeight - 8);
-      doc.text(`Page ${i} of ${pageCount}`, pageWidth - 20, pageHeight - 8, { align: "right" });
+
+      setDraw(C.border);
+      doc.setLineWidth(0.25);
+      doc.line(M, H - 12, W - M, H - 12);
+
+      setColor(C.muted);
+      setFont(6.5, "normal");
+      doc.text(`AuditSmart  ·  ${data.contractName}`, M, H - 6.5);
+      doc.text(`Page ${i} of ${totalPages}`, W - M, H - 6.5, { align: "right" });
+      doc.text(
+        "© Xorion Network LLC  ·  Confidential",
+        W / 2,
+        H - 6.5,
+        { align: "center" }
+      );
     }
-    
-    // ============================================
-    // Generate PDF
-    // ============================================
-    const pdfOutput = doc.output("arraybuffer");
-    resolve(Buffer.from(pdfOutput));
+
+    resolve(Buffer.from(doc.output("arraybuffer")));
   });
 }

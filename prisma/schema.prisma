@@ -95,6 +95,7 @@ model User {
   lastAuditReset     DateTime @default(now())
 
   @@index([email])
+  
 }
 
 model Account {
@@ -181,6 +182,7 @@ model Audit {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 // Individual Agent Reports

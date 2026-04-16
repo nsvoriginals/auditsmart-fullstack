@@ -74,14 +74,24 @@ export async function GET(req: NextRequest) {
         remaining = Math.max(0, limit - auditsThisMonth);
     }
 
-    return NextResponse.json({
-      plan,
-      auditsThisMonth,
-      limit,
-      remaining,
-      canAudit: remaining === null || remaining > 0,
-      isUnlimited: limit === null,
-    });
+    return NextResponse.json(
+      {
+        plan,
+        auditsThisMonth,
+        limit,
+        remaining,
+        canAudit: remaining === null || remaining > 0,
+        isUnlimited: limit === null,
+      },
+      {
+        headers: {
+          // Cache per-user for 60 s; revalidate stale in background for 30 s more.
+          // This eliminates redundant DB hits when the sidebar + scan page both
+          // fetch limits on the same page load.
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=30",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching limits:", error);
     return NextResponse.json(

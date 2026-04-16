@@ -1,20 +1,18 @@
 "use client";
-// app/dashboard/page.tsx — Dashboard Overview (Responsive)
+// app/dashboard/page.tsx — Dashboard Overview
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { 
-  Shield, 
-  AlertTriangle, 
-  Clock, 
-  Plus, 
-  Eye, 
+import {
+  Shield,
+  AlertTriangle,
+  Clock,
+  Plus,
+  Eye,
   Star,
   Zap,
-  Brain,
-  Sparkles,
   ArrowRight,
   CheckCircle,
   XCircle,
@@ -22,7 +20,6 @@ import {
   Calendar,
   TrendingUp,
   FileText,
-  Menu
 } from "lucide-react";
 
 interface DashboardStats {
@@ -95,7 +92,6 @@ export default function DashboardOverview() {
       if (!response.ok) throw new Error(result.error);
       setData(result);
     } catch (err) {
-      console.error("Error fetching dashboard:", err);
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
     } finally {
       setLoading(false);
@@ -109,29 +105,30 @@ export default function DashboardOverview() {
   const riskInfo = riskColors(averageScore);
 
   const statCards = [
-    { label: "Total Audits", value: stats?.totalAudits || 0, icon: Shield },
-    { label: "Completed", value: stats?.completedAudits || 0, icon: CheckCircle },
-    { label: "Pending", value: stats?.pendingAudits || 0, icon: Clock },
-    { label: "Avg Score", value: averageScore.toFixed(0), suffix: "/100", icon: TrendingUp },
+    { label: "Total Audits",  value: stats?.totalAudits ?? 0,       icon: Shield      },
+    { label: "Completed",     value: stats?.completedAudits ?? 0,    icon: CheckCircle },
+    { label: "Pending",       value: stats?.pendingAudits ?? 0,      icon: Clock       },
+    { label: "Avg Score",     value: (averageScore).toFixed(0), suffix: "/100", icon: TrendingUp },
   ];
-
-  const Skeleton = () => (
-    <div style={{ height: 120, borderRadius: "var(--radius-md)", background: "var(--elevated)", animation: "pulse 1.5s ease-in-out infinite" }} />
-  );
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-          <div><Skeleton /><div style={{ height: 20, width: 200, marginTop: 8 }}><Skeleton /></div></div>
-          <div style={{ width: 120 }}><Skeleton /></div>
+      <div className="flex flex-col gap-6">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div className="space-y-2">
+            <div className="h-8 w-56 rounded-lg bg-elevated animate-pulse" />
+            <div className="h-4 w-40 rounded-lg bg-elevated animate-pulse" />
+          </div>
+          <div className="h-10 w-28 rounded-lg bg-elevated animate-pulse" />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-          {[1,2,3,4].map(i => <Skeleton key={i} />)}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="h-28 rounded-xl bg-elevated animate-pulse" />
+          ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
-          <div><Skeleton /><div style={{ height: 300, marginTop: 12 }}><Skeleton /></div></div>
-          <div><Skeleton /><div style={{ height: 300, marginTop: 12 }}><Skeleton /></div></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="h-80 rounded-xl bg-elevated animate-pulse" />
+          <div className="h-80 rounded-xl bg-elevated animate-pulse" />
         </div>
       </div>
     );
@@ -139,60 +136,73 @@ export default function DashboardOverview() {
 
   if (error) {
     return (
-      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "72px 24px", textAlign: "center" }}>
-        <AlertTriangle size={48} style={{ color: "#ef4444", margin: "0 auto 20px" }} />
-        <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 8 }}>Error Loading Dashboard</h3>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, fontFamily: "'Satoshi', sans-serif" }}>{error}</p>
-        <button onClick={fetchDashboardData} style={{ padding: "10px 22px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Try Again</button>
+      <div className="rounded-xl border border-border bg-card py-16 px-6 text-center">
+        <AlertTriangle size={44} className="mx-auto mb-5" style={{ color: "#ef4444" }} />
+        <h3 className="text-lg font-bold tracking-tight text-text-primary mb-2 font-sans">
+          Error Loading Dashboard
+        </h3>
+        <p className="text-sm text-text-muted mb-6 font-sans">{error}</p>
+        <button
+          onClick={fetchDashboardData}
+          className="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold font-sans"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-        @media (max-width: 640px) {
-          .stats-grid { gap: 8px !important; }
-          .stats-card { padding: 12px !important; }
-          .stats-value { font-size: 24px !important; }
-        }
-      `}</style>
-
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(22px, 6vw, 28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary mb-1 font-sans">
             Welcome back, {session?.user?.name?.split(" ")[0] || "there"}!
           </h1>
-          <p style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+          <p className="text-xs sm:text-sm text-text-muted font-sans">
             Here's your security audit overview and recent activity.
           </p>
         </div>
-        <Link href="/dashboard/scan"
-          className="whitespace-nowrap"
-          style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
+        <Link
+          href="/dashboard/scan"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold font-sans whitespace-nowrap transition-opacity hover:opacity-90"
+        >
           <Plus size={13} /> New Audit
         </Link>
       </div>
 
-      {/* Stats Cards - Responsive Grid */}
-      <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map(({ label, value, suffix, icon: Icon }) => (
-          <div key={label} className="stats-card" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18, boxShadow: "var(--shadow-card)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'Satoshi', sans-serif" }}>{label}</span>
-              <Icon size={14} style={{ color: "var(--text-muted)" }} />
+          <div
+            key={label}
+            className="bg-card border border-border rounded-xl p-4 shadow-card"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-text-muted font-sans">
+                {label}
+              </span>
+              <Icon size={14} className="text-text-muted" />
             </div>
-            <div className="stats-value" style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(24px, 5vw, 32px)", fontWeight: 800, letterSpacing: "-0.025em", color: label === "Avg Score" ? riskInfo.color : "var(--text-primary)", marginBottom: 4 }}>
+            <div
+              className="text-2xl sm:text-3xl font-extrabold tracking-tight font-sans mb-1"
+              style={{ color: label === "Avg Score" ? riskInfo.color : "var(--text-primary)" }}
+            >
               {value}{suffix || ""}
             </div>
             {label === "Avg Score" && averageScore > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
-                  <div style={{ width: `${averageScore}%`, height: "100%", background: riskInfo.color, borderRadius: 2 }} />
+              <div className="mt-3">
+                <div className="h-1 bg-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${averageScore}%`, background: riskInfo.color }}
+                  />
                 </div>
-                <span style={{ display: "inline-block", marginTop: 8, fontSize: 10, padding: "2px 8px", borderRadius: 4, background: riskInfo.bg, color: riskInfo.color, fontFamily: "'Satoshi', sans-serif", fontWeight: 600 }}>
+                <span
+                  className="inline-block mt-2 text-[10px] px-2 py-0.5 rounded font-semibold font-sans"
+                  style={{ background: riskInfo.bg, color: riskInfo.color }}
+                >
                   {riskInfo.text} Risk
                 </span>
               </div>
@@ -201,29 +211,33 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* Two Column Layout - Responsive */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+      {/* Two-column section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Recent Audits */}
-        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
-          <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between flex-wrap gap-2 px-5 py-4 border-b border-border">
             <div>
-              <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 2 }}>Recent Audits</h3>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>Your most recent security audit reports</p>
+              <h3 className="text-sm font-bold tracking-tight text-text-primary font-sans">Recent Audits</h3>
+              <p className="text-[11px] text-text-muted font-sans">Your most recent security audit reports</p>
             </div>
             {recentAudits.length > 0 && (
-              <Link href="/dashboard/history" style={{ fontSize: 11, color: "var(--primary)", textDecoration: "none", fontFamily: "'Satoshi', sans-serif" }}>
+              <Link href="/dashboard/history" className="text-[11px] text-brand font-sans">
                 View all →
               </Link>
             )}
           </div>
-          <div style={{ padding: "8px 0" }}>
+
+          <div>
             {recentAudits.length === 0 ? (
-              <div style={{ padding: "48px 24px", textAlign: "center" }}>
-                <div style={{ width: 48, height: 48, borderRadius: "var(--radius-lg)", background: "var(--primary-faint)", border: "1px solid rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                  <FileText size={22} style={{ color: "var(--primary)" }} />
+              <div className="py-12 px-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-[rgba(99,102,241,0.08)] border border-[rgba(99,102,241,0.15)] flex items-center justify-center mx-auto mb-4">
+                  <FileText size={22} className="text-brand" />
                 </div>
-                <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16, fontFamily: "'Satoshi', sans-serif" }}>No audits yet. Run your first scan.</p>
-                <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--primary)", color: "#fff", borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+                <p className="text-sm text-text-muted mb-4 font-sans">No audits yet. Run your first scan.</p>
+                <Link
+                  href="/dashboard/scan"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold font-sans"
+                >
                   <Plus size={12} /> Start First Audit
                 </Link>
               </div>
@@ -236,37 +250,43 @@ export default function DashboardOverview() {
                   <div
                     key={audit.id}
                     onClick={() => router.push(`/dashboard/audit/results/${audit.id}`)}
-                    style={{
-                      padding: "14px 20px",
-                      cursor: "pointer",
-                      borderBottom: idx < recentAudits.length - 1 ? "1px solid var(--border)" : "none",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--elevated)"}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+                    className={`flex items-center gap-3 px-5 py-3.5 cursor-pointer transition-colors hover:bg-elevated ${
+                      idx < recentAudits.length - 1 ? "border-b border-border" : ""
+                    }`}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                      {/* Score Circle */}
-                      <div style={{ width: 44, height: 44, borderRadius: "50%", border: `2px solid ${risk.border}`, background: risk.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 800, color: risk.color }}>{audit.score}</span>
-                      </div>
-                      
-                      {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                          <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>{audit.contractName}</span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, padding: "2px 7px", borderRadius: 4, background: status.bg, color: status.color, fontFamily: "'Satoshi', sans-serif" }}>
-                            <StatusIcon size={10} style={status.label === "Processing" ? { animation: "spin 1s linear infinite" } : {}} />
-                            {status.label}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 10, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", flexWrap: "wrap" }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}><Calendar size={9} />{relTime(audit.createdAt)}</span>
-                        </div>
-                      </div>
-                      
-                      <ArrowRight size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+                    {/* Score circle */}
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ border: `2px solid ${risk.border}`, background: risk.bg }}
+                    >
+                      <span className="text-sm font-extrabold font-sans" style={{ color: risk.color }}>
+                        {audit.score}
+                      </span>
                     </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-xs sm:text-sm font-bold tracking-tight text-text-primary font-sans truncate">
+                          {audit.contractName}
+                        </span>
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-sans"
+                          style={{ background: status.bg, color: status.color }}
+                        >
+                          <StatusIcon
+                            size={10}
+                            style={status.label === "Processing" ? { animation: "spin 1s linear infinite" } : {}}
+                          />
+                          {status.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] text-text-muted font-sans">
+                        <Calendar size={9} />
+                        {relTime(audit.createdAt)}
+                      </div>
+                    </div>
+
+                    <ArrowRight size={14} className="text-text-muted flex-shrink-0" />
                   </div>
                 );
               })
@@ -274,71 +294,96 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Right Column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Plan & Usage Card */}
-          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-              <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>Plan & Usage</h3>
-              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "var(--primary-faint)", color: "var(--primary)", fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textTransform: "uppercase" }}>
+        {/* Right column */}
+        <div className="flex flex-col gap-4">
+          {/* Plan & Usage */}
+          <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+              <h3 className="text-sm font-bold tracking-tight text-text-primary font-sans">Plan & Usage</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-[rgba(99,102,241,0.1)] text-[var(--primary)] font-semibold uppercase font-sans">
                 {subscription?.plan || "FREE"}
               </span>
             </div>
-            
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", flexWrap: "wrap", gap: 4 }}>
+
+            <div className="mb-4">
+              <div className="flex justify-between text-[11px] text-text-muted font-sans mb-1.5 flex-wrap gap-1">
                 <span>Audits this month</span>
-                <span style={{ color: "var(--text-primary)" }}>{stats?.currentMonthAudits || 0}{subscription?.plan === "FREE" && <span style={{ color: "var(--text-muted)" }}> / 3</span>}</span>
+                <span className="text-text-primary">
+                  {stats?.currentMonthAudits || 0}
+                  {subscription?.plan === "FREE" && <span className="text-text-muted"> / 3</span>}
+                </span>
               </div>
-              <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ width: `${subscription?.plan === "FREE" ? ((stats?.currentMonthAudits || 0) / 3) * 100 : Math.min(((stats?.currentMonthAudits || 0) / 100) * 100, 100)}%`, height: "100%", background: "var(--primary)", borderRadius: 2 }} />
+              <div className="h-1 bg-border rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full"
+                  style={{
+                    width: `${
+                      subscription?.plan === "FREE"
+                        ? ((stats?.currentMonthAudits || 0) / 3) * 100
+                        : Math.min(((stats?.currentMonthAudits || 0) / 100) * 100, 100)
+                    }%`,
+                  }}
+                />
               </div>
             </div>
-            
+
             {subscription?.plan === "FREE" && stats?.remainingAudits !== null && (
-              <div style={{ padding: 10, borderRadius: "var(--radius-sm)", background: "var(--elevated)", marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-                  <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>Remaining free audits</span>
-                  <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{stats?.remainingAudits}</span>
-                </div>
+              <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2.5 rounded-lg bg-elevated mb-4">
+                <span className="text-[10px] text-text-muted font-sans">Remaining free audits</span>
+                <span className="text-base font-bold text-text-primary font-sans">
+                  {stats?.remainingAudits}
+                </span>
               </div>
             )}
-            
+
             {subscription?.plan === "FREE" ? (
-              <Link href="/pricing" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "9px 16px", background: "var(--primary)", color: "#fff", borderRadius: "var(--radius)", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+              <Link
+                href="/pricing"
+                className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-lg bg-primary text-white text-xs font-semibold font-sans"
+              >
                 <Zap size={12} /> Upgrade for more audits
               </Link>
             ) : (
-              <p style={{ fontSize: 10, color: "var(--text-muted)", textAlign: "center", fontFamily: "'Satoshi', sans-serif" }}>
-                Renews on {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "N/A"}
+              <p className="text-[10px] text-text-muted text-center font-sans">
+                Renews on {subscription?.currentPeriodEnd
+                  ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                  : "N/A"}
               </p>
             )}
           </div>
 
           {/* Quick Actions */}
-          <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18 }}>
-            <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 12 }}>Quick Actions</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
+            <h3 className="text-sm font-bold tracking-tight text-text-primary font-sans mb-3">Quick Actions</h3>
+            <div className="flex flex-col gap-1.5">
               {[
-                { icon: Shield, label: "New Security Audit", href: "/dashboard/scan" },
-                { icon: Eye, label: "View Audit History", href: "/dashboard/history" },
-                { icon: Star, label: "Upgrade Plan", href: "/pricing" },
+                { icon: Shield, label: "New Security Audit",  href: "/dashboard/scan"    },
+                { icon: Eye,    label: "View Audit History",  href: "/dashboard/history" },
+                { icon: Star,   label: "Upgrade Plan",        href: "/pricing"           },
               ].map(({ icon: Icon, label, href }) => (
-                <Link key={label} href={href} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: "var(--radius-sm)", color: "var(--text-secondary)", fontSize: "clamp(11px, 3vw, 12px)", textDecoration: "none", transition: "background 0.15s" }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--elevated)"} onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                  <Icon size={14} style={{ color: "var(--primary)" }} />
-                  <span style={{ fontFamily: "'Satoshi', sans-serif" }}>{label}</span>
+                <Link
+                  key={label}
+                  href={href}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-text-secondary text-xs font-sans transition-colors hover:bg-elevated"
+                >
+                  <Icon size={14} className="text-brand" />
+                  {label}
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Security Tip */}
-          <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(99,102,241,0.02) 100%)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: "var(--radius-md)", padding: 16 }}>
-            <div style={{ display: "flex", gap: 12 }}>
-              <Shield size={18} style={{ color: "var(--primary)", flexShrink: 0 }} />
+          {/* Security tip */}
+          <div className="rounded-xl border border-[rgba(99,102,241,0.15)] bg-[rgba(99,102,241,0.04)] p-4">
+            <div className="flex gap-3">
+              <Shield size={18} className="text-brand flex-shrink-0 mt-0.5" />
               <div>
-                <h4 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>Security Tip</h4>
-                <p style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", lineHeight: 1.5, fontFamily: "'Satoshi', sans-serif" }}>Regular audits are crucial for contract security. Run audits after every major update.</p>
+                <h4 className="text-xs font-bold tracking-tight text-text-primary font-sans mb-1">
+                  Security Tip
+                </h4>
+                <p className="text-[11px] text-text-muted leading-relaxed font-sans">
+                  Regular audits are crucial for contract security. Run audits after every major update.
+                </p>
               </div>
             </div>
           </div>

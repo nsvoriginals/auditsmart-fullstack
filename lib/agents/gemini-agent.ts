@@ -1,54 +1,182 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { config } from '../config';
+// lib/agents/gemini-agent.ts
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { config } from "../config";
 
-let genAI: GoogleGenerativeAI | null = null;
+export interface GeminiFinding {
+  type: string;
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  function: string;
+  line: number | string;
+  description: string;
+  recommendation: string;
+  source: string;
+  confidence: string;
+}
+
+let _genAI: GoogleGenerativeAI | null = null;
 
 function getClient(): GoogleGenerativeAI | null {
-  if (!genAI && config.GEMINI_API_KEY) {
-    genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
+  if (!_genAI && config.GEMINI_API_KEY) {
+    _genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
   }
-  return genAI;
+  return _genAI;
 }
 
-const PROMPT = `You are a world-class smart contract security auditor.
+function buildPrompt(contractCode: string): string {
+  return `You are an elite Solidity smart contract security auditor. You have deep expertise in EVM internals, DeFi exploit mechanics, and every major smart contract vulnerability class. You have studied all major real-world exploits: The DAO reentrancy ($60M), Parity Wallet access control ($150M), Poly Network privilege escalation ($611M), Euler Finance flash loan ($197M), and dozens more.
 
-CRITICAL RULE: Only report vulnerabilities with DIRECT evidence in the code. Do NOT speculate.
+Your task is to perform a COMPREHENSIVE security audit of the smart contract below and identify every real, exploitable vulnerability.
 
-Analyze this Solidity contract for ALL vulnerability types:
-
-1. REENTRANCY: Check every function with external calls
-2. ACCESS CONTROL: Does every function have proper checks?
-3. INTEGER MATH: Can overflow/underflow occur?
-4. SELFDESTRUCT/DELEGATECALL BACKDOORS: CRITICAL if found
-5. SIGNATURE VERIFICATION: Is replay protection used?
-6. ORACLE MANIPULATION: Are price bounds enforced?
-7. FLASH LOAN: Can the flash loan repayment be bypassed?
-8. GOVERNANCE: Is quorum required? Can proposals execute arbitrary calls?
-9. DOS: Are there unbounded loops?
-10. INITIALIZATION: Can initialize() be called multiple times?
-
-Return ONLY a JSON array. Each finding:
-{
-  "type": "Vulnerability Name",
-  "severity": "critical|high|medium|low|info",
-  "confidence": "HIGH|MEDIUM|LOW",
-  "line": "line number",
-  "function": "function_name",
-  "description": "Detailed explanation with exploit path",
-  "recommendation": "Specific code fix"
-}
-
-Contract to audit:
+════════════════════════════════════════════════════════════════════════
+CONTRACT TO AUDIT:
 \`\`\`solidity
-CONTRACT_CODE
-\`\`\``;
+${contractCode.slice(0, 8000)}
+\`\`\`
+════════════════════════════════════════════════════════════════════════
 
-export async function runGeminiAnalysis(contractCode: string): Promise<any[]> {
-  const client = getClient();
-  if (!client) {
-    console.log("⚠️ Gemini API key missing");
-    return [];
+AUDIT CHECKLIST — examine EVERY category below:
+
+━━━ CATEGORY 1: ACCESS CONTROL (Most Common Critical Bugs) ━━━
+□ Can anyone call mint(), burn(), setOwner(), transferOwnership(), setFee(), pause()?
+□ Are all administrative functions protected by onlyOwner, onlyRole, or equivalent?
+□ Are role checks done BEFORE state changes?
+□ Can the initializer be called more than once (re-initialization attack)?
+□ Can ownership be transferred to address(0) accidentally?
+□ Are two-step ownership transfers enforced for critical roles?
+
+━━━ CATEGORY 2: REENTRANCY ━━━
+□ Does any function make an external call (.call, .transfer, .send, token.transfer, IERC20.transfer) BEFORE updating state?
+□ Can an attacker reenter the function during an external call and drain funds?
+□ Is a reentrancy guard (ReentrancyGuard, mutex) missing from withdraw/swap/claim functions?
+□ Are cross-function reentrancy paths possible (e.g. reenter a different function)?
+□ Read-only reentrancy: does a view function use state that can be manipulated mid-call?
+
+━━━ CATEGORY 3: INTEGER ARITHMETIC ━━━
+□ For Solidity <0.8: is SafeMath used for all arithmetic? Can any value wrap around?
+□ For Solidity ≥0.8 with unchecked{}: is each unchecked block truly safe?
+□ Can any subtraction underflow (e.g. balances[user] -= amount without prior check)?
+□ Division before multiplication causing precision loss (e.g. a/b*c instead of a*c/b)?
+□ Can multiplication overflow before reaching uint256 max?
+□ Off-by-one errors in loop bounds or index calculations?
+
+━━━ CATEGORY 4: FLASH LOAN / ORACLE MANIPULATION ━━━
+□ Does the contract read price or balances from a DEX pool in a single transaction?
+□ Can an attacker use a flash loan to temporarily skew the price oracle?
+□ Is spot price from AMM used (manipulable) instead of TWAP?
+□ Can the token balance of the contract be inflated with a direct transfer before a price check?
+□ Are there checks on the source/freshness of price data (Chainlink staleness check)?
+
+━━━ CATEGORY 5: DENIAL OF SERVICE ━━━
+□ Are there unbounded loops (for/while) over arrays that could exceed block gas limit?
+□ Can a single malicious actor make a function permanently fail (push-payment griefing)?
+□ Can external calls in loops cause a single failure to revert the entire transaction?
+□ Can a user lock the contract by sending ETH to a payable function or self-destruct?
+
+━━━ CATEGORY 6: SIGNATURE & CRYPTOGRAPHY ━━━
+□ Does ecrecover return address(0) for invalid signatures, and is this checked?
+□ Are signatures protected against replay attacks (nonce + chainId)?
+□ Are signed messages domain-separated (EIP-712)?
+□ Can a signature be reused across different contracts or chains?
+□ Are hashes computed with all necessary parameters to prevent substitution?
+
+━━━ CATEGORY 7: DANGEROUS OPERATIONS ━━━
+□ Is selfdestruct present? Who can call it? Can it be called by anyone?
+□ Is delegatecall used with a user-controlled address?
+□ Are there proxy patterns with unprotected upgrade functions?
+□ Is tx.origin used for authentication instead of msg.sender?
+□ Is block.timestamp used as a critical randomness source or deadline?
+□ Is blockhash used for randomness (manipulable by miners)?
+
+━━━ CATEGORY 8: TOKEN & DeFi LOGIC ━━━
+□ ERC20: are return values from transfer()/transferFrom() checked?
+□ ERC20: is the contract compatible with fee-on-transfer tokens?
+□ ERC20: is the contract vulnerable to the approval race condition?
+□ Are correct slippage checks present on swaps?
+□ Can liquidity be removed in the same transaction it is added?
+□ Are vault share calculations correct (first-depositor inflation attack)?
+
+━━━ CATEGORY 9: BUSINESS LOGIC ━━━
+□ Are there missing state machine transitions?
+□ Can functions be called in wrong order (incorrect ordering assumption)?
+□ Can an attacker exploit rounding errors across multiple small transactions?
+□ Can a user withdraw more than they deposited?
+□ Are there missing zero-address checks on critical parameters?
+□ Can fee calculations overflow or be set to 100%?
+
+━━━ CATEGORY 10: FRONT-RUNNING ━━━
+□ Are there swap functions without slippage protection?
+□ Can an attacker see a pending transaction and sandwich it?
+□ Are commit-reveal schemes needed but missing?
+
+════════════════════════════════════════════════════════════════════════
+SEVERITY CLASSIFICATION:
+  CRITICAL = Funds can be stolen in one transaction, no preconditions required
+  HIGH     = Significant fund loss or complete privilege escalation, few steps
+  MEDIUM   = Partial loss, locked funds, or requires specific conditions
+  LOW      = Best-practice violations with minimal direct risk
+  INFO     = Gas optimizations, style issues, documentation gaps
+
+EVIDENCE REQUIREMENTS:
+- Only report issues with DIRECT EVIDENCE in the code shown above
+- For each finding, explain: what the vulnerable code is, how it is exploited, what is the impact, and the exact fix
+- Write descriptions that are at least 2–3 sentences: code pattern + attack path + impact
+
+════════════════════════════════════════════════════════════════════════
+RESPONSE FORMAT — return this JSON object exactly:
+
+{
+  "findings": [
+    {
+      "type": "<specific name — e.g. 'Reentrancy in withdraw()', not just 'Reentrancy'>",
+      "severity": "<critical|high|medium|low|info>",
+      "function": "<exact affected function name>",
+      "line": <line number as integer, or 0 if uncertain>,
+      "description": "<Comprehensive: what the vulnerable pattern is, step-by-step attack scenario, what the attacker gains, what fails or is stolen. Minimum 2-3 sentences.>",
+      "recommendation": "<Exact fix with corrected code snippet. Explain why the fix prevents the attack.>"
+    }
+  ]
+}
+
+If the contract has NO vulnerabilities, return: { "findings": [] }`;
+}
+
+function isValidFinding(f: unknown): f is GeminiFinding {
+  if (typeof f !== "object" || f === null) return false;
+  const obj = f as Record<string, unknown>;
+  return typeof obj.type === "string" && typeof obj.severity === "string";
+}
+
+function parseResponse(raw: string): GeminiFinding[] {
+  const text = raw.trim();
+
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed.findings))
+      return parsed.findings.filter(isValidFinding);
+    if (Array.isArray(parsed))
+      return parsed.filter(isValidFinding);
+  } catch {
+    // fall through to extraction strategy
   }
+
+  const arrayMatch = text.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    try {
+      const parsed = JSON.parse(arrayMatch[0]);
+      if (Array.isArray(parsed)) return parsed.filter(isValidFinding);
+    } catch {
+      // nothing recoverable
+    }
+  }
+
+  return [];
+}
+
+export async function runGeminiAnalysis(
+  contractCode: string
+): Promise<GeminiFinding[]> {
+  const client = getClient();
+  if (!client) return [];
 
   try {
     const model = client.getGenerativeModel({
@@ -60,65 +188,29 @@ export async function runGeminiAnalysis(contractCode: string): Promise<any[]> {
       },
     });
 
-    const prompt = PROMPT.replace("CONTRACT_CODE", contractCode.slice(0, 15000));
-    console.log("🔍 Gemini agent: sending request...");
-
-    const result = await Promise.race([
-      model.generateContent(prompt),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), config.AGENT_TIMEOUT_SECONDS * 1000)
+    const generatePromise = model.generateContent(buildPrompt(contractCode));
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout")),
+        config.AGENT_TIMEOUT_SECONDS * 1000
       )
-    ]) as any;
+    );
 
-    const response = await result.response;
-    const content = response.text();
-    console.log(`🔍 Gemini agent: got response (${content.length} chars)`);
+    const result = await Promise.race([generatePromise, timeoutPromise]);
+    const content = result.response.text();
 
-    return parseGeminiFindings(content);
-  } catch (error) {
-    console.error("❌ Gemini agent error:", error);
-    return [];
-  }
-}
-
-function parseGeminiFindings(content: string): any[] {
-  try {
-    let parsed = JSON.parse(content);
-    let findings: any[] = [];
-
-    if (Array.isArray(parsed)) {
-      findings = parsed;
-    } else if (parsed.findings && Array.isArray(parsed.findings)) {
-      findings = parsed.findings;
-    }
-
-    const validated = findings.filter(f => f.type && f.severity).map(f => ({
+    const findings = parseResponse(content).map((f) => ({
       ...f,
-      severity: normalizeSeverity(f.severity),
-      confidence: f.confidence || "MEDIUM",
-      line: String(f.line || ""),
-      source: "gemini_agent"
+      source:     "gemini_agent",
+      confidence: "HIGH",
+      severity:   (f.severity?.toLowerCase() ?? "info") as GeminiFinding["severity"],
     }));
 
-    console.log(`✅ Gemini agent: found ${validated.length} findings`);
-    return validated;
-  } catch {
-    const match = content.match(/\[[\s\S]*\]/);
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch {
-        return [];
-      }
-    }
+    console.log(`[gemini] ${findings.length} finding(s)`);
+    return findings;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`[gemini] ${msg}`);
     return [];
   }
-}
-
-function normalizeSeverity(severity: string): string {
-  const sev = severity.toLowerCase();
-  if (["critical", "high", "medium", "low", "info"].includes(sev)) {
-    return sev;
-  }
-  return "info";
 }

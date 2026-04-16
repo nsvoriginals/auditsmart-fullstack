@@ -7,13 +7,12 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 
-// Extend the built-in session types - remove duplicate id declarations
 declare module "next-auth" {
   interface User {
     role?: string;
     plan?: string;
   }
-  
+
   interface Session {
     user: {
       id: string;
@@ -22,12 +21,13 @@ declare module "next-auth" {
       role?: string;
       plan?: string;
       image?: string | null;
-    }
+    };
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
+    id?: string;
     role?: string;
     plan?: string;
   }
@@ -44,7 +44,7 @@ export const authOptions: NextAuthOptions = {
           name: profile.name || profile.login,
           email: profile.email,
           image: profile.avatar_url,
-        }
+        };
       },
     }),
     GoogleProvider({
@@ -56,7 +56,7 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-        }
+        };
       },
     }),
     CredentialsProvider({
@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { subscription: true }
+          include: { subscription: true },
         });
 
         if (!user || !user.password) {
@@ -80,7 +80,6 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-        
         if (!isValid) {
           throw new Error("Invalid credentials");
         }
@@ -95,16 +94,18 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+
   callbacks: {
-    async signIn({ user, account }: { user: any; account: any }) {
+    async signIn({ user, account }) {
       if (account?.provider === "google" || account?.provider === "github") {
         try {
           const existingUser = await prisma.user.findUnique({
             where: { email: user.email! },
-            include: { accounts: true, subscription: true }
+            include: { accounts: true, subscription: true },
           });
 
           if (!existingUser) {
+            // Brand new user — create user + account + subscription
             const newUser = await prisma.user.create({
               data: {
                 email: user.email!,
@@ -122,92 +123,120 @@ export const authOptions: NextAuthOptions = {
                     token_type: account.token_type,
                     scope: account.scope,
                     id_token: account.id_token,
-                  }
+                  },
                 },
                 subscription: {
                   create: {
                     plan: "FREE",
                     status: "ACTIVE",
                     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                  }
-                }
+                  },
+                },
               },
-              include: { subscription: true }
+              include: { subscription: true },
             });
-            
+
             user.id = newUser.id;
             user.role = newUser.role;
             (user as any).plan = newUser.subscription?.plan;
           } else {
+            // Existing user — enrich token fields
             user.id = existingUser.id;
             user.role = existingUser.role;
             (user as any).plan = existingUser.subscription?.plan;
+
+            // FIX: Link OAuth account if this provider isn't already stored.
+            // Without this, a user who signed up via email and then signs in via
+            // Google/GitHub gets their token set correctly but the Account record
+            // is never created, breaking future OAuth sign-ins.
+            const alreadyLinked = existingUser.accounts.some(
+              (a) =>
+                a.provider === account.provider &&
+                a.providerAccountId === account.providerAccountId
+            );
+
+            if (!alreadyLinked) {
+              await prisma.account.create({
+                data: {
+                  userId: existingUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token,
+                  refresh_token: account.refresh_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                },
+              });
+            }
           }
-          
+
           return true;
         } catch (error) {
           console.error("Error in OAuth signIn:", error);
           return false;
         }
       }
-      
+
       return true;
     },
-    
-    async jwt({ token, user, trigger, session }: { token: any; user: any; trigger?: string; session?: any }) {
+
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.plan = user.plan;
+        token.plan = (user as any).plan;
       }
-      
+
+      // Re-hydrate from DB on explicit session update (e.g., after plan upgrade)
       if (trigger === "update" && session?.user) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id },
-          include: { subscription: true }
+          include: { subscription: true },
         });
-        
+
         if (dbUser) {
           token.role = dbUser.role;
           token.plan = dbUser.subscription?.plan;
         }
       }
-      
+
       return token;
     },
-    
-    async session({ session, token }: { session: any; token: any }) {
+
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
         session.user.role = token.role;
         session.user.plan = token.plan;
       }
       return session;
     },
   },
+
   pages: {
     signIn: "/login",
     error: "/login",
   },
+
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
+
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
 };
 
-// Helper function to get session in API routes
 export async function getSession() {
   return await getServerSession(authOptions);
 }
 
-// Helper to get user with subscription
 export async function getUserWithSubscription(userId: string) {
   return await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      subscription: true,
-    },
+    include: { subscription: true },
   });
 }

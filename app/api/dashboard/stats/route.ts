@@ -53,18 +53,25 @@ export async function GET(req: NextRequest) {
       ? Math.max(0, 3 - currentMonthAudits)
       : null;
 
-    return NextResponse.json({
-      stats: {
-        totalAudits,
-        completedAudits,
-        pendingAudits,
-        averageScore: averageScore._avg.score || 0,
-        remainingAudits,
-        currentMonthAudits
+    return NextResponse.json(
+      {
+        stats: {
+          totalAudits,
+          completedAudits,
+          pendingAudits,
+          averageScore: averageScore._avg.score || 0,
+          remainingAudits,
+          currentMonthAudits,
+        },
+        recentAudits,
+        subscription: subscription || { plan: "FREE", status: "ACTIVE" },
       },
-      recentAudits,
-      subscription: subscription || { plan: "FREE", status: "ACTIVE" }
-    });
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     return NextResponse.json(

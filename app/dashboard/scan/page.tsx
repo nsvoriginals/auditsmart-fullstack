@@ -1,5 +1,5 @@
 "use client";
-// app/dashboard/scan/page.tsx (Responsive)
+// app/dashboard/scan/page.tsx (FIXED - Handles Async 202 Responses)
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import {
   Shield, AlertTriangle, ChevronDown, ChevronUp,
   Copy, Download, Loader2, FileCode, AlertCircle, Clock,
+  CheckCircle2, Circle,
 } from "lucide-react";
 
 interface Finding {
@@ -20,6 +21,16 @@ interface AuditResult {
   medium_count: number; low_count: number; info_count: number;
   findings: Finding[]; summary: string; deployment_verdict: string;
   scan_duration_ms: number; pdf_available: boolean; plan_used: string;
+}
+
+interface AsyncResponse {
+  success: boolean;
+  job_id: string;
+  report_id: string;
+  status: string;
+  message: string;
+  estimated_time_seconds: number;
+  status_url: string;
 }
 
 const SAMPLE_CONTRACT = `// SPDX-License-Identifier: MIT
@@ -57,7 +68,7 @@ const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string 
 const verdictStyle = (v: string) =>
   VERDICT_STYLES[v?.toUpperCase()] ?? { bg: "rgba(239,68,68,0.1)", text: "#ef4444", border: "rgba(239,68,68,0.25)" };
 
-/* ── inline style helpers for inputs ── */
+/* ── inline style helpers ── */
 const inputBase: React.CSSProperties = {
   width: "100%", padding: "10px 12px",
   background: "var(--elevated)",
@@ -70,6 +81,20 @@ const inputBase: React.CSSProperties = {
   transition: "border-color 0.15s",
 };
 
+// Progress steps for M-02
+const AUDIT_STEPS = [
+  { id: "init", label: "Initializing agents..." },
+  { id: "reentrancy", label: "Scanning for reentrancy..." },
+  { id: "access", label: "Checking access control..." },
+  { id: "overflow", label: "Testing integer overflow..." },
+  { id: "logic", label: "Analyzing business logic..." },
+  { id: "defi", label: "Detecting DeFi vulnerabilities..." },
+  { id: "backdoor", label: "Scanning for backdoors..." },
+  { id: "signature", label: "Verifying signatures..." },
+  { id: "orchestrator", label: "AI orchestrator analysis..." },
+  { id: "report", label: "Generating report..." },
+];
+
 export default function ScanPage() {
   const { data: session, update } = useSession();
   const [code, setCode]           = useState("");
@@ -81,6 +106,13 @@ export default function ScanPage() {
   const [expanded, setExpanded]   = useState<number | null>(null);
   const [auditsLeft, setAuditsLeft] = useState<number | null>(null);
   const [userPlan, setUserPlan]   = useState<string>("free");
+  
+  // ⭐ NEW: Async polling state
+  const [jobId, setJobId]         = useState<string | null>(null);
+  const [progress, setProgress]   = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  // Use a ref for pollCount — state updates are async and create stale closures in setInterval
+  const pollCountRef = React.useRef(0);
 
   useEffect(() => { fetchLimits(); }, []);
 
@@ -97,20 +129,104 @@ export default function ScanPage() {
     if (userPlan === "free" && auditsLeft !== null && auditsLeft <= 0) {
       setError("You've reached your audit limit. Upgrade your plan to continue."); return;
     }
-    setError(""); setResult(null); setScanning(true);
+    
+    setError("");
+    setResult(null);
+    setScanning(true);
+    setJobId(null);
+    setProgress(0);
+    setCurrentStep(0);
+    pollCountRef.current = 0;
+    
     try {
-      const res  = await fetch("/api/audit/scan", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contract_code: code, contract_name: name || "Smart Contract", chain }),
+      const res = await fetch("/api/audit/scan", {
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          contract_code: code, 
+          contract_name: name || "Smart Contract", 
+          chain 
+        }),
       });
+      
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? data.detail ?? "Scan failed.");
-      setResult(data);
-      await fetchLimits();
-      await update();
+      
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Scan failed.");
+      }
+      
+      // ⭐ Check if this is an async response (202 Accepted)
+      if (res.status === 202 && data.job_id) {
+        setJobId(data.job_id);
+        startPolling(data.job_id);
+      } else {
+        // Sync response (legacy/fallback)
+        setResult(data);
+        setScanning(false);
+        await fetchLimits();
+        await update();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please try again.");
-    } finally { setScanning(false); }
+      setScanning(false);
+    }
+  };
+
+  const startPolling = (auditJobId: string) => {
+    const startTime = Date.now();
+    
+    const pollInterval = setInterval(async () => {
+      pollCountRef.current += 1;
+
+      // Timeout after 2 minutes (40 × 3s = 120s)
+      if (pollCountRef.current > 40) {
+        clearInterval(pollInterval);
+        setError("Audit is taking longer than expected. Check History for results.");
+        setScanning(false);
+        setJobId(null);
+        return;
+      }
+
+      // Update progress animation
+      const elapsed = Date.now() - startTime;
+      const estimatedProgress = Math.min(90, Math.floor(elapsed / 450));
+      setProgress(estimatedProgress);
+      setCurrentStep((prev) => {
+        const next = Math.floor(estimatedProgress / 10);
+        return next > prev && next < AUDIT_STEPS.length ? next : prev;
+      });
+
+      try {
+        const response = await fetch(`/api/audit/results/${auditJobId}?poll=true`);
+        const data = await response.json();
+
+        if (data.status === "COMPLETED") {
+          clearInterval(pollInterval);
+          setProgress(100);
+          setCurrentStep(AUDIT_STEPS.length);
+
+          const fullResponse = await fetch(`/api/audit/results/${auditJobId}`);
+          const fullData = await fullResponse.json();
+
+          setResult(fullData);
+          setScanning(false);
+          setJobId(null);
+          await fetchLimits();
+          await update();
+        } else if (data.status === "FAILED") {
+          clearInterval(pollInterval);
+          setError("Audit processing failed. Please try again.");
+          setScanning(false);
+          setJobId(null);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+        // Continue polling on transient network errors
+      }
+    }, 3000);
+
+    // Cleanup
+    return () => clearInterval(pollInterval);
   };
 
   const downloadPdf = async () => {
@@ -130,6 +246,72 @@ export default function ScanPage() {
 
   const limitReached = userPlan === "free" && auditsLeft === 0;
 
+  // ⭐ Show progress UI when scanning with jobId
+  if (scanning && jobId) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div className="scan-header">
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(22px, 6vw, 28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>
+            Scanning Contract
+          </h1>
+          <p style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+            AI agents are analyzing your smart contract...
+          </p>
+        </div>
+
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "clamp(20px, 5vw, 32px)", boxShadow: "var(--shadow-card)" }}>
+          {/* Progress bar */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", marginBottom: 8, fontFamily: "'Satoshi', sans-serif" }}>
+              <span>Audit in progress</span>
+              <span>{progress}%</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: "var(--elevated)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(90deg, #3b82f6, #8b5cf6)", borderRadius: 2, transition: "width 0.3s ease" }} />
+            </div>
+          </div>
+
+          {/* Steps */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {AUDIT_STEPS.map((step, index) => {
+              const isCompleted = index < currentStep;
+              const isRunning = index === currentStep;
+              
+              return (
+                <div key={step.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {isCompleted ? (
+                    <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: "#10b981" }} />
+                  ) : isRunning ? (
+                    <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" style={{ color: "#3b82f6" }} />
+                  ) : (
+                    <Circle className="h-4 w-4 flex-shrink-0" style={{ color: "var(--border)" }} />
+                  )}
+                  <span style={{ 
+                    fontSize: "clamp(12px, 3vw, 13px)", 
+                    color: isCompleted ? "#10b981" : isRunning ? "#3b82f6" : "var(--text-muted)",
+                    fontFamily: "'Satoshi', sans-serif",
+                  }}>
+                    {step.label}
+                  </span>
+                  {isRunning && (
+                    <span style={{ marginLeft: "auto", fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-disabled)" }} className="animate-pulse">
+                      processing...
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <p style={{ marginTop: 20, fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-disabled)", textAlign: "center", fontFamily: "'Satoshi', sans-serif" }}>
+            Estimated time: ~45 seconds
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Original UI (form and results)
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <style>{`
@@ -216,8 +398,9 @@ export default function ScanPage() {
             onFocus={e => (e.target.style.borderColor = "var(--brand)")}
             onBlur={e  => (e.target.style.borderColor = "var(--border)")}
           />
-          <p style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-disabled)", marginTop: 4, fontFamily: "'Satoshi', sans-serif" }}>
+          <p style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: code.length > 50000 ? "#ef4444" : "var(--text-disabled)", marginTop: 4, fontFamily: "'Satoshi', sans-serif" }}>
             {code.length.toLocaleString()} / 50,000 characters
+            {code.length > 50000 && " (Exceeds limit!)"}
           </p>
         </div>
 
@@ -230,33 +413,22 @@ export default function ScanPage() {
 
         <button
           onClick={runScan}
-          disabled={scanning || limitReached}
+          disabled={scanning || limitReached || code.length > 50000}
           style={{
             width: "100%", padding: "clamp(10px, 3vw, 12px) 0",
-            background: scanning || limitReached ? "var(--elevated)" : "var(--brand)",
-            color: scanning || limitReached ? "var(--text-disabled)" : "#fff",
+            background: scanning || limitReached || code.length > 50000 ? "var(--elevated)" : "var(--brand)",
+            color: scanning || limitReached || code.length > 50000 ? "var(--text-disabled)" : "#fff",
             border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif",
-            fontSize: "clamp(13px, 3vw, 14px)", fontWeight: 600, cursor: scanning || limitReached ? "not-allowed" : "pointer",
+            fontSize: "clamp(13px, 3vw, 14px)", fontWeight: 600, cursor: scanning || limitReached || code.length > 50000 ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             transition: "background 0.15s",
           }}
         >
           {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Scanning…</> : <><Shield className="h-4 w-4" /> Run Audit</>}
         </button>
-
-        {scanning && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", marginBottom: 6, fontFamily: "'Satoshi', sans-serif", flexWrap: "wrap", gap: 8 }}>
-              <span>Analyzing contract…</span><span>AI Models</span>
-            </div>
-            <div style={{ height: 4, borderRadius: 2, background: "var(--elevated)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: "65%", background: "var(--brand)", borderRadius: 2 }} />
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Results */}
+      {/* Results - ONLY show if result exists AND has findings */}
       {result && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }} className="animate-fade-in">
 
@@ -310,8 +482,8 @@ export default function ScanPage() {
             </div>
           </div>
 
-          {/* Findings */}
-          {result.findings.length > 0 && (
+          {/* Findings - ⭐ SAFE CHECK: Only render if findings exists AND is an array */}
+          {result.findings && Array.isArray(result.findings) && result.findings.length > 0 && (
             <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
               <div className="findings-header" style={{ padding: "clamp(14px, 4vw, 18px) clamp(16px, 4vw, 24px)", borderBottom: "1px solid var(--border)" }}>
                 <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(14px, 4vw, 16px)", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 2 }}>Findings</h3>
