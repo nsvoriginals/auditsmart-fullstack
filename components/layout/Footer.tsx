@@ -238,7 +238,7 @@ export function Footer() {
             className="text-[11px] md:text-xs text-center order-3 md:order-2"
             style={{ color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}
           >
-            © {year} Xorion Network LLC. All rights reserved.
+            © {year} AuditSmart. All rights reserved.
           </p>
 
           {/* Social links - ONLY 4 required */}

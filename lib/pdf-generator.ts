@@ -177,7 +177,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     setColor([120, 80, 0] as RGB);
     setFont(6.5, "normal");
     doc.text(
-      "AI-generated security assessment. Not a professional audit. For informational purposes only. © Xorion Network LLC",
+      "AI-generated security assessment. Not a professional audit. For informational purposes only. © AuditSmart",
       M + 33,
       y + 7.5
     );
