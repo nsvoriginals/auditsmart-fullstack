@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PLAN_DETAILS } from "@/lib/plans";
 import { runAuditPipeline } from "@/lib/agents/pipeline";
 import crypto from "crypto";
 
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
       contract_name = "Contract",
       chain = "ethereum",
     } = body;
+    // Note: demo_mode field is intentionally ignored — signature is always verified.
 
     // Validate required fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -102,26 +104,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Update payment record if exists
-    try {
-      await prisma.payment.update({
-        where: { razorpayOrderId: razorpay_order_id },
-        data: { status: "paid", razorpayPaymentId: razorpay_payment_id }
-      });
-    } catch (e) {
-      // Payment record might not exist yet - create it
-      await prisma.payment.create({
-        data: {
-          userId: session.user.id,
-          razorpayOrderId: razorpay_order_id,
-          razorpayPaymentId: razorpay_payment_id,
-          amount: 165000,
-          currency: "INR",
-          status: "paid",
-          plan: "PREMIUM",
-        }
-      }).catch(() => {});
-    }
+    // Update payment record if exists, otherwise create it
+    await prisma.payment.upsert({
+      where: { razorpayOrderId: razorpay_order_id },
+      update: { status: "paid", razorpayPaymentId: razorpay_payment_id },
+      create: {
+        userId:              session.user.id,
+        razorpayOrderId:     razorpay_order_id,
+        razorpayPaymentId:   razorpay_payment_id,
+        amount:              PLAN_DETAILS.deep_audit.amountInPaise,
+        currency:            "INR",
+        status:              "paid",
+        plan:                "ENTERPRISE",
+      },
+    });
 
     return NextResponse.json({
       audit_id: audit.id,

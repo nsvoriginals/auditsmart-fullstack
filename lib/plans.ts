@@ -12,28 +12,28 @@ export const PLAN_DETAILS = {
     name: "Free",
     monthly: false,
     amountInPaise: 0,
-    displayPrice: 0,
+    displayPrice: 0,        // USD display price
   },
   pro: {
     id: "pro",
     name: "Pro",
     monthly: true,
-    amountInPaise: IS_PRODUCTION_PRICING ? 249900 : 100,
-    displayPrice: IS_PRODUCTION_PRICING ? 2499 : 1,
+    amountInPaise: IS_PRODUCTION_PRICING ? 159900 : 100,  // ₹1,599 / charged via Razorpay
+    displayPrice:  IS_PRODUCTION_PRICING ? 19      : 1,   // $19    / shown to user
   },
   enterprise: {
     id: "enterprise",
     name: "Enterprise",
     monthly: true,
-    amountInPaise: IS_PRODUCTION_PRICING ? 419900 : 200,
-    displayPrice: IS_PRODUCTION_PRICING ? 4199 : 2,
+    amountInPaise: IS_PRODUCTION_PRICING ? 249900 : 200,  // ₹2,499
+    displayPrice:  IS_PRODUCTION_PRICING ? 29      : 2,   // $29
   },
   deep_audit: {
     id: "deep_audit",
     name: "Deep Audit",
     monthly: false,
-    amountInPaise: IS_PRODUCTION_PRICING ? 169900 : 300,
-    displayPrice: IS_PRODUCTION_PRICING ? 1699 : 3,
+    amountInPaise: IS_PRODUCTION_PRICING ? 169900 : 300,  // ₹1,699
+    displayPrice:  IS_PRODUCTION_PRICING ? 20      : 3,   // $20
   },
 } as const;
 

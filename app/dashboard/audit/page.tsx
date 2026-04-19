@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { Play, Loader2, AlertCircle, CheckCircle, Zap, Shield, Brain, Sparkles, AlertTriangle } from "lucide-react";
 
 const PLANS = [
-  { id: "free", name: "Free", price: "$0", icon: Shield, features: ["3 audits/month", "Basic security checks", "Gemini AI", "8 specialized agents"] },
-  { id: "pro", name: "Pro", price: "$12", icon: Zap, features: ["10 audits/month", "Fix suggestions", "Claude Haiku", "Priority queue"], popular: true },
-  { id: "enterprise", name: "Enterprise", price: "$60", icon: Brain, features: ["Unlimited audits", "Exploit scenarios", "Claude Sonnet", "24/7 support"] },
+  { id: "free", name: "Free", price: "$0", icon: Shield, features: ["10 lifetime audits", "Basic security checks", "Gemini AI", "8 specialized agents"] },
+  { id: "pro", name: "Pro", price: "$25", icon: Zap, features: ["15 audits/month", "Fix suggestions", "Claude Haiku", "Priority queue"], popular: true },
+  { id: "enterprise", name: "Enterprise", price: "$42", icon: Brain, features: ["20 audits/month", "Exploit scenarios", "Claude Sonnet", "24/7 support"] },
   { id: "deep_audit", name: "Deep Audit", price: "$20", icon: Sparkles, features: ["Claude Opus", "Extended thinking", "Exploit scenarios", "PDF report"] },
 ];
 
@@ -107,19 +107,19 @@ export default function AuditPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        if (res.status === 403 && data.limitReached) { setError(`Free plan limit reached (${data.currentUsage}/3). Please upgrade.`); setIsAuditing(false); setProgress(""); return; }
+        if (res.status === 403 && data.limitReached) { setError(data.message || `Audit limit reached (${data.currentUsage}/${data.limit}). Please upgrade.`); setIsAuditing(false); setProgress(""); return; }
         throw new Error(data.error || "Audit failed");
       }
       setProgress("Audit complete — redirecting to results…");
+      router.push(`/dashboard/audit/results/${data.audit_id}`);
       fetchLimits();
-      setTimeout(() => router.push(`/dashboard/audit/results/${data.audit_id}`), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run audit");
       setIsAuditing(false); setProgress("");
     }
   };
 
-  const limitReached = userLimits?.plan === "FREE" && userLimits?.remaining === 0;
+  const limitReached = userLimits ? !userLimits.canAudit : false;
   const usagePct = userLimits?.limit ? Math.min(100, (userLimits.auditsThisMonth / userLimits.limit) * 100) : 0;
 
   return (
@@ -136,17 +136,17 @@ export default function AuditPage() {
           <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
           <div>
             <div style={{ fontWeight: 500, marginBottom: 4 }}>Audit limit reached</div>
-            <div style={{ opacity: 0.8 }}>You've used all {userLimits?.auditsThisMonth}/3 free audits this month.</div>
-            <button className="upgrade-link" onClick={() => router.push("/pricing")}>Upgrade plan →</button>
+            <div style={{ opacity: 0.8 }}>You've used all {userLimits?.auditsThisMonth}/{userLimits?.limit ?? 10} audits on your {userLimits?.plan} plan.</div>
+            <button className="upgrade-link" onClick={() => router.push("/dashboard/billing")}>Upgrade plan →</button>
           </div>
         </div>
       )}
 
-      {!loadingLimits && userLimits?.plan === "FREE" && (userLimits?.remaining ?? 0) > 0 && (
+      {!loadingLimits && !limitReached && userLimits && !userLimits.isUnlimited && (userLimits?.remaining ?? 0) > 0 && (
         <div className="alert-box alert-ok" style={{ marginBottom: 24 }}>
           <CheckCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
           <div style={{ flex: 1 }}>
-            <span>Free plan — {userLimits.auditsThisMonth}/3 audits used. {userLimits.remaining} remaining.</span>
+            <span>Free plan — {userLimits.auditsThisMonth}/{userLimits.limit ?? 10} audits used. {userLimits.remaining} remaining.</span>
             <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: `${usagePct}%` }} /></div>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default function AuditPage() {
 
           <div className="privacy-note">
             Your code is encrypted and never stored permanently.<br />
-            Free plan: 3 audits per month.
+            Free plan: 10 lifetime audits.
           </div>
         </div>
       </div>

@@ -22,21 +22,21 @@ interface ExtendedSession {
 
 const PLANS = [
   {
-    id: "free", name: "Free", price: "₹0", period: "forever",
+    id: "free", name: "Free", price: "$0", period: "forever",
     description: "Try before you commit", icon: Shield,
     features: ["3 audits included", "Groq LLaMA + Gemini analysis", "PDF audit report", "Community support"],
     missing: ["Fix suggestions", "Exploit scenarios", "Claude AI models"],
     cta: "Start free", ctaHref: "/register", featured: false,
   },
   {
-    id: "pro", name: "Pro", price: "₹2,900", period: "/month",
+    id: "pro", name: "Pro", price: "$19", period: "/month",
     description: "For active developers", icon: Zap,
     features: ["20 audits / month", "Groq + Claude Haiku", "PDF audit reports", "Fix suggestions with code", "Deployment verdict", "Email support"],
     missing: ["Exploit scenarios", "Claude Sonnet / Opus"],
     cta: "Upgrade to Pro", featured: true,
   },
   {
-    id: "enterprise", name: "Enterprise", price: "₹4,900", period: "/month",
+    id: "enterprise", name: "Enterprise", price: "$29", period: "/month",
     description: "For teams shipping to mainnet", icon: Crown,
     features: ["50 audits / month", "Groq + Claude Sonnet", "PDF audit reports", "Fix suggestions with code", "Full exploit scenarios", "Deployment verdict", "API access", "Priority support"],
     missing: [], cta: "Upgrade to Enterprise", featured: false,
@@ -60,8 +60,8 @@ const FAQS = [
 ];
 
 const annualPrice = (p: string) => {
-  const m = p.match(/₹([\d,]+)/); if (!m) return p;
-  return `₹${(parseInt(m[1].replace(/,/g, "")) * 10).toLocaleString()}`;
+  const m = p.match(/\$([\d,]+)/); if (!m) return p;
+  return `$${(parseInt(m[1].replace(/,/g, "")) * 10).toLocaleString()}`;
 };
 
 export default function PricingPage() {
@@ -199,9 +199,9 @@ export default function PricingPage() {
             </div>
             <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 10 }}>Deep Audit</h3>
             <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 38, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
-              ₹1,650 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
+              $20 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
             </div>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>~$20 USD · Available on any plan</p>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>≈ ₹1,699 INR · Available on any plan</p>
             <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "var(--brand)", color: "#fff", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textDecoration: "none" }}>
               Request Deep Audit <ArrowRight size={13} />
             </Link>

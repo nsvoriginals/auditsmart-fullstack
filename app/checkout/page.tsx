@@ -15,15 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-// Plan display names and prices (in INR for display)
-const PLAN_DETAILS: Record<string, { name: string; displayPrice: number; amountInPaise: number }> = {
-  pro: { name: "Pro", displayPrice: 2499, amountInPaise: 249900 },
-  enterprise: { name: "Enterprise", displayPrice: 4199, amountInPaise: 419900 },
-  deep_audit: { name: "Deep Audit", displayPrice: 1699, amountInPaise: 169900 },
-};
-
-// TEST MODE - Set to true for testing with ₹1 amounts
-const TEST_MODE = true;
+import { PLAN_DETAILS as PLAN_CONFIG } from "@/lib/plans";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -44,7 +36,7 @@ function CheckoutContent() {
 
   // Validate plan
   const plan = planParam?.toLowerCase() || "";
-  const planDetails = PLAN_DETAILS[plan];
+  const planDetails = plan in PLAN_CONFIG ? PLAN_CONFIG[plan as keyof typeof PLAN_CONFIG] : null;
   
   useEffect(() => {
     if (plan && !planDetails) {
@@ -54,14 +46,10 @@ function CheckoutContent() {
 
   const createOrder = useCallback(async (): Promise<string | null> => {
     try {
-      const amount = TEST_MODE 
-        ? (plan === "pro" ? 100 : plan === "enterprise" ? 200 : 300) // ₹1, ₹2, ₹3 for testing
-        : planDetails?.amountInPaise;
-
       const response = await fetch("/api/payment/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, amount }),
+        body: JSON.stringify({ plan }),
       });
 
       if (!response.ok) {
@@ -94,13 +82,9 @@ function CheckoutContent() {
       return;
     }
 
-    const amount = TEST_MODE
-      ? (plan === "pro" ? 100 : plan === "enterprise" ? 200 : 300)
-      : planDetails?.amountInPaise;
-
     const options = {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: amount,
+      amount: planDetails?.amountInPaise,
       currency: "INR",
       name: "AuditSmart",
       description: `${planDetails?.name} Plan - AI Smart Contract Audits`,
@@ -187,9 +171,7 @@ function CheckoutContent() {
     );
   }
 
-  const displayAmount = TEST_MODE 
-    ? (plan === "pro" ? 1 : plan === "enterprise" ? 2 : 3)
-    : planDetails.displayPrice;
+  const displayAmount = planDetails?.displayPrice ?? 0;
 
   return (
     <>
@@ -208,12 +190,7 @@ function CheckoutContent() {
           <CardHeader>
             <CardTitle className="text-2xl">{planDetails.name} Plan</CardTitle>
             <CardDescription>
-              {TEST_MODE && (
-                <span className="inline-block mt-2 px-3 py-1 bg-yellow-900/30 text-yellow-400 text-xs rounded-full border border-yellow-600">
-                  ⚠️ TEST MODE - Amount: ₹{displayAmount}
-                </span>
-              )}
-            </CardDescription>
+              </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -230,7 +207,7 @@ function CheckoutContent() {
             <div className="flex justify-between items-center py-4">
               <span className="text-lg font-semibold">Total</span>
               <span className="text-2xl font-bold">
-                ₹{displayAmount.toLocaleString('en-IN')}
+                ${displayAmount.toLocaleString("en-US")}
                 {plan !== "deep_audit" && <span className="text-sm font-normal text-gray-400">/mo</span>}
               </span>
             </div>
@@ -256,7 +233,7 @@ function CheckoutContent() {
                   Processing...
                 </>
               ) : (
-                `Pay ₹${displayAmount.toLocaleString('en-IN')}`
+                `Pay $${displayAmount.toLocaleString("en-US")}`
               )}
             </Button>
             <p className="text-xs text-gray-500 text-center">

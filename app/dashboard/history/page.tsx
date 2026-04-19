@@ -102,10 +102,7 @@ export default function HistoryPage() {
   const [audits, setAudits] = useState<Audit[]>([]);
   const [loading, setLoading] = useState(true);
   const [dlId, setDlId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     fetch("/api/audit/history?limit=50")
@@ -171,8 +168,6 @@ export default function HistoryPage() {
       animation: "pulse 1.5s ease-in-out infinite" 
     }} />
   );
-
-  if (!mounted) return null;
 
   // Error state
   if (error) {
@@ -242,7 +237,8 @@ export default function HistoryPage() {
           </p>
         </div>
         <Link href="/dashboard/scan"
-          style={{ 
+          prefetch={true}
+          style={{
             display: "inline-flex", 
             alignItems: "center", 
             gap: 7, 
@@ -361,8 +357,8 @@ export default function HistoryPage() {
               }}>
                 Run your first smart contract audit to see results here.
               </p>
-              <Link href="/dashboard/scan" style={{ 
-                display: "inline-flex", 
+              <Link href="/dashboard/scan" prefetch={true} style={{
+                display: "inline-flex",
                 alignItems: "center", 
                 gap: 7, 
                 padding: "10px 22px", 

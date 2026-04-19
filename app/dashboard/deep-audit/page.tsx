@@ -4,18 +4,18 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { 
-  Zap, 
-  Loader2, 
-  AlertCircle, 
-  CheckCircle, 
-  ArrowRight, 
+import { PLAN_DETAILS } from "@/lib/plans";
+import {
+  Zap,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  ArrowRight,
   FileCode,
   Brain,
   Search,
   FileText,
   CreditCard,
-  Smartphone
 } from "lucide-react";
 
 declare global {
@@ -91,7 +91,7 @@ export default function DeepAuditPage() {
       const res = await fetch("/api/payment/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "deep_audit", amount: 165000 }),
+        body: JSON.stringify({ plan: "deep_audit" }),
       });
       
       const data = await res.json();
@@ -112,8 +112,7 @@ export default function DeepAuditPage() {
         razorpay_signature: signature,
         contract_code: contractCode,
         contract_name: contractName || "Smart Contract",
-        chain: chain,
-        demo_mode: true, // Skip signature verification for test
+        chain,
       }),
     });
     
@@ -180,11 +179,8 @@ export default function DeepAuditPage() {
 
         // ✅ Prefill user data and test UPI ID
         prefill: {
-          name: session?.user?.name || "",
+          name:  session?.user?.name  || "",
           email: session?.user?.email || "",
-          contact: "",
-          method: "upi",
-          vpa: "success@razorpay"  // ⭐ Prefills UPI ID field with test ID
         },
 
         // ✅ Theme
@@ -206,11 +202,7 @@ export default function DeepAuditPage() {
             );
 
             setStep("complete");
-
-            // Brief pause so the user sees the success state, then redirect
-            setTimeout(() => {
-              router.push(`/dashboard/audit/results/${auditResult.audit_id}`);
-            }, 1500);
+            router.push(`/dashboard/audit/results/${auditResult.audit_id}`);
           } catch (err) {
             setError(err instanceof Error ? err.message : "Audit failed");
             setStep("form");
@@ -301,24 +293,6 @@ export default function DeepAuditPage() {
         textarea:focus, input:focus, select:focus { outline: none; border-color: var(--brand) !important; }
       `}</style>
       
-      {/* Test Mode Notice */}
-      <div style={{
-        marginBottom: 20,
-        padding: "12px 16px",
-        background: "rgba(16,185,129,0.08)",
-        border: "1px solid rgba(16,185,129,0.2)",
-        borderRadius: 12,
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        flexWrap: "wrap",
-      }}>
-        <Smartphone size={16} style={{ color: "#10b981" }} />
-        <span style={{ fontSize: 13, color: "#10b981" }}>
-          <strong>Test Mode:</strong> Enter UPI ID: <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4 }}>success@razorpay</code> for instant payment
-        </span>
-      </div>
-      
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <Zap size={20} style={{ color: "var(--brand-pink)" }} />
@@ -349,7 +323,7 @@ export default function DeepAuditPage() {
         <div>
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>One-time payment</div>
           <div style={{ fontSize: "clamp(28px, 6vw, 36px)", fontWeight: 800 }}>
-            ₹1,650
+            ${PLAN_DETAILS.deep_audit.displayPrice.toLocaleString("en-US")}
             <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)" }}> / audit</span>
           </div>
         </div>
@@ -501,12 +475,12 @@ contract MyContract {
           {loading ? (
             <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Processing...</>
           ) : (
-            <>Pay ₹1,650 <CreditCard size={14} /> <ArrowRight size={14} /></>
+            <>Pay ${PLAN_DETAILS.deep_audit.displayPrice.toLocaleString("en-US")} <CreditCard size={14} /> <ArrowRight size={14} /></>
           )}
         </button>
         
         <p style={{ marginTop: 16, fontSize: 11, color: "var(--text-disabled)", textAlign: "center" }}>
-          Secure payment powered by Razorpay. Enter UPI ID: <strong>success@razorpay</strong> for test payment.
+          Secure payment powered by Razorpay · Cards, UPI &amp; netbanking accepted
         </p>
       </div>
     </div>

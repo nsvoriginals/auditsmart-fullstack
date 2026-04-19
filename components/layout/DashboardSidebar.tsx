@@ -2,8 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { PLAN_DETAILS } from "@/lib/plans";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   History,
@@ -38,22 +40,51 @@ interface SidebarProps {
 
 function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void }) {
   const pathname = usePathname();
-  const plan = (user?.plan || "FREE").toUpperCase();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [planFromApi, setPlanFromApi] = useState<string | null>(null);
+  const plan = (planFromApi || (session?.user?.plan as string) || user?.plan || "FREE").toUpperCase();
+  const PLAN_LABEL: Record<string, string> = { FREE: "Free", PREMIUM: "Pro", ENTERPRISE: "Enterprise", ADMIN: "Admin" };
+  const planLabel = PLAN_LABEL[plan] ?? plan;
   const [remaining, setRemaining] = useState<number | null>(user?.auditsRemaining ?? null);
-  const [maxAudits, setMaxAudits] = useState<number>(user?.maxAudits ?? 3);
+  const [maxAudits, setMaxAudits] = useState<number>(user?.maxAudits ?? 10);
 
+  // Prefetch all nav routes on mount so clicks are instant
   useEffect(() => {
-    // Only fetch if the layout didn't supply hydrated values (e.g. auditsRemaining
-    // is undefined, meaning the server query failed or component is used standalone).
-    if (user?.auditsRemaining !== undefined) return;
+    const routes = [
+      "/dashboard",
+      "/dashboard/scan",
+      "/dashboard/history",
+      "/dashboard/audit",
+      "/dashboard/billing",
+      "/dashboard/monitor",
+      "/dashboard/settings",
+      "/dashboard/deep-audit",
+    ];
+    routes.forEach((r) => router.prefetch(r));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    fetch("/api/user/limits")
+  const fetchLimits = (bustCache = false) => {
+    fetch("/api/user/limits", { cache: bustCache ? "no-store" : "default" })
       .then((r) => r.json())
       .then((d) => {
+        if (d.plan      !== undefined) setPlanFromApi(d.plan.toUpperCase());
         if (d.remaining !== undefined) setRemaining(d.remaining);
-        if (d.limit    !== undefined) setMaxAudits(d.limit);
+        if (d.limit     !== undefined) setMaxAudits(d.limit);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    // Always fetch on mount to get fresh limits (props from layout can be stale after upgrade).
+    fetchLimits();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Re-fetch limits (with cache bust) immediately when payment completes.
+    const handler = () => fetchLimits(true);
+    window.addEventListener("plan-upgraded", handler);
+    return () => window.removeEventListener("plan-upgraded", handler);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const left = remaining ?? 0;
@@ -93,6 +124,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
       <div className="p-3 md:p-4">
         <Link
           href="/dashboard/scan"
+          prefetch={true}
           onClick={handleLinkClick}
           className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-lg text-white font-bold text-xs md:text-sm transition-opacity hover:opacity-85"
           style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
@@ -119,6 +151,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               onClick={handleLinkClick}
               className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all mb-0.5
                 ${isActive
@@ -142,6 +175,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
 
         <Link
           href="/dashboard/billing"
+          prefetch={true}
           onClick={handleLinkClick}
           className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5 text-text-secondary"
         >
@@ -151,11 +185,12 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
 
         <Link
           href="/dashboard/deep-audit"
+          prefetch={true}
           onClick={handleLinkClick}
           className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5 text-text-secondary"
         >
           <Zap size={16} className="text-brand-pink" />
-          <span>Deep Audit · $20</span>
+          <span>Deep Audit · ${PLAN_DETAILS.deep_audit.displayPrice}</span>
         </Link>
       </nav>
 
@@ -163,7 +198,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
       <div className="p-3 md:p-4 flex-shrink-0">
         <div className="rounded-xl p-3 md:p-4 bg-surface-2 border border-border">
           <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider mb-1 text-brand">
-            {plan} Plan
+            {planLabel} Plan
           </div>
           <div className="text-xl md:text-2xl font-extrabold tracking-tight text-text-primary">
             {left}

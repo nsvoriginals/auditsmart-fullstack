@@ -15,7 +15,7 @@ export async function GET() {
     const rawAudits = await prisma.audit.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
-      // Only fetch columns needed for the list — skip contractCode (can be large)
+      take: 100,
       select: {
         id: true,
         contractName: true,

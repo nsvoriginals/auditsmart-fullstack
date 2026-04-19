@@ -341,7 +341,7 @@ export default function ScanPage() {
             <p style={{ fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 600, color: "#ca8a04", fontFamily: "'Satoshi', sans-serif" }}>Limited audits remaining</p>
             <p style={{ fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
               {auditsLeft} audit{auditsLeft !== 1 ? "s" : ""} remaining this month.{" "}
-              <Link href="/pricing" style={{ color: "var(--brand)", textDecoration: "underline" }}>Upgrade</Link>
+              <Link href="/dashboard/billing" prefetch={true} style={{ color: "var(--brand)", textDecoration: "underline" }}>Upgrade</Link>
             </p>
           </div>
         </div>
@@ -353,7 +353,7 @@ export default function ScanPage() {
           <div>
             <p style={{ fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 600, color: "#ef4444", fontFamily: "'Satoshi', sans-serif" }}>Audit limit reached</p>
             <p style={{ fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
-              <Link href="/pricing" style={{ color: "var(--brand)", textDecoration: "underline" }}>Upgrade your plan</Link> to run more audits.
+              <Link href="/dashboard/billing" prefetch={true} style={{ color: "var(--brand)", textDecoration: "underline" }}>Upgrade your plan</Link> to run more audits.
             </p>
           </div>
         </div>
