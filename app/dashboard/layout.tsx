@@ -29,15 +29,20 @@ export default async function DashboardLayout({
         where: { userId, createdAt: { gte: startOfMonth } },
       });
 
-      if (plan === "ENTERPRISE" || plan === "ADMIN") {
+      if (plan === "ADMIN") {
         auditsRemaining = null; // unlimited
         maxAudits       = 999;
-      } else if (plan === "PREMIUM") {
+      } else if (plan === "ENTERPRISE") {
         maxAudits       = 20;
         auditsRemaining = Math.max(0, 20 - used);
+      } else if (plan === "PREMIUM") {
+        maxAudits       = 15;
+        auditsRemaining = Math.max(0, 15 - used);
       } else {
-        maxAudits       = 3;
-        auditsRemaining = Math.max(0, 3 - used);
+        // FREE: lifetime limit — count all audits, not just this month
+        const totalUsed = await prisma.audit.count({ where: { userId } });
+        maxAudits       = 10;
+        auditsRemaining = Math.max(0, 10 - totalUsed);
       }
     } catch {
       // Non-fatal — sidebar will show 0 as fallback

@@ -4,7 +4,11 @@
       "Bash(pnpm type-check *)",
       "Bash(ls E:/test/auditsmart/next.config*)",
       "Bash(cat E:/test/auditsmart/next.config.*)",
-      "Bash(cat E:/test/auditsmart/tailwind.config.*)"
+      "Bash(cat E:/test/auditsmart/tailwind.config.*)",
+      "Bash(xargs ls *)",
+      "Bash(npm run *)",
+      "Bash(npm audit *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

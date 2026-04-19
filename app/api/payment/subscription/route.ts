@@ -4,11 +4,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// Audits allowed per month per plan
+// Must match scan/route.ts enforcement and limits/route.ts
 const PLAN_AUDIT_LIMITS: Record<string, number> = {
-  FREE:       3,
-  PREMIUM:    50,
-  ENTERPRISE: Infinity,
+  FREE:       10, // 10 lifetime
+  PREMIUM:    15, // 15 per month
+  ENTERPRISE: 20, // 20 per month
   ADMIN:      Infinity,
 };
 
@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
     const payments = await prisma.payment.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      take: 10,
       select: {
         id: true,
         plan: true,
@@ -85,21 +86,22 @@ export async function GET(req: NextRequest) {
 
     const paymentHistory = payments.map((p) => ({
       id:         p.id,
-      plan:       p.plan.toLowerCase(),             // "free" | "premium" | "enterprise"
-      amount_inr: Math.round(p.amount / 100),       // paise → ₹
+      plan:       p.plan.toLowerCase(),
+      amount_inr: Math.round(p.amount / 100),         // paise → ₹
       status:     p.status,
       date:       p.createdAt.toISOString(),
     }));
 
     // ── 3. Response ──────────────────────────────────────────────────────────
     return NextResponse.json({
-      plan:             planName.toLowerCase(),
-      is_premium:       isPremium,
+      plan:                planName.toLowerCase(),
+      is_premium:          isPremium,
       status,
-      expires_at:       sub?.currentPeriodEnd?.toISOString() ?? null,
-      days_remaining:   daysRemaining,
-      audits_remaining: auditsRemaining,
-      payment_history:  paymentHistory,
+      expires_at:          sub?.currentPeriodEnd?.toISOString() ?? null,
+      days_remaining:      daysRemaining,
+      audits_remaining:    auditsRemaining,
+      cancel_at_period_end: sub?.cancelAtPeriodEnd ?? false,
+      payment_history:     paymentHistory,
     });
   } catch (error) {
     console.error("GET /api/payment/subscription error:", error);

@@ -201,6 +201,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const plan = subscription.plan;
 
+    // Block cancelled paid subscriptions (FREE is always allowed)
+    if (plan !== "FREE" && subscription.status !== "ACTIVE") {
+      return NextResponse.json({
+        error: "SUBSCRIPTION_INACTIVE",
+        message: "Your subscription is no longer active. Please renew to continue.",
+        upgradeUrl: "/dashboard/billing",
+      }, { status: 403 });
+    }
+
     // H-03: Check plan limits (PER-USER, not global)
     const startOfMonth = new Date();
     startOfMonth.setDate(1);

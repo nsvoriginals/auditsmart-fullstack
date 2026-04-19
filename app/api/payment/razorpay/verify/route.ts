@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PLAN_DETAILS, mapPublicPlanToUserPlan, isPublicPlan } from "@/lib/plans";
 import crypto from "crypto";
 
 // B-07: Verify Razorpay signature
@@ -18,7 +19,7 @@ function verifyRazorpaySignature(
       .createHmac("sha256", secret)
       .update(body)
       .digest("hex");
-    
+
     return crypto.timingSafeEqual(
       Buffer.from(expectedSignature),
       Buffer.from(signature)
@@ -28,20 +29,6 @@ function verifyRazorpaySignature(
     return false;
   }
 }
-
-// Plan price mapping (in paise)
-const PLAN_PRICES: Record<string, number> = {
-  pro: 100,        // ₹1.00 (TESTING) - Change to 99000 for production
-  enterprise: 200, // ₹2.00 (TESTING) - Change to 499000 for production
-  deep_audit: 300, // ₹3.00 (TESTING) - Change to 165000 for production
-};
-
-// Plan to role mapping (matches your UserRole enum)
-const PLAN_TO_ROLE: Record<string, string> = {
-  pro: "PREMIUM",
-  enterprise: "ENTERPRISE",
-  deep_audit: "PREMIUM",
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate plan is valid
-    if (!PLAN_PRICES[plan]) {
+    if (!isPublicPlan(plan) || plan === "free") {
       return NextResponse.json(
         { error: "Invalid plan selected" },
         { status: 400 }
@@ -122,9 +109,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get plan details
-    const userRole = PLAN_TO_ROLE[plan] as "FREE" | "PREMIUM" | "ENTERPRISE" | "ADMIN";
-    const amount = PLAN_PRICES[plan];
+    // Get plan details from single source of truth
+    const planDetails = PLAN_DETAILS[plan as keyof typeof PLAN_DETAILS];
+    const userRole = mapPublicPlanToUserPlan(plan as any);
+    const amount = planDetails.amountInPaise;
 
     // Calculate subscription end date
     const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

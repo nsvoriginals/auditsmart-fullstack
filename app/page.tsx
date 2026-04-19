@@ -103,7 +103,7 @@ const STEPS = [
 const PLANS = [
   {
     name: "Free",
-    price: "₹0",
+    price: "$0",
     period: "/ month",
     desc: "3 audits · forever",
     feats: ["3 audits / month", "8 Groq AI agents", "PDF reports", "Backdoor detection", "Public share link"],
@@ -115,7 +115,7 @@ const PLANS = [
   },
   {
     name: "Pro",
-    price: "₹2,499",
+    price: "$19",
     period: "/ month",
     desc: "15 audits / month",
     feats: ["Everything in Free"],
@@ -128,7 +128,7 @@ const PLANS = [
   },
   {
     name: "Enterprise",
-    price: "₹4,199",
+    price: "$29",
     period: "/ month",
     desc: "20 audits / month",
     feats: ["Everything in Pro"],
@@ -140,7 +140,7 @@ const PLANS = [
   },
   {
     name: "Deep Audit",
-    price: "₹1,699",
+    price: "$20",
     period: "/ audit",
     desc: "One-time · any plan",
     feats: ["Claude Opus (max power)"],
@@ -979,7 +979,7 @@ export default function LandingPage() {
                       borderLeft: "1px solid var(--border)",
                       borderRight: "1px solid var(--border)"
                     }}>
-                      Pro <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$29</span>
+                      Pro <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$19</span>
                     </th>
                     <th style={{
                       padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
@@ -989,7 +989,7 @@ export default function LandingPage() {
                       fontWeight: 700,
                       color: "var(--text-primary)"
                     }}>
-                      Enterprise <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$49</span>
+                      Enterprise <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontWeight: 400 }}>$29</span>
                     </th>
                     <th style={{
                       padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",

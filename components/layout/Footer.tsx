@@ -234,6 +234,7 @@ export function Footer() {
 
           {/* Copyright */}
           <p
+            suppressHydrationWarning
             className="text-[11px] md:text-xs text-center order-3 md:order-2"
             style={{ color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}
           >

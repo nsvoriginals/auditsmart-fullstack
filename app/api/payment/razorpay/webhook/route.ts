@@ -1,16 +1,15 @@
 // app/api/payment/razorpay/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { mapPublicPlanToUserPlan, isPublicPlan } from "@/lib/plans";
 import crypto from "crypto";
 
-// B-07: Webhook signature verification (same logic as verify route)
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
   try {
     const expectedSignature = crypto
       .createHmac("sha256", secret)
       .update(payload)
       .digest("hex");
-    
     return crypto.timingSafeEqual(
       Buffer.from(expectedSignature),
       Buffer.from(signature)
@@ -19,13 +18,6 @@ function verifyWebhookSignature(payload: string, signature: string, secret: stri
     return false;
   }
 }
-
-// Plan to role mapping
-const PLAN_TO_ROLE: Record<string, "FREE" | "PREMIUM" | "ENTERPRISE" | "ADMIN"> = {
-  pro: "PREMIUM",
-  enterprise: "ENTERPRISE",
-  deep_audit: "PREMIUM",
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -103,14 +95,14 @@ async function handlePaymentCaptured(payment: any) {
   }
 
   const userId = notes?.userId;
-  const plan = notes?.plan;
+  const plan   = notes?.plan;
 
   if (!userId || !plan) {
     console.error(`❌ Missing userId or plan in notes for order ${order_id}`);
     return;
   }
 
-  const userRole = PLAN_TO_ROLE[plan] || "PREMIUM";
+  const userRole = isPublicPlan(plan) ? mapPublicPlanToUserPlan(plan) : "PREMIUM";
   const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   // Update everything in a transaction
@@ -165,7 +157,7 @@ async function handlePaymentCaptured(payment: any) {
       data: {
         userId,
         action: "WEBHOOK_PAYMENT_SUCCESS",
-        details: `Order: ${order_id}, Plan: ${plan}, Amount: ${amount/100} INR`,
+        details: `Order: ${order_id}, Plan: ${plan}, Amount: ₹${(amount/100).toFixed(2)} INR`,
       },
     }),
   ]);

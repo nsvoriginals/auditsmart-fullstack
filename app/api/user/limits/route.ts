@@ -33,51 +33,50 @@ export async function GET(req: NextRequest) {
     // Get the plan from subscription (matches UserRole enum: FREE, PREMIUM, ENTERPRISE, ADMIN)
     const plan = subscription.plan;
     
-    // Calculate audits this month
+    // Calculate monthly audits (used for PREMIUM/ENTERPRISE)
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
     const auditsThisMonth = await prisma.audit.count({
-      where: {
-        userId,
-        createdAt: {
-          gte: startOfMonth
-        }
-      }
+      where: { userId, createdAt: { gte: startOfMonth } },
     });
 
-    // Determine limits based on plan (using your UserRole enum)
+    // FREE plan tracks lifetime total — all other plans track monthly
+    const totalAudits = plan === "FREE"
+      ? await prisma.audit.count({ where: { userId } })
+      : auditsThisMonth;
+
+    // Limits must match scan/route.ts enforcement values
     let limit: number | null = null;
     let remaining: number | null = null;
-    
+
     switch (plan) {
       case "FREE":
-        limit = 3;
-        remaining = Math.max(0, limit - auditsThisMonth);
+        limit = 10; // 10 lifetime audits
+        remaining = Math.max(0, limit - totalAudits);
         break;
       case "PREMIUM":
-        limit = 20;  // Premium users get 20 audits per month
+        limit = 15; // 15 per month
         remaining = Math.max(0, limit - auditsThisMonth);
         break;
       case "ENTERPRISE":
-        limit = null;  // Unlimited audits
-        remaining = null;
+        limit = 20; // 20 per month
+        remaining = Math.max(0, limit - auditsThisMonth);
         break;
       case "ADMIN":
-        limit = null;  // Unlimited audits for admins
+        limit = null;
         remaining = null;
         break;
       default:
-        // Fallback to FREE plan
-        limit = 3;
-        remaining = Math.max(0, limit - auditsThisMonth);
+        limit = 10;
+        remaining = Math.max(0, limit - totalAudits);
     }
 
     return NextResponse.json(
       {
         plan,
-        auditsThisMonth,
+        auditsThisMonth: plan === "FREE" ? totalAudits : auditsThisMonth,
         limit,
         remaining,
         canAudit: remaining === null || remaining > 0,
@@ -85,10 +84,7 @@ export async function GET(req: NextRequest) {
       },
       {
         headers: {
-          // Cache per-user for 60 s; revalidate stale in background for 30 s more.
-          // This eliminates redundant DB hits when the sidebar + scan page both
-          // fetch limits on the same page load.
-          "Cache-Control": "private, max-age=60, stale-while-revalidate=30",
+          "Cache-Control": "private, no-store",
         },
       }
     );

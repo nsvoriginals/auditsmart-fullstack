@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    const remainingAudits = subscription?.plan === "FREE" 
-      ? Math.max(0, 3 - currentMonthAudits)
+    const remainingAudits = subscription?.plan === "FREE"
+      ? Math.max(0, 10 - totalAudits)
       : null;
 
     return NextResponse.json(
