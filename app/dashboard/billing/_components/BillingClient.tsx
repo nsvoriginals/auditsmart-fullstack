@@ -37,8 +37,10 @@ const PLAN_META: Record<PaidPlan, { icon: React.ElementType; color: string; bg: 
 
 const PLAN_BADGE: Record<string, { text: string; style: React.CSSProperties }> = {
   free:       { text: "Free",       style: { background: "var(--elevated)", color: "var(--text-muted)",    border: "1px solid var(--border)" } },
+  pro:        { text: "Pro",        style: { background: "rgba(99,102,241,0.12)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" } },
   premium:    { text: "Pro",        style: { background: "rgba(99,102,241,0.12)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" } },
   enterprise: { text: "Enterprise", style: { background: "rgba(139,92,246,0.12)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.2)" } },
+  deep_audit: { text: "Deep Audit", style: { background: "rgba(236,72,153,0.12)", color: "#f9a8d4", border: "1px solid rgba(236,72,153,0.2)" } },
   admin:      { text: "Admin",      style: { background: "rgba(16,185,129,0.12)", color: "#6ee7b7",  border: "1px solid rgba(16,185,129,0.2)" } },
 };
 

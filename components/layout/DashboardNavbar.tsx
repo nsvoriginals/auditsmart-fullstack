@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import {
-  Bell,
   Search,
   Menu,
   User,
@@ -124,18 +123,6 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
 
       {/* Right section */}
       <div className="flex items-center gap-1 md:gap-2 ml-auto">
-        {/* Notification bell */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative h-8 w-8 text-text-muted hover:text-text-primary flex-shrink-0"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white bg-brand">
-            3
-          </span>
-        </Button>
-
         {/* Plan badge — desktop only */}
         <span className={`hidden md:inline-flex items-center rounded px-2 py-0.5 text-[11px] font-medium font-sans ${planBadge}`}>
           {planLabel} Plan
