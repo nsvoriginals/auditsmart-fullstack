@@ -506,6 +506,68 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* ── POWERED BY ── */}
+      <section
+        style={{
+          padding: "40px",
+          background: "var(--surface-1)",
+          borderTop: "1px solid var(--border)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "var(--text-disabled)",
+              marginBottom: 32,
+              fontFamily: "monospace",
+            }}
+          >
+            Powered by World-Class AI
+          </p>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            {POWERED.map((p, i) => (
+              <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    padding: "16px 24px",
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 14,
+                    transition: "border-color var(--base)",
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-strong)")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)")}
+                >
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>
+                    {p.name}
+                  </p>
+                  <p style={{ fontSize: 10, color: "var(--text-disabled)", fontFamily: "monospace" }}>
+                    {p.sub}
+                  </p>
+                </div>
+                {i < POWERED.length - 1 && (
+                  <div style={{ width: 1, height: 40, background: "var(--border)" }} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── FEATURES ── */}
       <section style={{ padding: "100px 40px" }} id="features">
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -1120,68 +1182,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      {/* ── POWERED BY ── */}
-      <section
-        style={{
-          padding: "40px",
-          background: "var(--surface-1)",
-          borderTop: "1px solid var(--border)",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <p
-            style={{
-              textAlign: "center",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: "var(--text-disabled)",
-              marginBottom: 32,
-              fontFamily: "monospace",
-            }}
-          >
-            Powered by World-Class AI
-          </p>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
-            {POWERED.map((p, i) => (
-              <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    padding: "16px 24px",
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 14,
-                    transition: "border-color var(--base)",
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-strong)")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)")}
-                >
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>
-                    {p.name}
-                  </p>
-                  <p style={{ fontSize: 10, color: "var(--text-disabled)", fontFamily: "monospace" }}>
-                    {p.sub}
-                  </p>
-                </div>
-                {i < POWERED.length - 1 && (
-                  <div style={{ width: 1, height: 40, background: "var(--border)" }} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <Footer />
     </div>
   );
