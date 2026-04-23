@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     switch (plan) {
       case "FREE":
-        limit = 10; // 10 lifetime audits
+        limit = 3; // 3 lifetime audits
         remaining = Math.max(0, limit - totalAudits);
         break;
       case "PREMIUM":
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
         remaining = null;
         break;
       default:
-        limit = 10;
+        limit = 3;
         remaining = Math.max(0, limit - totalAudits);
     }
 

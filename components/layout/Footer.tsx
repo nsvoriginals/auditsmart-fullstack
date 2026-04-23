@@ -81,10 +81,24 @@ export function Footer() {
       return;
     }
     setSubscribing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast.success("Subscribed successfully!");
-    setEmail("");
-    setSubscribing(false);
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Something went wrong. Please try again.");
+      } else {
+        toast.success(data.message ?? "Subscribed successfully!");
+        setEmail("");
+      }
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   return (

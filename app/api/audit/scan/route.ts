@@ -9,7 +9,7 @@ import { nanoid } from "nanoid";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const MAX_CONTRACT_SIZE = 50_000; // B-03: 50KB limit
-const FREE_PLAN_LIFETIME_LIMIT = 10; // H-03: From briefing
+const FREE_PLAN_LIFETIME_LIMIT = 3;
 const PRO_PLAN_MONTHLY_LIMIT = 15;
 const ENTERPRISE_PLAN_MONTHLY_LIMIT = 20;
 
