@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm prisma generate && pnpm next build",
-  "installCommand": "pnpm install",
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": "nextjs",
   "regions": ["iad1"],
   "env": {
