@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
   // CORS headers for API routes
   if (path.startsWith('/api/')) {
     const allowedOrigin = process.env.NODE_ENV === 'production'
-      ? (process.env.NEXT_PUBLIC_APP_URL || process.env.ALLOWED_ORIGIN || 'https://zylithium.org')
+      ? (process.env.NEXT_PUBLIC_APP_URL || process.env.ALLOWED_ORIGIN || 'https://auditsmart.io')
       : 'http://localhost:3000';
     response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -145,11 +145,11 @@ export async function middleware(request: NextRequest) {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com https://analytics.ahrefs.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com",
+      "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://analytics.ahrefs.com",
       "frame-src https://api.razorpay.com https://checkout.razorpay.com",
       "object-src 'none'",
       "base-uri 'self'",
