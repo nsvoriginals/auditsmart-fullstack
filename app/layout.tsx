@@ -59,6 +59,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
+        <script
+          src="https://analytics.ahrefs.com/analytics.js"
+          data-key="CWDu0DcX0aQfQV90hPlbgQ"
+          async
+        />
         <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
         <meta name="color-scheme" content="dark light" />

@@ -39,7 +39,7 @@ export const PLAN_DETAILS = {
 
 export const PLAN_FEATURES: Record<PublicPlan, string[]> = {
   free: [
-    "10 audits lifetime",
+    "3 audits lifetime",
     "Groq AI analysis",
     "Basic vulnerability detection",
     "PDF audit report",
@@ -75,7 +75,7 @@ export const PLAN_FEATURES: Record<PublicPlan, string[]> = {
 };
 
 export const PLAN_LIMITS: Record<UserPlan, number> = {
-  FREE: 10,
+  FREE: 3,
   PREMIUM: 15,
   ENTERPRISE: 20,
   ADMIN: Number.POSITIVE_INFINITY,
