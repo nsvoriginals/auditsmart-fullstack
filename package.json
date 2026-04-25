@@ -63,6 +63,15 @@
     "vaul": "^1.1.2",
     "zod": "^4.3.6"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "core-js",
+      "unrs-resolver"
+    ]
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
     "@types/bcryptjs": "^2.4.6",
