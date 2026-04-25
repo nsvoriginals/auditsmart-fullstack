@@ -289,12 +289,14 @@ model Notification {
 
 // Newsletter Subscribers
 model NewsletterSubscriber {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  subscribedAt DateTime @default(now())
-  isActive     Boolean  @default(true)
+  id               String   @id @default(cuid())
+  email            String   @unique
+  subscribedAt     DateTime @default(now())
+  isActive         Boolean  @default(true)
+  unsubscribeToken String   @unique @default(cuid())
 
   @@index([email])
+  @@index([unsubscribeToken])
 }
 
 // Audit Log

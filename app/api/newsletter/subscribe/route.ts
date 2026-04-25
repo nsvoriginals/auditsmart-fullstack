@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail } from "@/lib/resend";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,16 +25,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: "You're already subscribed!" });
       }
       // Re-activate if previously unsubscribed
-      await prisma.newsletterSubscriber.update({
+      const updated = await prisma.newsletterSubscriber.update({
         where: { email },
         data: { isActive: true, subscribedAt: new Date() },
       });
-    } else {
-      await prisma.newsletterSubscriber.create({ data: { email } });
+      sendWelcomeEmail(email, updated.unsubscribeToken).catch((err) =>
+        console.error("Welcome email failed:", err)
+      );
+      return NextResponse.json({
+        success: true,
+        message: "Welcome back! Check your inbox.",
+      });
     }
 
-    // Fire-and-forget welcome email
-    sendWelcomeEmail(email).catch((err) =>
+    const subscriber = await prisma.newsletterSubscriber.create({
+      data: {
+        email,
+        unsubscribeToken: crypto.randomUUID(),
+      },
+    });
+
+    sendWelcomeEmail(email, subscriber.unsubscribeToken).catch((err) =>
       console.error("Welcome email failed:", err)
     );
 
