@@ -41,7 +41,7 @@ export function NewsletterEmail({
       <Body style={body}>
         <Container style={container}>
           <Section style={header}>
-            <Text style={logo}>The Fearless</Text>
+            <Text style={logo}>AuditSmart</Text>
           </Section>
 
           <Section style={content}>
@@ -56,7 +56,7 @@ export function NewsletterEmail({
 
           <Section style={footer}>
             <Text style={footerText}>
-              You received this because you subscribed to The Fearless newsletter.{" "}
+              You received this because you subscribed at auditsmart.org.{" "}
               <a href={unsubscribeUrl} style={unsubscribeLink}>
                 Unsubscribe
               </a>

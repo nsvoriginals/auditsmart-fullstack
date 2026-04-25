@@ -30,23 +30,23 @@ export function WelcomeEmail({ unsubscribeUrl }: WelcomeEmailProps) {
           fontStyle="normal"
         />
       </Head>
-      <Preview>Welcome to The Fearless — you're in.</Preview>
+      <Preview>Welcome to AuditSmart — you're on the list.</Preview>
       <Body style={body}>
         <Container style={container}>
           <Section style={header}>
-            <Text style={logo}>The Fearless</Text>
+            <Text style={logo}>AuditSmart</Text>
           </Section>
 
           <Section style={content}>
             <Text style={heading}>You're in.</Text>
             <Text style={paragraph}>
-              Welcome to The Fearless newsletter. You'll get updates on smart
-              contract security, audits, and Web3 insights — straight to your
-              inbox.
+              Welcome to AuditSmart. You'll get the latest smart contract
+              vulnerability reports, security best practices, and Web3 insights
+              — straight to your inbox.
             </Text>
 
-            <Button href="https://thefearless.xyz" style={button}>
-              Visit The Fearless
+            <Button href="https://auditsmart.org" style={button}>
+              Visit AuditSmart
             </Button>
           </Section>
 
@@ -54,7 +54,7 @@ export function WelcomeEmail({ unsubscribeUrl }: WelcomeEmailProps) {
 
           <Section style={footer}>
             <Text style={footerText}>
-              You received this because you subscribed to The Fearless newsletter.{" "}
+              You received this because you subscribed at auditsmart.org.{" "}
               <a href={unsubscribeUrl} style={unsubscribeLink}>
                 Unsubscribe
               </a>
