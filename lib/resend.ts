@@ -7,10 +7,10 @@ export const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM = "The Fearless <newsletter@thefearless.xyz>";
+const FROM = "AuditSmart <newsletter@auditsmart.org>";
 
 function unsubscribeUrl(token: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://thefearless.xyz";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://auditsmart.org";
   return `${base}/api/newsletter/unsubscribe?token=${token}`;
 }
 
@@ -29,7 +29,7 @@ export async function sendWelcomeEmail(
     await resend.emails.send({
       from: FROM,
       to: email,
-      subject: "You're in. Welcome to The Fearless.",
+      subject: "You're in. Welcome to AuditSmart.",
       html,
     });
   } catch (err) {
