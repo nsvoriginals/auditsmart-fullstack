@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
+import { TrialPopup } from "@/components/TrialPopup";
 
 // Accept server-side session so SessionProvider pre-populates the cache.
 // Without this, every "use client" page fires GET /api/auth/session on mount
@@ -13,5 +14,10 @@ export default function Providers({
   children: React.ReactNode;
   session?: Session | null;
 }) {
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  return (
+    <SessionProvider session={session}>
+      {children}
+      <TrialPopup />
+    </SessionProvider>
+  );
 }

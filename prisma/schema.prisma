@@ -89,6 +89,9 @@ model User {
   apiKeys            ApiKey[]
   auditLogs          AuditLog[]
 
+  // Trial tracking
+  hasUsedTrial       Boolean  @default(false)
+
   // Usage tracking
   totalAudits        Int      @default(0)
   currentMonthAudits Int      @default(0)
@@ -135,6 +138,7 @@ model Subscription {
   currentPeriodStart     DateTime           @default(now())
   currentPeriodEnd       DateTime
   cancelAtPeriodEnd      Boolean            @default(false)
+  isTrial                Boolean            @default(false)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
