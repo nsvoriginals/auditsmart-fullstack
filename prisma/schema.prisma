@@ -18,6 +18,7 @@ model User {
   razorpayCustomerId String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  hasUsedTrial       Boolean             @default(false)
   totalAudits        Int                 @default(0)
   currentMonthAudits Int                 @default(0)
   lastAuditReset     DateTime            @default(now())
@@ -70,6 +71,7 @@ model Subscription {
   currentPeriodStart     DateTime           @default(now())
   currentPeriodEnd       DateTime
   cancelAtPeriodEnd      Boolean            @default(false)
+  isTrial                Boolean            @default(false)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)

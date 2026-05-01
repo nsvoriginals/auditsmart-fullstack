@@ -1,14 +1,14 @@
 "use client";
 // app/pricing/page.tsx
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { toast } from "sonner";
-import { Check, X, Sparkles, Zap, Shield, Crown, ArrowRight, Loader2 } from "lucide-react";
+import { Check, X, Sparkles, Zap, Shield, Crown, ArrowRight, Loader2, Gift } from "lucide-react";
 
 declare global {
   interface Window {
@@ -26,20 +26,20 @@ const PLANS = [
     description: "Try before you commit", icon: Shield,
     features: ["3 audits included", "Groq LLaMA + Gemini analysis", "PDF audit report", "Community support"],
     missing: ["Fix suggestions", "Exploit scenarios", "Claude AI models"],
-    cta: "Start free", ctaHref: "/register", featured: false,
+    cta: "Start free", ctaHref: "/register", featured: false, trialEligible: false,
   },
   {
     id: "pro", name: "Pro", price: "$19", period: "/month",
     description: "For active developers", icon: Zap,
     features: ["20 audits / month", "Groq + Claude Haiku", "PDF audit reports", "Fix suggestions with code", "Deployment verdict", "Email support"],
     missing: ["Exploit scenarios", "Claude Sonnet / Opus"],
-    cta: "Upgrade to Pro", featured: true,
+    cta: "Upgrade to Pro", featured: true, trialEligible: true,
   },
   {
     id: "enterprise", name: "Enterprise", price: "$29", period: "/month",
     description: "For teams shipping to mainnet", icon: Crown,
     features: ["50 audits / month", "Groq + Claude Sonnet", "PDF audit reports", "Fix suggestions with code", "Full exploit scenarios", "Deployment verdict", "API access", "Priority support"],
-    missing: [], cta: "Upgrade to Enterprise", featured: false,
+    missing: [], cta: "Upgrade to Enterprise", featured: false, trialEligible: true,
   },
 ];
 
@@ -57,6 +57,7 @@ const FAQS = [
   { q: "What payment methods do you accept?", a: "We accept all major credit cards, debit cards, UPI, and net banking via Razorpay." },
   { q: "Is there a long-term contract?", a: "No, all plans are month-to-month. Cancel anytime with no hidden fees." },
   { q: "Do you offer team discounts?", a: "Yes, for Enterprise plans we offer volume discounts. Contact sales for a custom quote." },
+  { q: "How does the free trial work?", a: "You get 3 days of full access on your chosen paid plan at $0.00. After the trial, your plan renews at the regular monthly price. Cancel before day 4 and you won't be charged." },
 ];
 
 const annualPrice = (p: string) => {
@@ -64,14 +65,18 @@ const annualPrice = (p: string) => {
   return `$${(parseInt(m[1].replace(/,/g, "")) * 10).toLocaleString()}`;
 };
 
-export default function PricingPage() {
+function PricingContent() {
   const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isTrial = searchParams.get("trial") === "true";
+
   const [paying, setPaying] = useState<string | null>(null);
+  const [startingTrial, setStartingTrial] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
 
   const handleUpgrade = async (planId: string) => {
-    if (!session) { router.push("/login?callbackUrl=/pricing"); return; }
+    if (!session) { router.push(`/login?callbackUrl=/pricing`); return; }
     if (session.user?.plan === planId) { toast.info("You're already on this plan"); return; }
     setPaying(planId);
     try {
@@ -96,16 +101,67 @@ export default function PricingPage() {
     finally { setPaying(null); }
   };
 
+  const handleStartTrial = async (planId: string) => {
+    if (!session) { router.push(`/login?callbackUrl=/pricing?trial=true`); return; }
+    setStartingTrial(planId);
+    try {
+      const res = await fetch("/api/trial/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 409) toast.error("You've already used your free trial.");
+        else toast.error(data.error ?? "Could not start trial.");
+        return;
+      }
+      toast.success(`3-day free trial started! Enjoy full ${planId} access.`);
+      setTimeout(() => router.push("/dashboard"), 1200);
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setStartingTrial(null);
+    }
+  };
+
   const card: React.CSSProperties = { background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: 28, display: "flex", flexDirection: "column", position: "relative", boxShadow: "var(--shadow-card)", transition: "box-shadow 0.2s" };
   const featuredCard: React.CSSProperties = { ...card, border: "1px solid rgba(99,102,241,0.35)", boxShadow: "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" };
   const btnPrimary: React.CSSProperties = { width: "100%", padding: "11px 0", background: "var(--brand)", color: "#fff", border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 };
   const btnGhost: React.CSSProperties = { ...btnPrimary, background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)" };
+  const btnTrial: React.CSSProperties = { ...btnPrimary, background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" };
 
   return (
     <div style={{ background: "var(--background)", minHeight: "100vh", color: "var(--text-primary)" }}>
       <Navbar />
 
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "80px 24px" }}>
+
+        {/* Trial Banner */}
+        {isTrial && (
+          <div style={{
+            background: "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.12) 100%)",
+            border: "1px solid rgba(99,102,241,0.3)",
+            borderRadius: "var(--radius-lg)",
+            padding: "18px 24px",
+            marginBottom: 40,
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+          }}>
+            <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Gift size={16} style={{ color: "var(--brand)" }} />
+            </div>
+            <div>
+              <div style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, fontSize: 14, color: "var(--text-primary)", marginBottom: 2 }}>
+                You qualify for a 3-day free trial
+              </div>
+              <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 12, color: "var(--text-muted)" }}>
+                Start any paid plan at $0.00 today. Full access for 3 days — cancel before day 4 and you&apos;re never charged.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 48 }}>
@@ -114,22 +170,26 @@ export default function PricingPage() {
           </div>
           <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,5vw,52px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 12 }}>Simple, transparent pricing</h1>
           <p style={{ fontSize: 14, color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.8, fontFamily: "'Satoshi', sans-serif" }}>
-            Start free with 3 audits. Upgrade when your contracts need more protection.
+            {isTrial
+              ? "Start free for 3 days on any paid plan. No charge until your trial ends."
+              : "Start free with 3 audits. Upgrade when your contracts need more protection."}
           </p>
         </div>
 
         {/* Toggle */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 48 }}>
-          <div style={{ display: "inline-flex", background: "var(--elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 4, gap: 4 }}>
-            {(["monthly", "yearly"] as const).map(v => (
-              <button key={v} onClick={() => setBillingInterval(v)}
-                style={{ padding: "8px 20px", borderRadius: "var(--radius-sm)", border: "none", background: billingInterval === v ? "var(--card)" : "transparent", color: billingInterval === v ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, cursor: "pointer", boxShadow: billingInterval === v ? "var(--shadow-xs)" : "none", fontWeight: billingInterval === v ? 500 : 400 }}>
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-                {v === "yearly" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--brand)", background: "var(--brand-faint)", borderRadius: 100, padding: "2px 7px" }}>Save 20%</span>}
-              </button>
-            ))}
+        {!isTrial && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 48 }}>
+            <div style={{ display: "inline-flex", background: "var(--elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 4, gap: 4 }}>
+              {(["monthly", "yearly"] as const).map(v => (
+                <button key={v} onClick={() => setBillingInterval(v)}
+                  style={{ padding: "8px 20px", borderRadius: "var(--radius-sm)", border: "none", background: billingInterval === v ? "var(--card)" : "transparent", color: billingInterval === v ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", fontSize: 13, cursor: "pointer", boxShadow: billingInterval === v ? "var(--shadow-xs)" : "none", fontWeight: billingInterval === v ? 500 : 400 }}>
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                  {v === "yearly" && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--brand)", background: "var(--brand-faint)", borderRadius: 100, padding: "2px 7px" }}>Save 20%</span>}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Plans grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 56 }}>
@@ -138,15 +198,21 @@ export default function PricingPage() {
             const isCurrent = session?.user?.plan === plan.id;
             const price = billingInterval === "yearly" && plan.id !== "free" ? annualPrice(plan.price) : plan.price;
             const period = billingInterval === "yearly" && plan.id !== "free" ? "/year" : plan.period;
+            const isTrialTarget = isTrial && plan.trialEligible;
 
             return (
               <div key={plan.id} style={plan.featured ? featuredCard : card}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card-hover)"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = plan.featured ? "0 0 0 1px rgba(99,102,241,0.1), var(--shadow-card)" : "var(--shadow-card)"}
               >
-                {plan.featured && (
+                {plan.featured && !isTrialTarget && (
                   <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", background: "var(--brand)", color: "#fff", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100, fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}>
                     Most Popular
+                  </div>
+                )}
+                {isTrialTarget && (
+                  <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100, fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}>
+                    3-Day Free Trial
                   </div>
                 )}
 
@@ -154,9 +220,20 @@ export default function PricingPage() {
                   <Icon size={16} />
                 </div>
                 <div style={{ fontSize: 10, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4, fontFamily: "'Satoshi', sans-serif" }}>{plan.name}</div>
-                <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 34, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
-                  {price}<span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)", marginLeft: 3, fontFamily: "'Satoshi', sans-serif" }}>{period}</span>
-                </div>
+
+                {isTrialTarget ? (
+                  <div style={{ fontFamily: "'Satoshi', sans-serif" }}>
+                    <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+                      $0.00<span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)", marginLeft: 3 }}>for 3 days</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-disabled)", marginTop: 2 }}>then {price}{period}</div>
+                  </div>
+                ) : (
+                  <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 34, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+                    {price}<span style={{ fontSize: 13, fontWeight: 400, color: "var(--text-muted)", marginLeft: 3, fontFamily: "'Satoshi', sans-serif" }}>{period}</span>
+                  </div>
+                )}
+
                 <div style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 22px", fontFamily: "'Satoshi', sans-serif" }}>{plan.description}</div>
                 <div style={{ height: 1, background: "var(--border)", marginBottom: 18 }} />
 
@@ -178,14 +255,30 @@ export default function PricingPage() {
                     isCurrent
                       ? <button style={btnGhost} disabled>Current Plan</button>
                       : <Link href={plan.ctaHref!} style={{ ...btnPrimary, textDecoration: "none" }}>{plan.cta}</Link>
-                  ) : isCurrent
-                    ? <button style={btnGhost} disabled>Current Plan</button>
-                    : (
-                      <button style={plan.featured ? btnPrimary : btnGhost} onClick={() => handleUpgrade(plan.id)} disabled={paying !== null}>
-                        {paying === plan.id ? <><Loader2 size={13} style={{ animation: "spin 0.7s linear infinite" }} /> Processing…</> : plan.cta}
-                      </button>
-                    )}
+                  ) : isCurrent ? (
+                    <button style={btnGhost} disabled>Current Plan</button>
+                  ) : isTrialTarget ? (
+                    <button
+                      style={btnTrial}
+                      onClick={() => handleStartTrial(plan.id)}
+                      disabled={startingTrial !== null}
+                    >
+                      {startingTrial === plan.id
+                        ? <><Loader2 size={13} style={{ animation: "spin 0.7s linear infinite" }} /> Starting trial…</>
+                        : <>Start Free Trial →</>}
+                    </button>
+                  ) : (
+                    <button style={plan.featured ? btnPrimary : btnGhost} onClick={() => handleUpgrade(plan.id)} disabled={paying !== null}>
+                      {paying === plan.id ? <><Loader2 size={13} style={{ animation: "spin 0.7s linear infinite" }} /> Processing…</> : plan.cta}
+                    </button>
+                  )}
                 </div>
+
+                {isTrialTarget && (
+                  <p style={{ fontSize: 10, color: "var(--text-disabled)", textAlign: "center", marginTop: 8, fontFamily: "'Satoshi', sans-serif" }}>
+                    Cancel before day 4 — no charge ever.
+                  </p>
+                )}
               </div>
             );
           })}
@@ -238,5 +331,13 @@ export default function PricingPage() {
       <Footer />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense>
+      <PricingContent />
+    </Suspense>
   );
 }
