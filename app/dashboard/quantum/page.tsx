@@ -121,13 +121,12 @@ function UpgradeGate() {
         <div style={{ padding: "clamp(20px,5vw,28px) clamp(20px,5vw,32px)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 24 }}>
             {[
-              { icon: "⚛️",  title: "Grover's Algorithm",    desc: "Quadratic speedup for vulnerability pattern search in contract bytecode" },
-              { icon: "🔁",  title: "Variational QC (VQC)", desc: "Two-layer RY/RZ circuit scores transaction risk with quantum probability" },
-              { icon: "🔀",  title: "Dual-Backend Parallel", desc: "IBM Qiskit and AWS Braket circuits run simultaneously for consensus" },
-              { icon: "📊",  title: "Unified Risk Score",    desc: "Weighted aggregation: 70% worst-case + 30% average across all 4 circuits" },
+              { title: "Grover's Algorithm",   desc: "Quadratic speedup for vulnerability pattern search in contract bytecode" },
+              { title: "Variational QC (VQC)", desc: "Two-layer RY/RZ circuit scores transaction risk with quantum probability" },
+              { title: "Dual-Backend Parallel",desc: "IBM Qiskit and AWS Braket circuits run simultaneously for consensus" },
+              { title: "Unified Risk Score",   desc: "Weighted aggregation: 70% worst-case + 30% average across all 4 circuits" },
             ].map((f) => (
               <div key={f.title} style={{ padding: "14px 16px", borderRadius: "var(--radius)", background: "var(--elevated)", border: "1px solid var(--border)" }}>
-                <div style={{ fontSize: 20, marginBottom: 6 }}>{f.icon}</div>
                 <div style={{ fontSize: "clamp(12px,3vw,13px)", fontWeight: 600, color: "var(--text-primary)", marginBottom: 4, fontFamily: "'Satoshi', sans-serif" }}>{f.title}</div>
                 <div style={{ fontSize: "clamp(11px,2.5vw,12px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", lineHeight: 1.55 }}>{f.desc}</div>
               </div>
@@ -248,8 +247,7 @@ export default function QuantumPage() {
     );
   }
 
-  const isPaid = ["PREMIUM", "ENTERPRISE", "ADMIN"].includes(userPlan);
-  if (!isPaid) return <UpgradeGate />;
+  // Plan gate disabled — available to all users for now
 
   // Running state — full-screen progress
   if (running) {
