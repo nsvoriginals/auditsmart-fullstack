@@ -17,6 +17,7 @@ import {
   Zap,
   X,
   TrendingUp,
+  Atom,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -60,6 +61,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
       "/dashboard/monitor",
       "/dashboard/settings",
       "/dashboard/deep-audit",
+      "/dashboard/quantum",
     ];
     routes.forEach((r) => router.prefetch(r));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -166,6 +168,50 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
             </Link>
           );
         })}
+
+        <div className="h-px my-3 bg-border" />
+
+        {/* ── Quantum section ── */}
+        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2 text-text-disabled">
+          Quantum
+        </p>
+
+        {(() => {
+          const isQuantumActive = pathname?.startsWith("/dashboard/quantum");
+          const isPaid = ["PREMIUM", "ENTERPRISE", "ADMIN"].includes(plan);
+          return (
+            <Link
+              href="/dashboard/quantum"
+              prefetch={true}
+              onClick={handleLinkClick}
+              className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all mb-0.5
+                ${isQuantumActive
+                  ? "bg-[rgba(168,85,247,0.07)] border border-[rgba(168,85,247,0.15)] text-purple-400"
+                  : "border border-transparent text-text-secondary"}`}
+            >
+              <Atom
+                size={16}
+                className={isQuantumActive ? "text-purple-400" : isPaid ? "text-purple-400/70" : "text-text-disabled"}
+              />
+              <span className="truncate">Quantum Audit</span>
+              {isPaid ? (
+                <span
+                  className="ml-auto flex-shrink-0"
+                  style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}
+                >
+                  Beta
+                </span>
+              ) : (
+                <span
+                  className="ml-auto flex-shrink-0"
+                  style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(0,212,255,0.08)", color: "var(--brand)", border: "1px solid rgba(0,212,255,0.15)" }}
+                >
+                  Pro+
+                </span>
+              )}
+            </Link>
+          );
+        })()}
 
         <div className="h-px my-3 bg-border" />
 
