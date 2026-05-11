@@ -2,20 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-const PAID_PLANS = new Set(["PREMIUM", "ENTERPRISE", "ADMIN"]);
-
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const plan = (((session.user as any).plan as string) || "FREE").toUpperCase();
-  if (!PAID_PLANS.has(plan)) {
-    return NextResponse.json(
-      { error: "Quantum auditing requires a Pro plan or higher." },
-      { status: 403 }
-    );
   }
 
   const quantumUrl = process.env.QUANTUM_URL;
