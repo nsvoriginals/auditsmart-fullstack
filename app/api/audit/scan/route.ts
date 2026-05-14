@@ -74,6 +74,12 @@ function mapAgentType(agentName: string): AgentType {
     claude_pro: AgentType.CLAUDE_AGENT,
     claude_enterprise: AgentType.CLAUDE_AGENT,
     claude_deep_audit: AgentType.CLAUDE_AGENT,
+    erc20_agent: AgentType.ERC20_AGENT,
+    erc721_agent: AgentType.ERC721_AGENT,
+    erc1155_agent: AgentType.ERC1155_AGENT,
+    erc4626_agent: AgentType.ERC4626_AGENT,
+    erc1967_agent: AgentType.ERC1967_AGENT,
+    erc1271_agent: AgentType.ERC1271_AGENT,
   };
   return mapping[agentName?.toLowerCase()] ?? AgentType.SECURITY;
 }
@@ -141,7 +147,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       contract_code,
       contract_name = "Smart Contract",
       chain = "ethereum",
-    } = body as { contract_code?: string; contract_name?: string; chain?: string };
+      erc_standards = [],
+    } = body as { contract_code?: string; contract_name?: string; chain?: string; erc_standards?: string[] };
 
     // Validation
     if (!contract_code || contract_code.trim().length === 0) {
@@ -285,7 +292,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // B-02: Run pipeline asynchronously (don't await)
     const runAuditAsync = async () => {
       try {
-        const result = await runAuditPipeline(contract_code, contract_name, plan.toLowerCase());
+        const result = await runAuditPipeline(contract_code, contract_name, plan.toLowerCase(), erc_standards);
 
         // Update audit with results
         await prisma.audit.update({

@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
       // Log attempt
       await prisma.auditLog.create({
         data: {
-          userId: "system",
           action: "WEBHOOK_SIGNATURE_FAILED",
           details: `IP: ${req.headers.get("x-forwarded-for")}`,
           ipAddress: req.headers.get("x-forwarded-for") || "unknown",
@@ -95,7 +94,7 @@ async function handlePaymentCaptured(payment: any) {
   }
 
   const userId = notes?.userId;
-  const plan   = notes?.plan;
+  const plan   = notes?.plan || notes?.plan_type;
 
   if (!userId || !plan) {
     console.error(`❌ Missing userId or plan in notes for order ${order_id}`);

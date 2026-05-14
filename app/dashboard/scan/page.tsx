@@ -81,26 +81,43 @@ const inputBase: React.CSSProperties = {
   transition: "border-color 0.15s",
 };
 
-// Progress steps for M-02
-const AUDIT_STEPS = [
-  { id: "init", label: "Initializing agents..." },
-  { id: "reentrancy", label: "Scanning for reentrancy..." },
-  { id: "access", label: "Checking access control..." },
-  { id: "overflow", label: "Testing integer overflow..." },
-  { id: "logic", label: "Analyzing business logic..." },
-  { id: "defi", label: "Detecting DeFi vulnerabilities..." },
-  { id: "backdoor", label: "Scanning for backdoors..." },
-  { id: "signature", label: "Verifying signatures..." },
-  { id: "orchestrator", label: "AI orchestrator analysis..." },
-  { id: "report", label: "Generating report..." },
+const BASE_AUDIT_STEPS = [
+  { id: "init",        label: "Initializing agents..." },
+  { id: "reentrancy",  label: "Scanning for reentrancy..." },
+  { id: "access",      label: "Checking access control..." },
+  { id: "overflow",    label: "Testing integer overflow..." },
+  { id: "logic",       label: "Analyzing business logic..." },
+  { id: "defi",        label: "Detecting DeFi vulnerabilities..." },
+  { id: "backdoor",    label: "Scanning for backdoors..." },
+  { id: "signature",   label: "Verifying signatures..." },
+  { id: "orchestrator",label: "AI orchestrator analysis..." },
+  { id: "report",      label: "Generating report..." },
 ];
+
+const ERC_STANDARDS = [
+  { id: "erc20",   label: "ERC-20",        desc: "Fungible Token" },
+  { id: "erc721",  label: "ERC-721",       desc: "NFT" },
+  { id: "erc1155", label: "ERC-1155",      desc: "Multi-Token" },
+  { id: "erc4626", label: "ERC-4626",      desc: "Tokenized Vault" },
+  { id: "erc1967", label: "ERC-1967/UUPS", desc: "Upgradeable Proxy" },
+  { id: "erc1271", label: "ERC-1271",      desc: "Contract Signatures" },
+] as const;
+
+type ErcStandardId = typeof ERC_STANDARDS[number]["id"];
 
 export default function ScanPage() {
   const { data: session, update } = useSession();
-  const [code, setCode]           = useState("");
-  const [name, setName]           = useState("");
-  const [chain, setChain]         = useState("ethereum");
-  const [scanning, setScanning]   = useState(false);
+  const [code, setCode]                 = useState("");
+  const [name, setName]                 = useState("");
+  const [chain, setChain]               = useState("ethereum");
+  const [ercStandards, setErcStandards] = useState<ErcStandardId[]>([]);
+  const [ercOpen, setErcOpen]           = useState(false);
+  const [scanning, setScanning]         = useState(false);
+
+  const toggleErc = (id: ErcStandardId) =>
+    setErcStandards(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
   const [result, setResult]       = useState<AuditResult | null>(null);
   const [error, setError]         = useState("");
   const [expanded, setExpanded]   = useState<number | null>(null);
@@ -111,8 +128,15 @@ export default function ScanPage() {
   const [jobId, setJobId]         = useState<string | null>(null);
   const [progress, setProgress]   = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
-  // Use a ref for pollCount — state updates are async and create stale closures in setInterval
   const pollCountRef = React.useRef(0);
+
+  const AUDIT_STEPS = React.useMemo(() => {
+    const ercSteps = ercStandards.map(id => ({
+      id,
+      label: `Checking ${ERC_STANDARDS.find(s => s.id === id)?.label ?? id} compliance...`,
+    }));
+    return [...BASE_AUDIT_STEPS.slice(0, 8), ...ercSteps, ...BASE_AUDIT_STEPS.slice(8)];
+  }, [ercStandards]);
 
   useEffect(() => { fetchLimits(); }, []);
 
@@ -142,10 +166,11 @@ export default function ScanPage() {
       const res = await fetch("/api/audit/scan", {
         method: "POST", 
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          contract_code: code, 
-          contract_name: name || "Smart Contract", 
-          chain 
+        body: JSON.stringify({
+          contract_code: code,
+          contract_name: name || "Smart Contract",
+          chain,
+          erc_standards: ercStandards,
         }),
       });
       
@@ -379,6 +404,85 @@ export default function ScanPage() {
               ))}
             </select>
           </div>
+        </div>
+
+        {/* ERC Standard Selector */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", marginBottom: 6, fontFamily: "'Satoshi', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            ERC Standards
+          </label>
+          <button
+            type="button"
+            onClick={() => setErcOpen(o => !o)}
+            style={{
+              ...inputBase,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              cursor: "pointer", textAlign: "left",
+              borderColor: ercOpen ? "var(--brand)" : "var(--border)",
+            }}
+          >
+            <span style={{ color: ercStandards.length ? "var(--text-primary)" : "var(--text-disabled)" }}>
+              {ercStandards.length === 0
+                ? "None — select standards to enable specialist agents"
+                : ercStandards.map(id => ERC_STANDARDS.find(s => s.id === id)?.label).join(", ")}
+            </span>
+            <ChevronDown className="h-4 w-4" style={{ color: "var(--text-muted)", flexShrink: 0, transform: ercOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+          </button>
+
+          {ercOpen && (
+            <div style={{
+              marginTop: 4, background: "var(--card)", border: "1px solid var(--border)",
+              borderRadius: "var(--radius)", overflow: "hidden",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            }}>
+              {ERC_STANDARDS.map((std, i) => {
+                const selected = ercStandards.includes(std.id);
+                return (
+                  <label
+                    key={std.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 14px", cursor: "pointer",
+                      borderTop: i > 0 ? "1px solid var(--border)" : "none",
+                      background: selected ? "var(--brand-faint)" : "transparent",
+                      transition: "background 0.1s",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleErc(std.id)}
+                      style={{ accentColor: "var(--brand)", width: 14, height: 14, flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: "clamp(12px, 3vw, 13px)", fontWeight: selected ? 600 : 400, color: selected ? "var(--brand)" : "var(--text-primary)", fontFamily: "'Satoshi', sans-serif" }}>
+                        {std.label}
+                      </span>
+                      <span style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", marginLeft: 8 }}>
+                        {std.desc}
+                      </span>
+                    </div>
+                    {selected && (
+                      <span style={{ fontSize: "clamp(9px, 2vw, 10px)", padding: "1px 7px", borderRadius: 4, background: "rgba(99,102,241,0.15)", color: "var(--brand)", fontFamily: "'Satoshi', sans-serif", fontWeight: 600 }}>
+                        active
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+              {ercStandards.length > 0 && (
+                <div style={{ padding: "8px 14px", borderTop: "1px solid var(--border)", background: "var(--elevated)" }}>
+                  <button
+                    type="button"
+                    onClick={() => setErcStandards([])}
+                    style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "clamp(10px, 2.5vw, 11px)", cursor: "pointer", fontFamily: "'Satoshi', sans-serif" }}
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 16 }}>
