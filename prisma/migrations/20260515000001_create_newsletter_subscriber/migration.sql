@@ -1,5 +1,5 @@
--- CreateTable
-CREATE TABLE "NewsletterSubscriber" (
+-- Create table for fresh databases
+CREATE TABLE IF NOT EXISTS "NewsletterSubscriber" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "subscribedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -9,14 +9,19 @@ CREATE TABLE "NewsletterSubscriber" (
     CONSTRAINT "NewsletterSubscriber_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "NewsletterSubscriber_email_key" ON "NewsletterSubscriber"("email");
+-- Add unsubscribeToken if the table already existed without it
+ALTER TABLE "NewsletterSubscriber" ADD COLUMN IF NOT EXISTS "unsubscribeToken" TEXT;
 
--- CreateIndex
-CREATE UNIQUE INDEX "NewsletterSubscriber_unsubscribeToken_key" ON "NewsletterSubscriber"("unsubscribeToken");
+-- Backfill any rows that are missing a value before enforcing NOT NULL
+UPDATE "NewsletterSubscriber"
+SET "unsubscribeToken" = gen_random_uuid()::text
+WHERE "unsubscribeToken" IS NULL;
 
--- CreateIndex
-CREATE INDEX "NewsletterSubscriber_email_idx" ON "NewsletterSubscriber"("email");
+-- Enforce NOT NULL (safe to run even if column is already NOT NULL)
+ALTER TABLE "NewsletterSubscriber" ALTER COLUMN "unsubscribeToken" SET NOT NULL;
 
--- CreateIndex
-CREATE INDEX "NewsletterSubscriber_unsubscribeToken_idx" ON "NewsletterSubscriber"("unsubscribeToken");
+-- Idempotent indexes
+CREATE UNIQUE INDEX IF NOT EXISTS "NewsletterSubscriber_email_key" ON "NewsletterSubscriber"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "NewsletterSubscriber_unsubscribeToken_key" ON "NewsletterSubscriber"("unsubscribeToken");
+CREATE INDEX IF NOT EXISTS "NewsletterSubscriber_email_idx" ON "NewsletterSubscriber"("email");
+CREATE INDEX IF NOT EXISTS "NewsletterSubscriber_unsubscribeToken_idx" ON "NewsletterSubscriber"("unsubscribeToken");
