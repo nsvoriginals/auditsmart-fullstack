@@ -1,9 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `provider` on the `User` table. All the data in the column will be lost.
-
-*/
 -- CreateEnum
 CREATE TYPE "UserRole" AS ENUM ('FREE', 'PREMIUM', 'ENTERPRISE', 'ADMIN');
 
@@ -17,22 +11,30 @@ CREATE TYPE "AuditStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED
 CREATE TYPE "FindingSeverity" AS ENUM ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO');
 
 -- CreateEnum
-CREATE TYPE "AgentType" AS ENUM ('SECURITY', 'GAS_OPTIMIZATION', 'COMPLIANCE', 'LOGIC');
+CREATE TYPE "AgentType" AS ENUM ('REENTRANCY_AGENT', 'OVERFLOW_AGENT', 'ACCESS_CONTROL_AGENT', 'LOGIC_AGENT', 'GAS_DOS_AGENT', 'DEFI_AGENT', 'BACKDOOR_AGENT', 'SIGNATURE_AGENT', 'SLITHER_AGENT', 'GEMINI_AGENT', 'CLAUDE_AGENT', 'SECURITY', 'GAS_OPTIMIZATION', 'COMPLIANCE', 'ERC20_AGENT', 'ERC721_AGENT', 'ERC1155_AGENT', 'ERC4626_AGENT', 'ERC1967_AGENT', 'ERC1271_AGENT');
 
 -- CreateEnum
 CREATE TYPE "ChainType" AS ENUM ('ETHEREUM', 'BSC', 'POLYGON', 'AVALANCHE', 'ARBITRUM', 'OPTIMISM', 'BASE');
 
--- AlterTable
-ALTER TABLE "User" DROP COLUMN "provider",
-ADD COLUMN     "currentMonthAudits" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "emailVerified" TIMESTAMP(3),
-ADD COLUMN     "lastAuditReset" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "razorpayCustomerId" TEXT,
-ADD COLUMN     "role" "UserRole" NOT NULL DEFAULT 'FREE',
-ADD COLUMN     "totalAudits" INTEGER NOT NULL DEFAULT 0;
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT,
+    "password" TEXT,
+    "image" TEXT,
+    "role" "UserRole" NOT NULL DEFAULT 'FREE',
+    "emailVerified" TIMESTAMP(3),
+    "razorpayCustomerId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "hasUsedTrial" BOOLEAN NOT NULL DEFAULT false,
+    "totalAudits" INTEGER NOT NULL DEFAULT 0,
+    "currentMonthAudits" INTEGER NOT NULL DEFAULT 0,
+    "lastAuditReset" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
--- DropEnum
-DROP TYPE "Provider";
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "Account" (
@@ -72,6 +74,7 @@ CREATE TABLE "Subscription" (
     "currentPeriodStart" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "currentPeriodEnd" TIMESTAMP(3) NOT NULL,
     "cancelAtPeriodEnd" BOOLEAN NOT NULL DEFAULT false,
+    "isTrial" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -200,6 +203,17 @@ CREATE TABLE "Notification" (
 );
 
 -- CreateTable
+CREATE TABLE "NewsletterSubscriber" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "subscribedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "unsubscribeToken" TEXT NOT NULL,
+
+    CONSTRAINT "NewsletterSubscriber_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "AuditLog" (
     "id" TEXT NOT NULL,
     "userId" TEXT,
@@ -211,6 +225,12 @@ CREATE TABLE "AuditLog" (
 
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE INDEX "User_email_idx" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");
@@ -237,6 +257,9 @@ CREATE INDEX "Audit_status_idx" ON "Audit"("status");
 CREATE INDEX "Audit_createdAt_idx" ON "Audit"("createdAt");
 
 -- CreateIndex
+CREATE INDEX "Audit_userId_createdAt_idx" ON "Audit"("userId", "createdAt");
+
+-- CreateIndex
 CREATE INDEX "AgentReport_auditId_idx" ON "AgentReport"("auditId");
 
 -- CreateIndex
@@ -249,13 +272,13 @@ CREATE INDEX "Finding_auditId_idx" ON "Finding"("auditId");
 CREATE INDEX "Finding_severity_idx" ON "Finding"("severity");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "MonitoredContract_userId_address_chain_key" ON "MonitoredContract"("userId", "address", "chain");
+
+-- CreateIndex
 CREATE INDEX "MonitoredContract_userId_idx" ON "MonitoredContract"("userId");
 
 -- CreateIndex
 CREATE INDEX "MonitoredContract_address_idx" ON "MonitoredContract"("address");
-
--- CreateIndex
-CREATE UNIQUE INDEX "MonitoredContract_userId_address_chain_key" ON "MonitoredContract"("userId", "address", "chain");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ApiKey_key_key" ON "ApiKey"("key");
@@ -270,6 +293,18 @@ CREATE INDEX "Notification_userId_idx" ON "Notification"("userId");
 CREATE INDEX "Notification_isRead_idx" ON "Notification"("isRead");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "NewsletterSubscriber_email_key" ON "NewsletterSubscriber"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "NewsletterSubscriber_unsubscribeToken_key" ON "NewsletterSubscriber"("unsubscribeToken");
+
+-- CreateIndex
+CREATE INDEX "NewsletterSubscriber_email_idx" ON "NewsletterSubscriber"("email");
+
+-- CreateIndex
+CREATE INDEX "NewsletterSubscriber_unsubscribeToken_idx" ON "NewsletterSubscriber"("unsubscribeToken");
+
+-- CreateIndex
 CREATE INDEX "AuditLog_userId_idx" ON "AuditLog"("userId");
 
 -- CreateIndex
@@ -277,9 +312,6 @@ CREATE INDEX "AuditLog_action_idx" ON "AuditLog"("action");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
-
--- CreateIndex
-CREATE INDEX "User_email_idx" ON "User"("email");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
