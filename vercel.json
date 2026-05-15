@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm prisma generate && pnpm prisma migrate deploy && pnpm next build",
+  "buildCommand": "pnpm prisma generate && (pnpm prisma migrate resolve --rolled-back 20260425000000_add_newsletter_unsubscribe_token || true) && (pnpm prisma migrate resolve --applied 20260515000000_init || true) && pnpm prisma migrate deploy && pnpm next build",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": "nextjs",
   "regions": ["iad1"],
