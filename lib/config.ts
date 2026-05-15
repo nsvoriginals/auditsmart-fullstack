@@ -19,18 +19,16 @@ export const config = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
 
-  // ✅ FIXED: Claude models (April 2026 - Working)
-  CLAUDE_HAIKU_MODEL: 'claude-3-5-haiku-20241022',
-  CLAUDE_SONNET_MODEL: 'claude-3-5-sonnet-20241022',
-  CLAUDE_OPUS_MODEL: 'claude-3-opus-20240229',
+  CLAUDE_HAIKU_MODEL: process.env.CLAUDE_HAIKU_MODEL || 'claude-haiku-4-5-20251001',
+  CLAUDE_SONNET_MODEL: process.env.CLAUDE_SONNET_MODEL || 'claude-sonnet-4-6',
+  CLAUDE_OPUS_MODEL: process.env.CLAUDE_OPUS_MODEL || 'claude-opus-4-7',
 
-  // ✅ FIXED: Gemini models (404 fix)
-  GEMINI_MODEL: 'gemini-2.0-flash-exp',
+  // Gemini models — read from env, fall back to stable non-experimental model
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
   GEMINI_FLASH_MODEL: 'gemini-1.5-flash',
 
-  // ✅ FIXED: Groq models (already correct)
-  GROQ_MODEL: "llama-3.3-70b-versatile",
-  GROQ_FALLBACK_MODEL: "mixtral-8x7b-32768",
+  GROQ_MODEL: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+  GROQ_FALLBACK_MODEL: "llama-3.1-70b-versatile",
 
   // ✅ FIXED: Reduced timeouts for better UX
   AGENT_TIMEOUT_SECONDS: 30,
@@ -44,7 +42,7 @@ export const config = {
   PDF_ENABLED: process.env.PDF_ENABLED !== 'false',
 
   MAX_CONTRACT_SIZE: 50000,
-  FREE_PLAN_AUDIT_LIMIT: 10,
+  FREE_PLAN_AUDIT_LIMIT: 3,
 
   RISK_THRESHOLDS: {
     critical: 70,
@@ -174,6 +172,90 @@ export const AGENT_CONFIGS = [
   • Meta-transaction relay: can a relayer change function parameters while keeping a valid signature?
   • Signature length checks: is the signature length validated to be exactly 65 bytes?
   SEVERITY GUIDE: forged signature enabling fund theft = CRITICAL. Replay without loss = HIGH.`,
+  },
+  {
+    name: "erc20_agent",
+    focus: `ERC20 TOKEN VULNERABILITIES — only report if this contract implements or interacts with ERC20. Return [] if it does not.
+  • approve() race condition: can an attacker front-run an approval change from N→M to spend both N and M? Missing increaseAllowance/decreaseAllowance = MEDIUM.
+  • Missing return value: does the contract call external ERC20 transfer()/transferFrom() without checking the bool return? Tokens like USDT return no value — use SafeERC20.
+  • Fee-on-transfer tokens: does the contract assume the received amount equals the sent amount? Actual received = sent - fee, breaking balance accounting = HIGH.
+  • Rebasing tokens: does the contract snapshot balances that can change externally (e.g. stETH, AMPL)?
+  • Infinite approval: does the contract request type(uint256).max approval from users unnecessarily? Phishing risk.
+  • permit() (EIP-2612): is the deadline checked? Is the recovered signer validated against address(0)?
+  • Deflationary token: can total supply change in ways that break invariants (fee burns, minting by owner)?
+  • ERC20 transfer to address(0): does transfer/transferFrom allow burning to the zero address unintentionally?
+  • Double-entry token: tokens with two storage slots for the same balance (e.g. cETH) — is balance read from the right slot?
+  • Flash-mintable tokens: can total supply be inflated in one tx to exploit a share calculation?
+  SEVERITY GUIDE: fund loss via missing return value or fee-on-transfer math = HIGH. Approval race = MEDIUM.`,
+  },
+  {
+    name: "erc721_agent",
+    focus: `ERC721 NFT VULNERABILITIES — only report if this contract implements or interacts with ERC721. Return [] if it does not.
+  • safeTransferFrom reentrancy: the receiver's onERC721Received() callback executes before state is finalized — can attacker re-enter to mint/transfer again? = CRITICAL.
+  • setApprovalForAll phishing: is there protection against users being tricked into approving a malicious operator?
+  • tokenId collision: can two tokens be minted with the same tokenId (missing _exists check or non-sequential IDs)?
+  • Unrestricted mint: can anyone call mint() without payment or role check?
+  • Integer overflow in tokenId counter: if using a uint256 counter, can it wrap? (pre-0.8 only)
+  • Centralized tokenURI: is the base URI an off-chain server that the owner can change? Rug risk.
+  • Missing ERC165 supportsInterface: does the contract correctly implement interface detection?
+  • Royalty bypass: does the contract implement EIP-2981 royaltyInfo() — can marketplaces bypass it?
+  • Batch mint gas griefing: can a whale mint thousands of tokens in one tx to block others?
+  • Transfer to contract: safeTransferFrom to a contract that does not implement onERC721Received will revert — can this be used to lock tokens?
+  SEVERITY GUIDE: reentrancy via callback enabling double-mint/drain = CRITICAL. Unrestricted mint = HIGH.`,
+  },
+  {
+    name: "erc1155_agent",
+    focus: `ERC1155 MULTI-TOKEN VULNERABILITIES — only report if this contract implements or interacts with ERC1155. Return [] if it does not.
+  • Batch transfer reentrancy: onERC1155Received/onERC1155BatchReceived callbacks execute mid-transfer — can attacker re-enter safeBatchTransferFrom to double-spend balances? = CRITICAL.
+  • Integer overflow in batch mint: does minting multiple token IDs in a loop overflow supply counters?
+  • Missing balance check before burn: can a user burn tokens they don't own due to missing balanceOf check?
+  • URI substitution: is the URI per-token-id validated? Can an attacker influence the URI to point to malicious metadata?
+  • Approval scope: setApprovalForAll grants full control — is there a per-token-id approval missing that allows fine-grained control?
+  • Fungible vs non-fungible confusion: if a token ID is used both as fungible (amount>1) and non-fungible (amount=1), can state be corrupted?
+  • Missing supportsInterface for ERC1155Receiver: contracts receiving ERC1155 must implement the receiver interface or transfers revert.
+  • Supply cap bypass: in games/NFT projects, can the per-ID supply cap be exceeded via batch operations?
+  SEVERITY GUIDE: reentrancy enabling double-spend = CRITICAL. Supply overflow = HIGH.`,
+  },
+  {
+    name: "erc4626_agent",
+    focus: `ERC4626 TOKENIZED VAULT VULNERABILITIES — only report if this contract implements or interacts with ERC4626. Return [] if it does not.
+  • First-depositor share inflation attack: if totalSupply is 0, can an attacker deposit 1 wei then donate assets to inflate the share price, causing later depositors to receive 0 shares? = CRITICAL.
+  • Rounding direction: does convertToShares() round DOWN (correct for deposit) and convertToAssets() round DOWN (correct for withdrawal/mint)? Wrong rounding direction lets users extract dust repeatedly.
+  • Missing slippage protection on deposit/withdraw/mint/redeem: no minShares/maxAssets parameter — front-running griefing = MEDIUM.
+  • maxDeposit/maxWithdraw not enforced: if these return a limit, is it actually checked before processing?
+  • Fee manipulation: if the vault charges a management/performance fee, can the fee rate be changed between deposit and withdrawal to extract user funds?
+  • Asset/share decimal mismatch: if asset has 6 decimals (USDC) and shares have 18, does share math overflow or lose precision?
+  • Reentrancy via ERC777 asset: if the underlying asset is an ERC777 token, hooks fire before state update — reentrancy risk.
+  • Locked shares: can a user end up with shares they cannot redeem (e.g. if underlying asset is paused or blacklisted)?
+  • totalAssets() manipulation: if totalAssets() reads from an external oracle or token balance, can it be manipulated in one tx?
+  SEVERITY GUIDE: share inflation stealing depositor funds = CRITICAL. Rounding extraction = HIGH.`,
+  },
+  {
+    name: "erc1967_agent",
+    focus: `ERC1967 PROXY / UUPS UPGRADE VULNERABILITIES — only report if this contract uses a proxy pattern (ERC1967, UUPS, TransparentUpgradeableProxy, OpenZeppelin upgradeable). Return [] if it does not.
+  • Uninitialized implementation: if the implementation contract's initialize() is not called, can an attacker call it themselves and become owner, then selfdestruct the implementation to brick the proxy? = CRITICAL.
+  • Missing _authorizeUpgrade override: in UUPS, if upgradeTo() is not overridden with an access check, anyone can upgrade to a malicious implementation = CRITICAL.
+  • Storage collision: do the proxy and implementation use the same storage slot for different variables? ERC1967 uses specific slots — are they respected?
+  • Constructor vs initializer: does the implementation use a constructor (runs only on implementation, not proxy) instead of initializer? State in constructor is invisible to proxy.
+  • Re-initialization attack: can initialize() be called a second time after deployment? Missing initializer modifier check = HIGH.
+  • Selfdestruct in implementation: does the implementation contain selfdestruct? Destroying the implementation bricks all proxies pointing to it = HIGH.
+  • upgradeTo() input validation: is the new implementation address validated (not address(0), is a contract)?
+  • Admin slot confusion (TransparentProxy): can a non-admin call implementation functions that collide with admin functions?
+  • Gap variables: are storage gap arrays (__gap) present in base contracts to prevent storage collisions on upgrade?
+  SEVERITY GUIDE: uninitialized implementation takeover = CRITICAL. Unguarded upgradeTo = CRITICAL.`,
+  },
+  {
+    name: "erc1271_agent",
+    focus: `ERC1271 SMART CONTRACT SIGNATURE VULNERABILITIES — only report if this contract implements isValidSignature() or verifies signatures from smart contract wallets (ERC1271). Return [] if it does not.
+  • Wrong magic value: does isValidSignature() return exactly bytes4(0x1626ba7e) on success? Returning true or 1 instead causes signature verification to fail silently.
+  • Missing access control: can any external caller invoke isValidSignature() in a way that changes state or leaks info?
+  • Signature replay across contracts: is the contract address included in the signed message hash? A signature valid for contract A must not be valid for contract B.
+  • Missing nonce/expiry: can a valid signature be replayed indefinitely? Is there a nonce or expiry timestamp in the signed message?
+  • EIP-712 domain separator: is the domain separator constructed with the correct chainId AND verifyingContract address? Missing either allows cross-chain or cross-contract replay.
+  • Delegated signing: if isValidSignature() delegates to an owner that can change, can an attacker time the owner change to validate a signature the new owner never approved?
+  • Signature over mutable data: if the signed message includes a value that can change (e.g. token price, nonce from another contract), can the meaning of the signature be altered after signing?
+  • Gnosis Safe compatibility: if integrating with multisig wallets, does the contract handle the case where isValidSignature() reverts (should be treated as invalid, not bubble up)?
+  SEVERITY GUIDE: signature forgery enabling fund theft = CRITICAL. Replay enabling unauthorized action = HIGH.`,
   },
 ];
 

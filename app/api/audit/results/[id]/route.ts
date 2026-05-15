@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     if (reportId) {
       // Public report access via random report_id
       whereClause = { report: { contains: reportId } };
-    } else if (!isPublic && session?.user?.id) {
+    } else if (session?.user?.id) {
       // Private access - must be owner
       whereClause = { id: params.id, userId: session.user.id };
     } else {

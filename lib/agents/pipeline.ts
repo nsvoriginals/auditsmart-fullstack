@@ -45,10 +45,13 @@ function isTestFile(contractCode: string): { isTest: boolean; reason: string } {
   return { isTest: false, reason: "" };
 }
 
+const ERC_AGENT_NAMES = ["erc20_agent","erc721_agent","erc1155_agent","erc4626_agent","erc1967_agent","erc1271_agent"];
+
 export async function runAuditPipeline(
   contractCode: string,
   contractName: string = "Contract",
-  plan: string = "free"
+  plan: string = "free",
+  ercStandards: string[] = []
 ): Promise<AuditResult> {
   const startTime = Date.now();
   const errors: string[] = [];
@@ -68,11 +71,19 @@ export async function runAuditPipeline(
   let allFindings: any[] = [];
   const agentsUsed: string[] = [];
 
-  // ⭐ Phase 1: Run Groq agents with error handling
-  console.log("\n📡 Phase 1: Groq agents (parallel)...");
-  
-  const groqResults = await Promise.allSettled(  // ⭐ Use allSettled instead of all
-    AGENT_CONFIGS.map(async (agent) => {
+  // Select agents: base 8 always + requested ERC specialists
+  const selectedErcAgentNames = ercStandards.map(s => `${s}_agent`);
+  const activeAgents = AGENT_CONFIGS.filter(
+    a => !ERC_AGENT_NAMES.includes(a.name) || selectedErcAgentNames.includes(a.name)
+  );
+
+  console.log(`\n📡 Phase 1: ${activeAgents.length} Groq agents (parallel)...`);
+  if (selectedErcAgentNames.length) {
+    console.log(`   ERC specialists: ${selectedErcAgentNames.join(", ")}`);
+  }
+
+  const groqResults = await Promise.allSettled(
+    activeAgents.map(async (agent) => {
       try {
         const findings = await runGroqAnalysis(contractCode, agent.focus, agent.name);
         if (findings.length) {
@@ -91,7 +102,7 @@ export async function runAuditPipeline(
 
   // Count successful agents
   const successfulAgents = groqResults.filter(r => r.status === 'fulfilled').length;
-  console.log(`\n   Phase 1: ${successfulAgents}/${AGENT_CONFIGS.length} agents succeeded, ${allFindings.length} raw findings`);
+  console.log(`\n   Phase 1: ${successfulAgents}/${activeAgents.length} agents succeeded, ${allFindings.length} raw findings`);
 
   // ⭐ Phase 2: Orchestrator with fallback
   let thinkingChain: string | null = null;

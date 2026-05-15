@@ -38,7 +38,7 @@ SOLIDITY SECURITY AUDIT — SPECIALIST FOCUS: ${focus}
 
 CONTRACT UNDER REVIEW:
 \`\`\`solidity
-${contractCode.slice(0, 4500)}
+${contractCode.slice(0, 12000)}
 \`\`\`
 
 ════════════════════════════════════════════════════════════

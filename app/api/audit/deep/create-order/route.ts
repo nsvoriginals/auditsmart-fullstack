@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       notes: {
         userId:    session.user.id,
         plan_type,
+        plan:      plan_type,
         email:     session.user.email || "",
       },
     });
