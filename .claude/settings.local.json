@@ -26,7 +26,9 @@
       "Bash(pnpm prisma *)",
       "Bash(pnpm tsc *)",
       "Bash(timeout 10)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(psql *)",
+      "Bash(node -e ' *)"
     ]
   }
 }
