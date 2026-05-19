@@ -5,11 +5,12 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { 
-  Shield, AlertTriangle, Eye, Download, Plus, ChevronRight, 
-  Calendar, Clock, TrendingUp, FileText, FileCode, Coins,
-  Wallet, Key, Globe, Database, Loader2
+import {
+  Eye, Download, Plus, ChevronRight,
+  Calendar, Clock, TrendingUp, FileText, Loader2
 } from "lucide-react";
+import { LanguageIcon } from "@/components/LanguageIcon";
+import { detectLanguage, languageLabel, languageColor, type ContractLanguage } from "@/lib/contract-language";
 
 interface Audit {
   id: string; 
@@ -28,20 +29,6 @@ interface Audit {
   pdf_available: boolean; 
   created_at: string;
 }
-
-// Contract type icons based on name/chain
-const getContractIcon = (name: string, chain: string) => {
-  const lowerName = name.toLowerCase();
-  const lowerChain = chain?.toLowerCase() || "";
-  
-  if (lowerName.includes("token") || lowerName.includes("erc20")) return Coins;
-  if (lowerName.includes("nft") || lowerName.includes("erc721")) return FileCode;
-  if (lowerName.includes("vault") || lowerName.includes("pool")) return Database;
-  if (lowerName.includes("wallet")) return Wallet;
-  if (lowerName.includes("governance") || lowerName.includes("dao")) return Key;
-  if (lowerChain.includes("polygon")) return Globe;
-  return FileText;
-};
 
 // Risk colors with light theme support
 const riskColors = (level: string, score: number, isLight: boolean) => {
@@ -378,92 +365,98 @@ export default function HistoryPage() {
               {audits.map(audit => {
                 const rs = riskColors(audit.risk_level, audit.risk_score, isLight);
                 const vc = verdictColors(audit.deployment_verdict, isLight);
-                const ContractIcon = getContractIcon(audit.contract_name, audit.chain);
-                
+                const language: ContractLanguage = detectLanguage(audit.chain);
+                const lc = languageColor(language);
+
                 return (
                   <div key={audit.id}
                     onClick={() => router.push(`/dashboard/audit/results/${audit.id}`)}
                     className="audit-row"
-                    style={{ 
-                      background: "var(--card)", 
-                      border: "1px solid var(--border)", 
-                      borderRadius: "var(--radius-md)", 
-                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)", 
-                      cursor: "pointer", 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: 16, 
-                      boxShadow: "var(--shadow-card)", 
-                      transition: "box-shadow 0.15s, border-color 0.15s", 
-                      flexWrap: "wrap" 
+                    style={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-md)",
+                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 16,
+                      boxShadow: "var(--shadow-card)",
+                      transition: "box-shadow 0.15s, border-color 0.15s",
+                      flexWrap: "wrap"
                     }}
-                    onMouseEnter={e => { 
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.25)"; 
-                      (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card-hover)"; 
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.25)";
+                      (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card-hover)";
                     }}
-                    onMouseLeave={e => { 
-                      (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; 
-                      (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card)"; 
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                      (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card)";
                     }}
                   >
-                    {/* Contract Type Icon - Light green circle */}
-                    <div style={{ 
-                      width: "clamp(40px, 8vw, 48px)", 
-                      height: "clamp(40px, 8vw, 48px)", 
-                      borderRadius: "50%", 
-                      background: isLight ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.12)", 
-                      border: `1.5px solid ${isLight ? "rgba(16,185,129,0.3)" : "rgba(16,185,129,0.25)"}`, 
-                      display: "flex", 
-                      alignItems: "center", 
-                      justifyContent: "center", 
-                      flexShrink: 0 
-                    }}>
-                      <ContractIcon size={20} style={{ color: "#10b981" }} />
-                    </div>
-
-                    {/* Score ring */}
-                    <div style={{ 
-                      width: "clamp(40px, 8vw, 48px)", 
-                      height: "clamp(40px, 8vw, 48px)", 
-                      borderRadius: "50%", 
-                      border: `2px solid ${rs.border}`, 
-                      background: rs.bg, 
-                      display: "flex", 
-                      alignItems: "center", 
-                      justifyContent: "center", 
-                      flexShrink: 0 
-                    }}>
-                      <span style={{ 
-                        fontFamily: "'Satoshi', sans-serif", 
-                        fontSize: "clamp(12px, 3vw, 14px)", 
-                        fontWeight: 800, 
-                        color: rs.color 
-                      }}>
-                        {audit.risk_score}
-                      </span>
+                    {/* Language icon — replaces the old contract-type icon + number circle */}
+                    <div
+                      title={languageLabel(language)}
+                      style={{
+                        width: "clamp(40px, 8vw, 48px)",
+                        height: "clamp(40px, 8vw, 48px)",
+                        borderRadius: "50%",
+                        background: lc.bg,
+                        border: `1.5px solid ${lc.border}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <LanguageIcon language={language} size={22} style={{ color: lc.color }} />
                     </div>
 
                     {/* Info */}
                     <div className="audit-info" style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                        <span style={{ 
-                          fontFamily: "'Satoshi', sans-serif", 
-                          fontSize: "clamp(13px, 3.5vw, 14px)", 
-                          fontWeight: 700, 
-                          color: "var(--text-primary)" 
+                        <span style={{
+                          fontFamily: "'Satoshi', sans-serif",
+                          fontSize: "clamp(13px, 3.5vw, 14px)",
+                          fontWeight: 700,
+                          color: "var(--text-primary)"
                         }}>
                           {audit.contract_name}
                         </span>
-                        <span style={{ 
-                          fontSize: "clamp(9px, 2vw, 10px)", 
-                          padding: "2px 7px", 
-                          borderRadius: 4, 
-                          background: "var(--elevated)", 
-                          border: "1px solid var(--border)", 
-                          color: "var(--text-disabled)", 
-                          fontFamily: "'Satoshi', monospace" 
+                        <span style={{
+                          fontSize: "clamp(9px, 2vw, 10px)",
+                          padding: "2px 7px",
+                          borderRadius: 4,
+                          background: lc.bg,
+                          border: `1px solid ${lc.border}`,
+                          color: lc.color,
+                          fontFamily: "'Satoshi', sans-serif",
+                          fontWeight: 600,
+                        }}>
+                          {languageLabel(language)}
+                        </span>
+                        <span style={{
+                          fontSize: "clamp(9px, 2vw, 10px)",
+                          padding: "2px 7px",
+                          borderRadius: 4,
+                          background: "var(--elevated)",
+                          border: "1px solid var(--border)",
+                          color: "var(--text-disabled)",
+                          fontFamily: "'Satoshi', monospace"
                         }}>
                           {audit.chain}
+                        </span>
+                        <span style={{
+                          fontSize: "clamp(9px, 2vw, 10px)",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          background: rs.bg,
+                          border: `1px solid ${rs.border}`,
+                          color: rs.color,
+                          fontFamily: "'Satoshi', sans-serif",
+                          fontWeight: 700,
+                        }}>
+                          {audit.risk_score}/100
                         </span>
                       </div>
                       <div style={{ 
