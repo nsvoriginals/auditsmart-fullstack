@@ -11,9 +11,10 @@ export async function middleware(request: NextRequest) {
 
   // CORS headers for API routes
   if (path.startsWith('/api/')) {
+    const origin = request.headers.get('origin') ?? '';
     const allowedOrigin = process.env.NODE_ENV === 'production'
       ? (process.env.NEXT_PUBLIC_APP_URL || process.env.ALLOWED_ORIGIN || 'https://auditsmart.io')
-      : 'http://localhost:3000';
+      : (origin.startsWith('http://localhost') ? origin : 'http://localhost:3000');
     response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -33,13 +34,20 @@ export async function middleware(request: NextRequest) {
     let success = true;
     let remaining = 0;
     let reset = 0;
-    
+
     if (auditRateLimit) {
-      // Use Upstash Redis
-      const result = await auditRateLimit.limit(ip);
-      success = result.success;
-      remaining = result.remaining;
-      reset = result.reset;
+      try {
+        const result = await auditRateLimit.limit(ip);
+        success = result.success;
+        remaining = result.remaining;
+        reset = result.reset;
+      } catch {
+        // Redis unreachable — fall through to in-memory
+        const result = memoryRateLimit(`audit:${ip}`, 5, 60 * 60 * 1000);
+        success = result.success;
+        remaining = result.remaining;
+        reset = result.reset;
+      }
     } else {
       // Fallback to in-memory
       const result = memoryRateLimit(`audit:${ip}`, 5, 60 * 60 * 1000);
@@ -79,8 +87,13 @@ export async function middleware(request: NextRequest) {
     let success = true;
 
     if (authRateLimit) {
-      const result = await authRateLimit.limit(`${ip}:auth`);
-      success = result.success;
+      try {
+        const result = await authRateLimit.limit(`${ip}:auth`);
+        success = result.success;
+      } catch {
+        // Redis unreachable — fall back to in-memory
+        success = memoryRateLimit(`auth:${ip}`, 10, 60 * 1000).success;
+      }
     } else {
       success = memoryRateLimit(`auth:${ip}`, 10, 60 * 1000).success;
     }
