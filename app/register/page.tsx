@@ -75,7 +75,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} method="post">
             {/* Name */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 7, fontFamily: "'Satoshi', sans-serif" }}>Full name</label>

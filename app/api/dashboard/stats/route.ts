@@ -49,8 +49,9 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
+    // FREE_PLAN_LIFETIME_LIMIT must match scan/route.ts (3)
     const remainingAudits = subscription?.plan === "FREE"
-      ? Math.max(0, 10 - totalAudits)
+      ? Math.max(0, 3 - totalAudits)
       : null;
 
     return NextResponse.json(

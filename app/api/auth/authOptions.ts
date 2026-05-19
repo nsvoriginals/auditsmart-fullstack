@@ -5,6 +5,7 @@ import GitHubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import type { JWT } from "next-auth/jwt";
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -71,12 +72,28 @@ export const authOptions: AuthOptions = {
       return true;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       // Persist role + id on the token at first sign-in
       if (user) {
         token.id   = user.id;
         token.role = (user as any).role ?? "FREE";
       }
+
+      // Re-fetch role from DB when the client calls session.update() — this is
+      // triggered after a successful plan upgrade so the JWT reflects the new role
+      // without requiring the user to re-login.
+      if (trigger === "update" && token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          });
+          if (dbUser) token.role = dbUser.role;
+        } catch {
+          // Non-fatal: keep existing token role on DB error
+        }
+      }
+
       return token;
     },
 

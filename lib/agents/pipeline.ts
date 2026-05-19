@@ -47,6 +47,16 @@ function isTestFile(contractCode: string): { isTest: boolean; reason: string } {
 
 const ERC_AGENT_NAMES = ["erc20_agent","erc721_agent","erc1155_agent","erc4626_agent","erc1967_agent","erc1271_agent"];
 
+// Map DB plan names (PREMIUM, ADMIN) to pipeline plan names (pro, enterprise).
+// The DB UserRole enum uses different names from the pipeline's plan identifiers.
+function normalizePlan(raw: string): string {
+  switch (raw.toLowerCase()) {
+    case "premium": return "pro";       // PREMIUM → Claude Haiku
+    case "admin":   return "enterprise"; // ADMIN   → Claude Sonnet (most capable hosted)
+    default:        return raw.toLowerCase();
+  }
+}
+
 export async function runAuditPipeline(
   contractCode: string,
   contractName: string = "Contract",
@@ -55,7 +65,10 @@ export async function runAuditPipeline(
 ): Promise<AuditResult> {
   const startTime = Date.now();
   const errors: string[] = [];
-  
+
+  // Normalize before any plan checks so "premium" → "pro" everywhere
+  plan = normalizePlan(plan);
+
   console.log("\n" + "=".repeat(65));
   console.log(`🚀 AuditSmart v3.0 | ${contractName} | Plan: ${plan.toUpperCase()}`);
   console.log(`   Contract: ${contractCode.length} chars`);

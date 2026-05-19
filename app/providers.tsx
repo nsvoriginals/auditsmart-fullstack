@@ -15,7 +15,11 @@ export default function Providers({
   session?: Session | null;
 }) {
   return (
-    <SessionProvider session={session}>
+    <SessionProvider
+      session={session}
+      refetchInterval={0}            // disable periodic background polling
+      refetchOnWindowFocus={false}   // don't refetch on tab focus
+    >
       {children}
       <TrialPopup />
     </SessionProvider>

@@ -16,7 +16,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { useUserLimits } from "@/lib/state/user-limits";
 
 interface DashboardNavbarProps {
   user?: {
@@ -45,26 +46,10 @@ export function DashboardNavbar({ user }: DashboardNavbarProps) {
   const [scrolled,     setScrolled]     = useState(false);
   const [profileOpen,  setProfileOpen]  = useState(false);
   const [signingOut,   setSigningOut]   = useState(false);
-  const [planFromApi, setPlanFromApi] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { data: session } = useSession();
+  const limits = useUserLimits({ plan: user?.plan });
 
-  const fetchPlan = (bustCache = false) => {
-    fetch("/api/user/limits", { cache: bustCache ? "no-store" : "default" })
-      .then((r) => r.json())
-      .then((d) => { if (d.plan) setPlanFromApi(d.plan.toUpperCase()); })
-      .catch(() => {});
-  };
-
-  useEffect(() => { fetchPlan(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const handler = () => fetchPlan(true);
-    window.addEventListener("plan-upgraded", handler);
-    return () => window.removeEventListener("plan-upgraded", handler);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const plan      = (planFromApi || (session?.user?.plan as string) || user?.plan || "FREE").toUpperCase();
+  const plan      = limits.plan;
   const planBadge = PLAN_BADGE[plan] ?? PLAN_BADGE.FREE;
   const PLAN_LABEL: Record<string, string> = { FREE: "Free", PREMIUM: "Pro", ENTERPRISE: "Enterprise", ADMIN: "Admin" };
   const planLabel = PLAN_LABEL[plan] ?? plan;
