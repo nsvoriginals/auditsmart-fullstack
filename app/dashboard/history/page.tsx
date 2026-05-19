@@ -9,8 +9,7 @@ import {
   Eye, Download, Plus, ChevronRight,
   Calendar, Clock, TrendingUp, FileText, Loader2
 } from "lucide-react";
-import { LanguageIcon } from "@/components/LanguageIcon";
-import { detectLanguage, languageLabel, languageColor, type ContractLanguage } from "@/lib/contract-language";
+import { ChainIcon, chainColor, chainLabel } from "@/components/ChainIcon";
 
 interface Audit {
   id: string; 
@@ -205,20 +204,21 @@ export default function HistoryPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ 
-            fontFamily: "'Satoshi', sans-serif", 
-            fontSize: "clamp(22px, 6vw, 28px)", 
-            fontWeight: 800, 
-            letterSpacing: "-0.025em", 
-            color: "var(--text-primary)", 
-            marginBottom: 4 
+          <h1 style={{
+            fontFamily: "'Satoshi', sans-serif",
+            fontSize: "clamp(24px, 6vw, 30px)",
+            fontWeight: 800,
+            letterSpacing: "-0.025em",
+            color: "var(--text-primary)",
+            marginBottom: 6
           }}>
             Audit History
           </h1>
-          <p style={{ 
-            fontSize: "clamp(12px, 3vw, 13px)", 
-            color: "var(--text-muted)", 
-            fontFamily: "'Satoshi', sans-serif" 
+          <p style={{
+            fontSize: "clamp(13px, 3vw, 14px)",
+            color: "var(--text-muted)",
+            fontFamily: "'Satoshi', sans-serif",
+            fontWeight: 500,
           }}>
             View and manage all your past smart contract security audits
           </p>
@@ -226,21 +226,21 @@ export default function HistoryPage() {
         <Link href="/dashboard/scan"
           prefetch={true}
           style={{
-            display: "inline-flex", 
-            alignItems: "center", 
-            gap: 7, 
-            padding: "9px 18px", 
-            background: "var(--brand)", 
-            color: "#fff", 
-            border: "none", 
-            borderRadius: "var(--radius)", 
-            fontFamily: "'Satoshi', sans-serif", 
-            fontSize: "clamp(12px, 3vw, 13px)", 
-            fontWeight: 600, 
-            textDecoration: "none", 
-            whiteSpace: "nowrap" 
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "11px 22px",
+            background: "var(--brand)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "var(--radius)",
+            fontFamily: "'Satoshi', sans-serif",
+            fontSize: "clamp(13px, 3vw, 14px)",
+            fontWeight: 700,
+            textDecoration: "none",
+            whiteSpace: "nowrap"
           }}>
-          <Plus size={13} /> New Audit
+          <Plus size={15} /> New Audit
         </Link>
       </div>
 
@@ -272,29 +272,31 @@ export default function HistoryPage() {
                 { label: "Avg Risk Score", value: Math.round(audits.reduce((s, a) => s + (a.risk_score || 0), 0) / (audits.length || 1)), color: "var(--text-primary)" },
                 { label: "PDF Reports", value: audits.filter(a => a.pdf_available).length, color: "var(--text-primary)" },
               ].map(({ label, value, color }) => (
-                <div key={label} style={{ 
-                  background: "var(--card)", 
-                  border: "1px solid var(--border)", 
-                  borderRadius: "var(--radius-md)", 
-                  padding: "clamp(12px, 3vw, 18px)", 
-                  textAlign: "center", 
-                  boxShadow: "var(--shadow-card)" 
+                <div key={label} style={{
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "clamp(16px, 3vw, 20px)",
+                  textAlign: "center",
+                  boxShadow: "var(--shadow-card)"
                 }}>
-                  <div style={{ 
-                    fontFamily: "'Satoshi', sans-serif", 
-                    fontSize: "clamp(22px, 5vw, 26px)", 
-                    fontWeight: 800, 
-                    color, 
-                    marginBottom: 4 
+                  <div style={{
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontSize: "clamp(26px, 5vw, 30px)",
+                    fontWeight: 800,
+                    color,
+                    marginBottom: 6,
+                    letterSpacing: "-0.02em",
                   }}>
                     {value}
                   </div>
-                  <div style={{ 
-                    fontSize: "clamp(9px, 2vw, 10px)", 
-                    color: "var(--text-disabled)", 
-                    textTransform: "uppercase", 
-                    letterSpacing: "0.08em", 
-                    fontFamily: "'Satoshi', sans-serif" 
+                  <div style={{
+                    fontSize: "clamp(11px, 2vw, 12px)",
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontWeight: 600,
                   }}>
                     {label}
                   </div>
@@ -325,39 +327,40 @@ export default function HistoryPage() {
               }}>
                 <FileText size={28} style={{ color: "var(--brand)" }} />
               </div>
-              <h3 style={{ 
-                fontFamily: "'Satoshi', sans-serif", 
-                fontSize: "clamp(16px, 4vw, 18px)", 
-                fontWeight: 700, 
-                letterSpacing: "-0.025em", 
-                color: "var(--text-primary)", 
-                marginBottom: 8 
+              <h3 style={{
+                fontFamily: "'Satoshi', sans-serif",
+                fontSize: "clamp(18px, 4vw, 20px)",
+                fontWeight: 700,
+                letterSpacing: "-0.025em",
+                color: "var(--text-primary)",
+                marginBottom: 10
               }}>
                 No audits yet
               </h3>
-              <p style={{ 
-                fontSize: "clamp(12px, 3vw, 13px)", 
-                color: "var(--text-muted)", 
-                marginBottom: 24, 
-                lineHeight: 1.7, 
-                fontFamily: "'Satoshi', sans-serif" 
+              <p style={{
+                fontSize: "clamp(13px, 3vw, 14px)",
+                color: "var(--text-muted)",
+                marginBottom: 24,
+                lineHeight: 1.7,
+                fontFamily: "'Satoshi', sans-serif",
+                fontWeight: 500,
               }}>
                 Run your first smart contract audit to see results here.
               </p>
               <Link href="/dashboard/scan" prefetch={true} style={{
                 display: "inline-flex",
-                alignItems: "center", 
-                gap: 7, 
-                padding: "10px 22px", 
-                background: "var(--brand)", 
-                color: "#fff", 
-                borderRadius: "var(--radius)", 
-                fontFamily: "'Satoshi', sans-serif", 
-                fontSize: "clamp(12px, 3vw, 13px)", 
-                fontWeight: 600, 
-                textDecoration: "none" 
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 24px",
+                background: "var(--brand)",
+                color: "#fff",
+                borderRadius: "var(--radius)",
+                fontFamily: "'Satoshi', sans-serif",
+                fontSize: "clamp(13px, 3vw, 14px)",
+                fontWeight: 700,
+                textDecoration: "none"
               }}>
-                <Plus size={13} /> Start Your First Audit
+                <Plus size={15} /> Start Your First Audit
               </Link>
             </div>
           ) : (
@@ -365,8 +368,8 @@ export default function HistoryPage() {
               {audits.map(audit => {
                 const rs = riskColors(audit.risk_level, audit.risk_score, isLight);
                 const vc = verdictColors(audit.deployment_verdict, isLight);
-                const language: ContractLanguage = detectLanguage(audit.chain);
-                const lc = languageColor(language);
+                const cc = chainColor(audit.chain);
+                const cLabel = chainLabel(audit.chain);
 
                 return (
                   <div key={audit.id}
@@ -376,7 +379,7 @@ export default function HistoryPage() {
                       background: "var(--card)",
                       border: "1px solid var(--border)",
                       borderRadius: "var(--radius-md)",
-                      padding: "clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px)",
+                      padding: "clamp(14px, 3vw, 18px) clamp(16px, 4vw, 20px)",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -394,134 +397,130 @@ export default function HistoryPage() {
                       (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card)";
                     }}
                   >
-                    {/* Language icon — replaces the old contract-type icon + number circle */}
+                    {/* Chain icon — actual blockchain network logo */}
                     <div
-                      title={languageLabel(language)}
+                      title={cLabel}
                       style={{
-                        width: "clamp(40px, 8vw, 48px)",
-                        height: "clamp(40px, 8vw, 48px)",
+                        width: "clamp(44px, 8vw, 52px)",
+                        height: "clamp(44px, 8vw, 52px)",
                         borderRadius: "50%",
-                        background: lc.bg,
-                        border: `1.5px solid ${lc.border}`,
+                        background: cc.bg,
+                        border: `1.5px solid ${cc.border}`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
                       }}
                     >
-                      <LanguageIcon language={language} size={22} style={{ color: lc.color }} />
+                      <ChainIcon chain={audit.chain} size={26} style={{ color: cc.color }} />
                     </div>
 
                     {/* Info */}
                     <div className="audit-info" style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
                         <span style={{
                           fontFamily: "'Satoshi', sans-serif",
-                          fontSize: "clamp(13px, 3.5vw, 14px)",
+                          fontSize: "clamp(15px, 3.5vw, 17px)",
                           fontWeight: 700,
-                          color: "var(--text-primary)"
+                          color: "var(--text-primary)",
+                          letterSpacing: "-0.01em",
                         }}>
                           {audit.contract_name}
                         </span>
                         <span style={{
-                          fontSize: "clamp(9px, 2vw, 10px)",
-                          padding: "2px 7px",
-                          borderRadius: 4,
-                          background: lc.bg,
-                          border: `1px solid ${lc.border}`,
-                          color: lc.color,
+                          fontSize: "clamp(11px, 2.4vw, 12px)",
+                          padding: "3px 9px",
+                          borderRadius: 5,
+                          background: cc.bg,
+                          border: `1px solid ${cc.border}`,
+                          color: cc.color,
                           fontFamily: "'Satoshi', sans-serif",
-                          fontWeight: 600,
+                          fontWeight: 700,
+                          letterSpacing: "0.01em",
                         }}>
-                          {languageLabel(language)}
+                          {cLabel}
                         </span>
                         <span style={{
-                          fontSize: "clamp(9px, 2vw, 10px)",
-                          padding: "2px 7px",
-                          borderRadius: 4,
-                          background: "var(--elevated)",
-                          border: "1px solid var(--border)",
-                          color: "var(--text-disabled)",
-                          fontFamily: "'Satoshi', monospace"
-                        }}>
-                          {audit.chain}
-                        </span>
-                        <span style={{
-                          fontSize: "clamp(9px, 2vw, 10px)",
-                          padding: "2px 8px",
-                          borderRadius: 4,
+                          fontSize: "clamp(11px, 2.4vw, 12px)",
+                          padding: "3px 9px",
+                          borderRadius: 5,
                           background: rs.bg,
                           border: `1px solid ${rs.border}`,
                           color: rs.color,
                           fontFamily: "'Satoshi', sans-serif",
-                          fontWeight: 700,
+                          fontWeight: 800,
                         }}>
                           {audit.risk_score}/100
                         </span>
                       </div>
-                      <div style={{ 
-                        display: "flex", 
-                        alignItems: "center", 
-                        gap: "clamp(8px, 2vw, 14px)", 
-                        flexWrap: "wrap", 
-                        fontSize: "clamp(10px, 2.5vw, 11px)", 
-                        color: "var(--text-disabled)", 
-                        fontFamily: "'Satoshi', sans-serif" 
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "clamp(10px, 2vw, 16px)",
+                        flexWrap: "wrap",
+                        fontSize: "clamp(12px, 2.6vw, 13px)",
+                        color: "var(--text-muted)",
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontWeight: 500,
                       }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <Calendar size={10} />{relTime(audit.created_at)}
+                        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <Calendar size={13} />{relTime(audit.created_at)}
                         </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <Clock size={10} />{Math.round(audit.scan_duration_ms / 1000)}s
+                        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <Clock size={13} />{Math.round(audit.scan_duration_ms / 1000)}s
                         </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <TrendingUp size={10} />{audit.plan_used}
+                        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <TrendingUp size={13} />{audit.plan_used}
                         </span>
                       </div>
                     </div>
 
                     {/* Finding chips */}
-                    <div className="finding-chips" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <div className="finding-chips" style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                       {audit.critical_count > 0 && (
-                        <span style={{ 
-                          fontSize: "clamp(9px, 2vw, 10px)", 
-                          padding: "3px 8px", 
-                          borderRadius: 5, 
-                          background: isLight ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.1)", 
-                          color: "#ef4444", 
-                          fontFamily: "'Satoshi', sans-serif" 
+                        <span style={{
+                          fontSize: "clamp(11px, 2.4vw, 12px)",
+                          padding: "4px 10px",
+                          borderRadius: 6,
+                          background: isLight ? "rgba(239,68,68,0.10)" : "rgba(239,68,68,0.12)",
+                          color: "#ef4444",
+                          fontFamily: "'Satoshi', sans-serif",
+                          fontWeight: 700,
                         }}>
-                          {audit.critical_count}C
+                          {audit.critical_count} Critical
                         </span>
                       )}
                       {audit.high_count > 0 && (
-                        <span style={{ 
-                          fontSize: "clamp(9px, 2vw, 10px)", 
-                          padding: "3px 8px", 
-                          borderRadius: 5, 
-                          background: isLight ? "rgba(249,115,22,0.08)" : "rgba(249,115,22,0.1)", 
-                          color: "#f97316", 
-                          fontFamily: "'Satoshi', sans-serif" 
+                        <span style={{
+                          fontSize: "clamp(11px, 2.4vw, 12px)",
+                          padding: "4px 10px",
+                          borderRadius: 6,
+                          background: isLight ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.12)",
+                          color: "#f97316",
+                          fontFamily: "'Satoshi', sans-serif",
+                          fontWeight: 700,
                         }}>
-                          {audit.high_count}H
+                          {audit.high_count} High
                         </span>
                       )}
                       {audit.medium_count > 0 && (
-                        <span style={{ 
-                          fontSize: "clamp(9px, 2vw, 10px)", 
-                          padding: "3px 8px", 
-                          borderRadius: 5, 
-                          background: isLight ? "rgba(234,179,8,0.08)" : "rgba(234,179,8,0.1)", 
-                          color: "#ca8a04", 
-                          fontFamily: "'Satoshi', sans-serif" 
+                        <span style={{
+                          fontSize: "clamp(11px, 2.4vw, 12px)",
+                          padding: "4px 10px",
+                          borderRadius: 6,
+                          background: isLight ? "rgba(234,179,8,0.10)" : "rgba(234,179,8,0.12)",
+                          color: "#ca8a04",
+                          fontFamily: "'Satoshi', sans-serif",
+                          fontWeight: 700,
                         }}>
-                          {audit.medium_count}M
+                          {audit.medium_count} Med
                         </span>
                       )}
-                      <span style={{ 
-                        fontSize: "clamp(10px, 2.5vw, 11px)", 
-                        color: "var(--text-disabled)", 
-                        fontFamily: "'Satoshi', sans-serif" 
+                      <span style={{
+                        fontSize: "clamp(12px, 2.6vw, 13px)",
+                        color: "var(--text-muted)",
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontWeight: 500,
                       }}>
                         {audit.total_findings} total
                       </span>
@@ -529,81 +528,81 @@ export default function HistoryPage() {
 
                     {/* Verdict */}
                     {audit.deployment_verdict && (
-                      <span style={{ 
-                        fontSize: "clamp(9px, 2vw, 10px)", 
-                        padding: "3px 10px", 
-                        borderRadius: 5, 
-                        background: vc.bg, 
-                        color: vc.color, 
-                        border: `1px solid ${vc.border}`, 
-                        fontFamily: "'Satoshi', sans-serif", 
-                        fontWeight: 600, 
-                        flexShrink: 0, 
-                        whiteSpace: "nowrap" 
+                      <span style={{
+                        fontSize: "clamp(11px, 2.4vw, 12px)",
+                        padding: "4px 12px",
+                        borderRadius: 6,
+                        background: vc.bg,
+                        color: vc.color,
+                        border: `1px solid ${vc.border}`,
+                        fontFamily: "'Satoshi', sans-serif",
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        whiteSpace: "nowrap"
                       }}>
                         {audit.deployment_verdict}
                       </span>
                     )}
 
                     {/* Actions */}
-                    <div className="audit-actions" style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                    <div className="audit-actions" style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                       {audit.pdf_available && (
                         <button onClick={e => downloadPdf(audit.id, audit.contract_name, e)}
-                          style={{ 
-                            width: "clamp(28px, 6vw, 32px)", 
-                            height: "clamp(28px, 6vw, 32px)", 
-                            borderRadius: "var(--radius-sm)", 
-                            background: "none", 
-                            border: "none", 
-                            color: "var(--text-muted)", 
-                            cursor: "pointer", 
-                            display: "flex", 
-                            alignItems: "center", 
-                            justifyContent: "center", 
-                            transition: "background 0.15s, color 0.15s" 
+                          style={{
+                            width: "clamp(34px, 6vw, 38px)",
+                            height: "clamp(34px, 6vw, 38px)",
+                            borderRadius: "var(--radius-sm)",
+                            background: "none",
+                            border: "none",
+                            color: "var(--text-muted)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "background 0.15s, color 0.15s"
                           }}
-                          onMouseEnter={e => { 
-                            (e.currentTarget as HTMLElement).style.background = "var(--elevated)"; 
-                            (e.currentTarget as HTMLElement).style.color = "var(--text-primary)"; 
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLElement).style.background = "var(--elevated)";
+                            (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
                           }}
-                          onMouseLeave={e => { 
-                            (e.currentTarget as HTMLElement).style.background = "none"; 
-                            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; 
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLElement).style.background = "none";
+                            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
                           }}
                         >
                           {dlId === audit.id ? (
-                            <Loader2 size={13} className="animate-spin" />
+                            <Loader2 size={16} className="animate-spin" />
                           ) : (
-                            <Download size={13} />
+                            <Download size={16} />
                           )}
                         </button>
                       )}
                       <button onClick={e => { e.stopPropagation(); router.push(`/dashboard/audit/results/${audit.id}`); }}
-                        style={{ 
-                          width: "clamp(28px, 6vw, 32px)", 
-                          height: "clamp(28px, 6vw, 32px)", 
-                          borderRadius: "var(--radius-sm)", 
-                          background: "none", 
-                          border: "none", 
-                          color: "var(--text-muted)", 
-                          cursor: "pointer", 
-                          display: "flex", 
-                          alignItems: "center", 
-                          justifyContent: "center", 
-                          transition: "background 0.15s, color 0.15s" 
+                        style={{
+                          width: "clamp(34px, 6vw, 38px)",
+                          height: "clamp(34px, 6vw, 38px)",
+                          borderRadius: "var(--radius-sm)",
+                          background: "none",
+                          border: "none",
+                          color: "var(--text-muted)",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          transition: "background 0.15s, color 0.15s"
                         }}
-                        onMouseEnter={e => { 
-                          (e.currentTarget as HTMLElement).style.background = "var(--elevated)"; 
-                          (e.currentTarget as HTMLElement).style.color = "var(--text-primary)"; 
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLElement).style.background = "var(--elevated)";
+                          (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
                         }}
-                        onMouseLeave={e => { 
-                          (e.currentTarget as HTMLElement).style.background = "none"; 
-                          (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; 
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLElement).style.background = "none";
+                          (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
                         }}
                       >
-                        <Eye size={13} />
+                        <Eye size={16} />
                       </button>
-                      <ChevronRight size={14} style={{ color: "var(--text-disabled)" }} />
+                      <ChevronRight size={18} style={{ color: "var(--text-disabled)" }} />
                     </div>
                   </div>
                 );
