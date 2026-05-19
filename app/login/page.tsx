@@ -77,7 +77,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} method="post">
             {[
               { label: "Email address", type: "email",    value: email,    set: setEmail,    placeholder: "you@example.com" },
               { label: "Password",      type: "password", value: password, set: setPassword, placeholder: "••••••••" },
