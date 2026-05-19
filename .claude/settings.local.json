@@ -28,7 +28,20 @@
       "Bash(timeout 10)",
       "Bash(git stash *)",
       "Bash(psql *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(xargs grep -L \"force-dynamic\")",
+      "Bash(New-Item -ItemType Directory -Force \"E:\\\\test\\\\auditsmart\\\\prisma\\\\migrations\\\\20260519000000_add_report_id_and_index_to_audit\")",
+      "Bash(Out-Null)",
+      "Bash(npx next *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(echo \"EXIT_CODE:$?\")",
+      "Bash(findstr \":3000\")",
+      "Bash(tasklist)",
+      "Bash(findstr node.exe)",
+      "PowerShell(Stop-Process *)",
+      "Bash(pnpm add *)"
     ]
   }
 }

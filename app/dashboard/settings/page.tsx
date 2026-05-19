@@ -5,7 +5,7 @@ import SettingsClient from "./_components/SettingsClient";
 
 export default async function SettingsPage() {
   const session = await getCachedSession();
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) redirect("/login");
 
   return (
     <SettingsClient

@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { PLAN_DETAILS } from "@/lib/plans";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useUserLimits } from "@/lib/state/user-limits";
 import {
   LayoutDashboard,
   History,
@@ -42,51 +42,27 @@ interface SidebarProps {
 function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
-  const [planFromApi, setPlanFromApi] = useState<string | null>(null);
-  const plan = (planFromApi || (session?.user?.plan as string) || user?.plan || "FREE").toUpperCase();
+  const limits = useUserLimits({
+    plan: user?.plan,
+    remaining: user?.auditsRemaining ?? null,
+    limit: user?.maxAudits ?? null,
+  });
+
+  const plan = limits.plan;
   const PLAN_LABEL: Record<string, string> = { FREE: "Free", PREMIUM: "Pro", ENTERPRISE: "Enterprise", ADMIN: "Admin" };
   const planLabel = PLAN_LABEL[plan] ?? plan;
-  const [remaining, setRemaining] = useState<number | null>(user?.auditsRemaining ?? null);
-  const [maxAudits, setMaxAudits] = useState<number>(user?.maxAudits ?? 10);
+  const remaining = limits.remaining;
+  const maxAudits = limits.limit ?? user?.maxAudits ?? 10;
 
-  // Prefetch all nav routes on mount so clicks are instant
   useEffect(() => {
+    // Prefetch internal navigation routes on idle so clicks are instant
     const routes = [
-      "/dashboard",
-      "/dashboard/scan",
-      "/dashboard/history",
-      "/dashboard/audit",
-      "/dashboard/billing",
-      "/dashboard/monitor",
-      "/dashboard/settings",
-      "/dashboard/deep-audit",
-      "/dashboard/quantum",
+      "/dashboard", "/dashboard/scan", "/dashboard/history", "/dashboard/audit",
+      "/dashboard/billing", "/dashboard/monitor", "/dashboard/settings",
+      "/dashboard/deep-audit", "/dashboard/quantum",
     ];
-    routes.forEach((r) => router.prefetch(r));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchLimits = (bustCache = false) => {
-    fetch("/api/user/limits", { cache: bustCache ? "no-store" : "default" })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.plan      !== undefined) setPlanFromApi(d.plan.toUpperCase());
-        if (d.remaining !== undefined) setRemaining(d.remaining);
-        if (d.limit     !== undefined) setMaxAudits(d.limit);
-      })
-      .catch(() => {});
-  };
-
-  useEffect(() => {
-    // Always fetch on mount to get fresh limits (props from layout can be stale after upgrade).
-    fetchLimits();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    // Re-fetch limits (with cache bust) immediately when payment completes.
-    const handler = () => fetchLimits(true);
-    window.addEventListener("plan-upgraded", handler);
-    return () => window.removeEventListener("plan-upgraded", handler);
+    const idle = (window as any).requestIdleCallback ?? ((cb: any) => setTimeout(cb, 200));
+    idle(() => routes.forEach((r) => router.prefetch(r)));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const left = remaining ?? 0;

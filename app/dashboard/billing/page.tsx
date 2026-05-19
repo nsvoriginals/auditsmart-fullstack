@@ -13,7 +13,7 @@ const PLAN_AUDIT_LIMITS: Record<string, number> = {
 
 export default async function BillingPage() {
   const session = await getCachedSession();
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) redirect("/login");
 
   const userId = session.user.id;
 
@@ -41,7 +41,7 @@ export default async function BillingPage() {
     }),
   ]);
 
-  if (!user) redirect("/auth/signin");
+  if (!user) redirect("/login");
 
   const sub = user.subscription;
   const planName = (sub?.plan ?? user.role).toString();

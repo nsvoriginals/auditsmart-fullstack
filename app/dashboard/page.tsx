@@ -47,7 +47,7 @@ const relTime = (d: Date) => {
 
 export default async function DashboardOverview() {
   const session = await getCachedSession();
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) redirect("/login");
 
   const userId = session.user.id;
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);

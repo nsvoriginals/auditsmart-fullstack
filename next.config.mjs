@@ -53,6 +53,11 @@ const nextConfig = {
   },
 
   experimental: {
+    // Aggressive client-side RSC caching — visiting a page then returning is instant
+    staleTimes: {
+      dynamic: 30,   // dynamic pages cached client-side for 30s
+      static: 300,   // static pages cached for 5min
+    },
     optimizePackageImports: [
       "lucide-react",
       "framer-motion",
