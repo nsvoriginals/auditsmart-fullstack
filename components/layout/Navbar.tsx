@@ -35,9 +35,12 @@ export function Navbar() {
 
   const isAuthed = status === "authenticated";
 
+  // Default to dark before hydration — avoids white flash on dark-mode systems
+  const isDark = !mounted || resolvedTheme === "dark";
+
   const navBg = scrolled
-    ? resolvedTheme === "dark" ? "rgba(5,5,8,0.97)" : "rgba(248,249,255,0.97)"
-    : resolvedTheme === "dark" ? "rgba(5,5,8,0.80)" : "rgba(248,249,255,0.80)";
+    ? isDark ? "rgba(5,5,8,0.97)" : "rgba(245,245,250,0.97)"
+    : isDark ? "rgba(5,5,8,0.82)" : "rgba(245,245,250,0.82)";
 
   return (
     <nav
@@ -97,13 +100,13 @@ export function Navbar() {
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
             className="w-9 h-9 rounded-lg transition-all flex items-center justify-center"
             style={{
-              background: resolvedTheme === "dark" ? "rgba(0,212,255,0.06)" : "rgba(123,47,255,0.06)",
-              border: `1px solid ${resolvedTheme === "dark" ? "rgba(0,212,255,0.15)" : "rgba(123,47,255,0.15)"}`,
+              background: isDark ? "rgba(0,212,255,0.06)" : "rgba(123,47,255,0.06)",
+              border: `1px solid ${isDark ? "rgba(0,212,255,0.15)" : "rgba(123,47,255,0.15)"}`,
               color: "var(--text-secondary)",
             }}
             aria-label="Toggle theme"
           >
-            {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         )}
 
@@ -154,7 +157,7 @@ export function Navbar() {
         <div
           className="fixed inset-x-0 top-16 z-40 p-5 flex flex-col gap-2 md:hidden"
           style={{
-            background: resolvedTheme === "dark" ? "rgba(5,5,8,0.98)" : "rgba(248,249,255,0.98)",
+            background: isDark ? "rgba(5,5,8,0.98)" : "rgba(245,245,250,0.98)",
             backdropFilter: "blur(20px)",
             borderBottom: "1px solid var(--border)",
           }}
