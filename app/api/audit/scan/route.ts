@@ -339,18 +339,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             recommendation: f.recommendation ?? null,
           }));
 
-        if (validFindings.length > 0) {
-          await prisma.finding.createMany({ data: validFindings });
-        }
-
-        // Increment user audit counters
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            totalAudits: { increment: 1 },
-            currentMonthAudits: { increment: 1 },
-          },
-        });
+        // Findings + user counter are independent — run in parallel
+        await Promise.all([
+          validFindings.length > 0
+            ? prisma.finding.createMany({ data: validFindings })
+            : Promise.resolve(),
+          prisma.user.update({
+            where: { id: userId },
+            data: { totalAudits: { increment: 1 }, currentMonthAudits: { increment: 1 } },
+          }),
+        ]);
 
         console.log(`✅ Audit ${audit.id} completed | Report ID: ${reportId}`);
       } catch (error: any) {
