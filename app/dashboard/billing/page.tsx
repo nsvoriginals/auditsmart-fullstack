@@ -1,19 +1,18 @@
 // app/dashboard/billing/page.tsx — Server Component wrapper
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCachedSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import BillingClient, { type BillingStatus } from "./_components/BillingClient";
 
 const PLAN_AUDIT_LIMITS: Record<string, number> = {
-  FREE:       10,
+  FREE:       3,
   PREMIUM:    15,
   ENTERPRISE: 20,
   ADMIN:      Infinity,
 };
 
 export default async function BillingPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedSession();
   if (!session?.user?.id) redirect("/auth/signin");
 
   const userId = session.user.id;

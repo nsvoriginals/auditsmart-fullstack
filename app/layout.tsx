@@ -7,8 +7,7 @@ import "./globals.css";
 import Providers from "./providers";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCachedSession } from "@/lib/session";
 
 // Self-hosted via next/font — eliminates external Google Fonts network request,
 // removes FOUT (flash of unstyled text), and improves privacy.
@@ -67,7 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Pre-fetch session on the server so SessionProvider populates its cache
   // immediately — eliminates the client-side GET /api/auth/session round-trip
   // that was causing the ~3s blank-page delay on every navigation.
-  const session = await getServerSession(authOptions);
+  const session = await getCachedSession();
 
   return (
     <html lang="en" suppressHydrationWarning className={`${syne.variable} ${dmMono.variable}`}>

@@ -1,48 +1,54 @@
 // app/dashboard/layout.tsx
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCachedSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
+
+const getAuditCounts = unstable_cache(
+  async (userId: string) => {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const [monthly, total] = await Promise.all([
+      prisma.audit.count({ where: { userId, createdAt: { gte: startOfMonth } } }),
+      prisma.audit.count({ where: { userId } }),
+    ]);
+    return { monthly, total };
+  },
+  ["dashboard-audit-counts"],
+  { revalidate: 60 }
+);
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  const userId  = (session?.user as any)?.id as string | undefined;
-  const plan    = ((session?.user as any)?.plan || "FREE").toUpperCase() as string;
+  const session = await getCachedSession();
+  const userId  = session?.user?.id as string | undefined;
+  const plan    = (session?.user?.plan || session?.user?.role || "FREE").toUpperCase() as string;
 
-  // Fetch audit limits once on the server so the sidebar never needs a
-  // client-side /api/user/limits round-trip on every page navigation.
   let auditsRemaining: number | null = null;
   let maxAudits = 3;
 
   if (userId) {
     try {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const used = await prisma.audit.count({
-        where: { userId, createdAt: { gte: startOfMonth } },
-      });
+      const { monthly, total } = await getAuditCounts(userId);
 
       if (plan === "ADMIN") {
-        auditsRemaining = null; // unlimited
+        auditsRemaining = null;
         maxAudits       = 999;
       } else if (plan === "ENTERPRISE") {
         maxAudits       = 20;
-        auditsRemaining = Math.max(0, 20 - used);
+        auditsRemaining = Math.max(0, 20 - monthly);
       } else if (plan === "PREMIUM") {
         maxAudits       = 15;
-        auditsRemaining = Math.max(0, 15 - used);
+        auditsRemaining = Math.max(0, 15 - monthly);
       } else {
-        // FREE: lifetime limit — count all audits, not just this month
-        const totalUsed = await prisma.audit.count({ where: { userId } });
-        maxAudits       = 10;
-        auditsRemaining = Math.max(0, 10 - totalUsed);
+        // FREE: lifetime limit of 3
+        maxAudits       = 3;
+        auditsRemaining = Math.max(0, 3 - total);
       }
     } catch {
       // Non-fatal — sidebar will show 0 as fallback

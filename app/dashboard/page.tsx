@@ -1,8 +1,7 @@
 // app/dashboard/page.tsx — Dashboard Overview (Server Component)
 import React from "react";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCachedSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import {
@@ -47,7 +46,7 @@ const relTime = (d: Date) => {
 };
 
 export default async function DashboardOverview() {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedSession();
   if (!session?.user?.id) redirect("/auth/signin");
 
   const userId = session.user.id;
