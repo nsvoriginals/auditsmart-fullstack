@@ -128,6 +128,7 @@ export default function ScanPage() {
   const [jobId, setJobId]         = useState<string | null>(null);
   const [progress, setProgress]   = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
+  const [slowWarning, setSlowWarning] = useState(false);
   const pollCountRef = React.useRef(0);
 
   const AUDIT_STEPS = React.useMemo(() => {
@@ -160,6 +161,7 @@ export default function ScanPage() {
     setJobId(null);
     setProgress(0);
     setCurrentStep(0);
+    setSlowWarning(false);
     pollCountRef.current = 0;
     
     try {
@@ -203,18 +205,24 @@ export default function ScanPage() {
     const pollInterval = setInterval(async () => {
       pollCountRef.current += 1;
 
-      // Timeout after 2 minutes (40 × 3s = 120s)
-      if (pollCountRef.current > 40) {
+      // After ~90s (30 polls) show a soft "still running" warning — don't give up yet
+      if (pollCountRef.current === 30) {
+        setSlowWarning(true);
+      }
+
+      // Hard stop at 5 minutes (100 × 3s = 300s) — rare but covers Groq retry storms
+      if (pollCountRef.current > 100) {
         clearInterval(pollInterval);
-        setError("Audit is taking longer than expected. Check History for results.");
+        setError("Audit is taking longer than expected. It may still be running — check History for results.");
         setScanning(false);
         setJobId(null);
+        setSlowWarning(false);
         return;
       }
 
-      // Update progress animation
+      // Progress animation: slow down after 90% so it never falsely hits 100
       const elapsed = Date.now() - startTime;
-      const estimatedProgress = Math.min(90, Math.floor(elapsed / 450));
+      const estimatedProgress = Math.min(90, Math.floor(elapsed / 750));
       setProgress(estimatedProgress);
       setCurrentStep((prev) => {
         const next = Math.floor(estimatedProgress / 10);
@@ -283,6 +291,25 @@ export default function ScanPage() {
             AI agents are analyzing your smart contract...
           </p>
         </div>
+
+        {/* Slow-audit soft warning — shown after ~90s, does NOT stop polling */}
+        {slowWarning && (
+          <div style={{ padding: "12px 16px", borderRadius: "var(--radius)", background: "rgba(234,179,8,0.07)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <Clock className="h-4 w-4 mt-0.5" style={{ color: "#ca8a04", flexShrink: 0 }} />
+            <div>
+              <p style={{ fontSize: "clamp(12px, 3vw, 13px)", fontWeight: 600, color: "#ca8a04", fontFamily: "'Satoshi', sans-serif" }}>
+                Still processing — this is taking a bit longer than usual
+              </p>
+              <p style={{ fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
+                Complex contracts can take up to 5 minutes. Hanging on…{" "}
+                <Link href="/dashboard/history" style={{ color: "var(--brand)" }}>
+                  View History
+                </Link>{" "}
+                if you need to navigate away.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "clamp(20px, 5vw, 32px)", boxShadow: "var(--shadow-card)" }}>
           {/* Progress bar */}
@@ -509,9 +536,18 @@ export default function ScanPage() {
         </div>
 
         {error && (
-          <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: "var(--radius)", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <AlertCircle className="h-4 w-4" style={{ color: "#ef4444", flexShrink: 0 }} />
-            <span style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "#ef4444", fontFamily: "'Satoshi', sans-serif" }}>{error}</span>
+          <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: "var(--radius)", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <AlertCircle className="h-4 w-4 mt-0.5" style={{ color: "#ef4444", flexShrink: 0 }} />
+            <span style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "#ef4444", fontFamily: "'Satoshi', sans-serif", flex: 1 }}>
+              {error.includes("History") ? (
+                <>
+                  Audit is taking longer than expected. It may still be running —{" "}
+                  <Link href="/dashboard/history" style={{ color: "#ef4444", textDecoration: "underline" }}>
+                    check History for results
+                  </Link>.
+                </>
+              ) : error}
+            </span>
           </div>
         )}
 

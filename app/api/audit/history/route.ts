@@ -1,10 +1,10 @@
 // app/api/audit/history/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -12,10 +12,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const url = new URL(req.url);
+    const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10)));
+    const skip = (page - 1) * limit;
+
     const rawAudits = await prisma.audit.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip,
+      take: limit,
       select: {
         id: true,
         contractName: true,
@@ -44,7 +50,12 @@ export async function GET() {
         else riskLevel = "low";
       }
 
-      const findings: any[] = report.findings ?? [];
+      // Use pre-computed counts from the report blob — avoids iterating findings[] in JS
+      const criticalCount = report.critical_count ?? 0;
+      const highCount = report.high_count ?? 0;
+      const mediumCount = report.medium_count ?? 0;
+      const lowCount = report.low_count ?? 0;
+      const totalFindings = report.total_findings ?? (criticalCount + highCount + mediumCount + lowCount);
 
       return {
         id: a.id,
@@ -53,11 +64,11 @@ export async function GET() {
         status: a.status,
         risk_level: riskLevel,
         risk_score: riskScore,
-        total_findings: report.total_findings ?? findings.length,
-        critical_count: report.critical_count ?? findings.filter((f: any) => f.severity?.toLowerCase() === "critical").length,
-        high_count: report.high_count ?? findings.filter((f: any) => f.severity?.toLowerCase() === "high").length,
-        medium_count: report.medium_count ?? findings.filter((f: any) => f.severity?.toLowerCase() === "medium").length,
-        low_count: report.low_count ?? findings.filter((f: any) => f.severity?.toLowerCase() === "low").length,
+        total_findings: totalFindings,
+        critical_count: criticalCount,
+        high_count: highCount,
+        medium_count: mediumCount,
+        low_count: lowCount,
         plan_used: report.plan_used || "free",
         deployment_verdict: report.deployment_verdict || "",
         scan_duration_ms: report.scan_duration_ms || 0,
@@ -67,7 +78,10 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ audits });
+    return NextResponse.json(
+      { audits, page, limit },
+      { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } }
+    );
   } catch (error) {
     console.error("Error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

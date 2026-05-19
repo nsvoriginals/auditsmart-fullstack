@@ -1,4 +1,6 @@
 // app/api/user/limits/route.ts
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -13,55 +15,50 @@ export async function GET(req: NextRequest) {
 
     const userId = session.user.id;
 
-    // Get user's subscription
-    let subscription = await prisma.subscription.findUnique({
-      where: { userId },
-    });
-
-    // If no subscription exists, create one for FREE tier
-    if (!subscription) {
-      subscription = await prisma.subscription.create({
-        data: {
-          userId: userId,
-          plan: "FREE",
-          status: "ACTIVE",
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        },
-      });
-    }
-
-    // Get the plan from subscription (matches UserRole enum: FREE, PREMIUM, ENTERPRISE, ADMIN)
-    const plan = subscription.plan;
-    
-    // Calculate monthly audits (used for PREMIUM/ENTERPRISE)
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const auditsThisMonth = await prisma.audit.count({
-      where: { userId, createdAt: { gte: startOfMonth } },
-    });
+    // Fetch subscription and monthly count in parallel
+    const [rawSubscription, auditsThisMonth] = await Promise.all([
+      prisma.subscription.findUnique({ where: { userId } }),
+      prisma.audit.count({ where: { userId, createdAt: { gte: startOfMonth } } }),
+    ]);
 
-    // FREE plan tracks lifetime total — all other plans track monthly
-    const totalAudits = plan === "FREE"
-      ? await prisma.audit.count({ where: { userId } })
-      : auditsThisMonth;
+    // Auto-create FREE subscription if missing
+    const subscription =
+      rawSubscription ??
+      (await prisma.subscription.create({
+        data: {
+          userId,
+          plan: "FREE",
+          status: "ACTIVE",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+      }));
 
-    // Limits must match scan/route.ts enforcement values
+    const plan = subscription.plan;
+
+    // FREE plan tracks lifetime total; paid plans track monthly
+    const totalAudits =
+      plan === "FREE"
+        ? await prisma.audit.count({ where: { userId } })
+        : auditsThisMonth;
+
     let limit: number | null = null;
     let remaining: number | null = null;
 
     switch (plan) {
       case "FREE":
-        limit = 3; // 3 lifetime audits
+        limit = 3;
         remaining = Math.max(0, limit - totalAudits);
         break;
       case "PREMIUM":
-        limit = 15; // 15 per month
+        limit = 15;
         remaining = Math.max(0, limit - auditsThisMonth);
         break;
       case "ENTERPRISE":
-        limit = 20; // 20 per month
+        limit = 20;
         remaining = Math.max(0, limit - auditsThisMonth);
         break;
       case "ADMIN":
@@ -83,16 +80,13 @@ export async function GET(req: NextRequest) {
         isUnlimited: limit === null,
       },
       {
-        headers: {
-          "Cache-Control": "private, no-store",
-        },
+        // Short TTL: stale for up to 30s but always revalidate so the UI
+        // reflects a just-completed audit within one poll cycle.
+        headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" },
       }
     );
   } catch (error) {
     console.error("Error fetching limits:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -2,12 +2,32 @@
 import type { Metadata } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+import { Syne, DM_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+
+// Self-hosted via next/font — eliminates external Google Fonts network request,
+// removes FOUT (flash of unstyled text), and improves privacy.
+const syne = Syne({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-syne",
+  preload: true,
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-dm-mono",
+  preload: false,
+});
 
 export const metadata: Metadata = {
   title: {
@@ -50,15 +70,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = await getServerSession(authOptions);
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${syne.variable} ${dmMono.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Syne + DM Mono from Google — Satoshi loaded via @font-face in globals.css */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
+        {/* Satoshi loaded via @font-face in globals.css; Syne + DM Mono are self-hosted via next/font above */}
         <script
           src="https://analytics.ahrefs.com/analytics.js"
           data-key="CWDu0DcX0aQfQV90hPlbgQ"
@@ -68,8 +82,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
         <meta name="color-scheme" content="dark light" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://api.razorpay.com" />
+        <link rel="preconnect" href="https://api.razorpay.com" />
       </head>
       <body style={{ fontFamily: "'Satoshi', 'Outfit', sans-serif" }}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>

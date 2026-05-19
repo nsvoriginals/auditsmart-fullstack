@@ -85,7 +85,7 @@ export default async function DashboardOverview() {
   const averageScore = avgResult._avg.score || 0;
   const riskInfo = riskColors(averageScore);
   const plan = subscription?.plan || "FREE";
-  const remainingAudits = plan === "FREE" ? Math.max(0, 10 - totalAudits) : null;
+  const remainingAudits = plan === "FREE" ? Math.max(0, 3 - totalAudits) : null;
 
   const statCards = [
     { label: "Total Audits", value: totalAudits,                          icon: Shield      },

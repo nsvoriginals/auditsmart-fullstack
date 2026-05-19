@@ -12,19 +12,41 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const session = await getServerSession(authOptions);
     const url = new URL(req.url);
-    const isPublic = url.searchParams.get("public") === "true";
     const isPolling = url.searchParams.get("poll") === "true";
-    
+
     // H-05: Public access for report verification via report_id
     const reportId = url.searchParams.get("report_id");
-    
+
+    // Polling path: skip the full findings include — we only need status.
+    // This is the hot path (called every few seconds while audit runs).
+    if (isPolling && !reportId) {
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const lite = await prisma.audit.findFirst({
+        where: { id: params.id, userId: session.user.id },
+        select: { id: true, status: true },
+      });
+      if (!lite) {
+        return NextResponse.json({ error: "Audit not found" }, { status: 404 });
+      }
+      return NextResponse.json(
+        {
+          job_id: lite.id,
+          status: lite.status,
+          progress: lite.status === "COMPLETED" ? 100 : lite.status === "PROCESSING" ? 50 : 0,
+          completed: lite.status === "COMPLETED" || lite.status === "FAILED",
+        },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
     let whereClause: any = {};
-    
+
     if (reportId) {
-      // Public report access via random report_id
-      whereClause = { report: { contains: reportId } };
+      // H-05: O(log n) indexed lookup — replaces the previous full-table JSON CONTAINS scan
+      whereClause = { reportId };
     } else if (session?.user?.id) {
-      // Private access - must be owner
       whereClause = { id: params.id, userId: session.user.id };
     } else {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,24 +56,13 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       where: whereClause,
       include: {
         findings: {
-          orderBy: { severity: 'desc' },
+          orderBy: { severity: "desc" },
         },
       },
     });
 
     if (!audit) {
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });
-    }
-
-    // For polling: return minimal status
-    if (isPolling) {
-      return NextResponse.json({
-        job_id: audit.id,
-        status: audit.status,
-        progress: audit.status === "COMPLETED" ? 100 : 
-                  audit.status === "PROCESSING" ? 50 : 0,
-        completed: audit.status === "COMPLETED" || audit.status === "FAILED",
-      });
     }
 
     // Parse report JSON
@@ -114,6 +125,13 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const summaryText = audit.summary || report.summary || report.overall_assessment || "Audit completed.";
     const contractName = audit.contractName || "Unnamed Contract";
 
+    // Completed audits are immutable — cache aggressively.
+    // In-progress audits must not be cached (client polls until done).
+    const cacheHeader =
+      audit.status === "COMPLETED"
+        ? "private, max-age=300, stale-while-revalidate=3600"
+        : "no-store";
+
     // Return shape satisfies BOTH consumers:
     // - scan page (flat snake_case fields + findings[].type)
     // - results page (audit.contractName + nested audit.report.* + findings[].title)
@@ -170,8 +188,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
       // findings array at root — both pages read this
       findings: formattedFindings,
-    });
-    
+    }, { headers: { "Cache-Control": cacheHeader } });
+
   } catch (error) {
     console.error("Error fetching audit:", error);
     return NextResponse.json(

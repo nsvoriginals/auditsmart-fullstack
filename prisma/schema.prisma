@@ -101,6 +101,7 @@ model Audit {
   score              Int?
   report             String?
   summary            String?
+  reportId           String?             @unique // H-05: public share ID (indexed for O(log n) lookup)
   startedAt          DateTime?
   completedAt        DateTime?
   createdAt          DateTime            @default(now())
@@ -114,6 +115,7 @@ model Audit {
   @@index([status])
   @@index([createdAt])
   @@index([userId, createdAt])
+  @@index([userId, status])
 }
 
 model AgentReport {

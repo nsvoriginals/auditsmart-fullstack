@@ -17,7 +17,10 @@ let _client: Groq | null = null;
 
 function getClient(): Groq | null {
   if (!_client && config.GROQ_API_KEY) {
-    _client = new Groq({ apiKey: config.GROQ_API_KEY, maxRetries: 2 });
+    // maxRetries: 1 → worst-case per agent = 2 × 30s = 60s.
+    // maxRetries: 2 was causing occasional 90s agent runs, pushing
+    // the overall pipeline past the 2-minute polling window.
+    _client = new Groq({ apiKey: config.GROQ_API_KEY, maxRetries: 1 });
   }
   return _client;
 }

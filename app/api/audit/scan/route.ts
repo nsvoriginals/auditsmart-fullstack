@@ -158,7 +158,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // C-05: Test file detection - BLOCK IMMEDIATELY
+    // C-05: Test file detection - BLOCK IMMEDIATELY (cheap, no DB round-trip)
     const testDetection = detectTestFile(contract_code);
     if (testDetection.isTest) {
       return NextResponse.json({
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }, { status: 400 });
     }
 
-    // B-03: Validate contract size
+    // B-03: Validate contract size (also cheap, no DB)
     if (contract_code.length > MAX_CONTRACT_SIZE) {
       const sizeKB = (contract_code.length / 1000).toFixed(1);
       return NextResponse.json(
@@ -183,11 +183,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Get user with subscription
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { subscription: true },
-    });
+    // H-03: Compute month boundary once, reuse across parallel queries
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // Fetch user+subscription and monthly count in parallel — saves one DB round-trip
+    const [userWithSub, monthlyUserAudits] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        include: { subscription: true },
+      }),
+      prisma.audit.count({
+        where: { userId, createdAt: { gte: startOfMonth } },
+      }),
+    ]);
+
+    const user = userWithSub;
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -217,22 +229,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }, { status: 403 });
     }
 
-    // H-03: Check plan limits (PER-USER, not global)
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    // ✅ CORRECT: Count audits for THIS user only
-    const totalUserAudits = await prisma.audit.count({
-      where: { userId: userId },
-    });
-
-    const monthlyUserAudits = await prisma.audit.count({
-      where: {
-        userId: userId,
-        createdAt: { gte: startOfMonth },
-      },
-    });
+    // For FREE plan we also need total lifetime count — fetch only if needed
+    const totalUserAudits = plan === "FREE"
+      ? await prisma.audit.count({ where: { userId } })
+      : monthlyUserAudits;
 
     // Free plan: 10 lifetime limit
     if (plan === "FREE" && totalUserAudits >= FREE_PLAN_LIFETIME_LIMIT) {
@@ -277,7 +277,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const chainUpper = chain.toUpperCase() as
       | "ETHEREUM" | "BSC" | "POLYGON" | "AVALANCHE" | "ARBITRUM" | "OPTIMISM" | "BASE";
 
-    // Create audit record
+    // Create audit record — store reportId at creation so public lookups use the index
     const audit = await prisma.audit.create({
       data: {
         userId,
@@ -286,6 +286,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         chain: chainUpper,
         status: "PROCESSING",
         score: 0,
+        reportId,
       },
     });
 

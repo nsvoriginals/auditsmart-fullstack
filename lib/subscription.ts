@@ -23,64 +23,44 @@ export async function activateSubscription({
     const currentPeriodEnd = new Date();
     currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30);
 
-    const existingSubscription = await prisma.subscription.findUnique({
-      where: { userId },
-    });
-
     const planKey = plan.toLowerCase() as keyof typeof PLAN_PRICES_PAISE;
     const amount = PLAN_PRICES_PAISE[planKey] || 0;
 
-    if (existingSubscription) {
-      const updated = await prisma.subscription.update({
+    // Upsert replaces the previous findUnique → create/update branch,
+    // cutting one DB round-trip and one network call.
+    const [subscription] = await Promise.all([
+      prisma.subscription.upsert({
         where: { userId },
-        data: {
+        create: {
+          userId,
           plan,
-          status: 'ACTIVE',
+          status: "ACTIVE",
           currentPeriodEnd,
           razorpaySubscriptionId: orderId,
         },
-      });
-
-      await prisma.payment.create({
+        update: {
+          plan,
+          status: "ACTIVE",
+          currentPeriodEnd,
+          razorpaySubscriptionId: orderId,
+        },
+      }),
+      prisma.payment.create({
         data: {
           userId,
           razorpayOrderId: orderId,
           razorpayPaymentId: paymentId,
           amount,
-          currency: 'INR',
-          status: 'completed',
+          currency: "INR",
+          status: "completed",
           plan,
         },
-      });
+      }),
+    ]);
 
-      return { success: true, subscription: updated };
-    } else {
-      const newSubscription = await prisma.subscription.create({
-        data: {
-          userId,
-          plan,
-          status: 'ACTIVE',
-          currentPeriodEnd,
-          razorpaySubscriptionId: orderId,
-        },
-      });
-
-      await prisma.payment.create({
-        data: {
-          userId,
-          razorpayOrderId: orderId,
-          razorpayPaymentId: paymentId,
-          amount,
-          currency: 'INR',
-          status: 'completed',
-          plan,
-        },
-      });
-
-      return { success: true, subscription: newSubscription };
-    }
+    return { success: true, subscription };
   } catch (error) {
-    console.error('Error activating subscription:', error);
+    console.error("Error activating subscription:", error);
     throw error;
   }
 }
