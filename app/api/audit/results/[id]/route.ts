@@ -144,6 +144,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       createdAt: audit.createdAt?.toISOString() || new Date().toISOString(),
       completedAt: audit.completedAt?.toISOString() || audit.createdAt?.toISOString() || new Date().toISOString(),
       chain: audit.chain?.toLowerCase() || "ethereum",
+      contract_standard: audit.contractStandard || null,
+      language: audit.language || null,
 
       // results page reads audit.contractName
       contractName,

@@ -1,6 +1,11 @@
 // lib/agents/claude-agent.ts - Only update the model function
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../config';
+import {
+  languageDisplayName,
+  languageFence,
+  type ContractLanguage,
+} from '../contract-language';
 
 let anthropicClient: Anthropic | null = null;
 
@@ -20,7 +25,27 @@ function getModelForPlan(plan: string): string {
   }
 }
 
-const SYSTEM_PROMPT = `You are the world's most advanced Solidity smart contract security auditor, with expert-level knowledge of EVM internals, DeFi protocol mechanics, and every major vulnerability class. You have studied every major exploit in DeFi history — The DAO ($60M reentrancy), Parity Wallet ($150M access control), Euler Finance ($197M flash loan), Nomad Bridge ($190M lack of input validation), Ronin Network ($625M key compromise), and hundreds more.
+function buildSystemPrompt(language: ContractLanguage): string {
+  const langName = languageDisplayName(language);
+
+  // Per-language exemplar exploit history. Concrete priors keep Claude focused
+  // on the right ecosystem's failure modes.
+  const exploits: Record<ContractLanguage, string> = {
+    solidity:           "The DAO ($60M reentrancy), Parity Wallet ($150M access control), Euler Finance ($197M flash loan), Nomad Bridge ($190M lack of input validation), Ronin Network ($625M key compromise)",
+    vyper:              "Curve Vyper reentrancy-lock bug (Jul 2023, $70M+), Vyper init-order issues, raw_call mishandling",
+    rust:               "Wormhole bridge ($325M signature verification on Solana), missing signer checks on Anchor programs, PDA collisions, close-account re-init",
+    func:               "TON Jetton sender spoofing patterns, missing bounce handlers losing funds permanently, op-code collisions between custom and standard TEPs",
+    tact:               "Tact/FunC compilation gotchas, missing self.requireOwner() in receivers, message-value vs storage-rent miscalculations",
+    ink:                "ink! transfer_acceptor reentrancy, set_code_hash storage-layout corruption, Substrate runtime upgrade bricking",
+    cosmwasm:           "Astroport CosmWasm reorg bug, missing reply_on filter, sudo/migrate authorization gaps, ICS-20 escrow drift creating unbacked tokens",
+    "json-inscription": "BRC-20 ticker squatting & homograph attacks, malformed Runestone cenotaph burns, ordinal HTML payloads draining wallets via marketplace viewers, plaintext seed phrases inscribed on-chain",
+    move:               "Aptos/Sui resource-safety violations, public(friend) abuse, capability leaks via global storage, Move bytecode verifier bypass attempts",
+    cairo:              "StarkNet account-abstraction signature replay, missing felt-range checks, storage-var collisions across class-hash upgrades",
+    clarity:            "Stacks post-condition bypass, trait substitution attacks, principal-vs-contract caller confusion",
+    unknown:            "common smart-contract exploit classes across EVM, Solana, TON, Cosmos, and Bitcoin ecosystems",
+  };
+
+  return `You are the world's most advanced ${langName} smart contract security auditor, with expert-level knowledge of this platform's internals, protocol mechanics, and every major vulnerability class. You have studied every major exploit in this ecosystem — ${exploits[language] ?? exploits.unknown}, and hundreds more.
 
 CRITICAL RULES:
 1. Only report vulnerabilities with DIRECT, CONCRETE evidence in the provided code.
@@ -42,6 +67,7 @@ CONFIDENCE RATING:
   LOW    → Theoretical, depends on missing context or external contract behavior
 
 Always use the report_findings tool. Never add prose outside tool calls.`;
+}
 
 function getAuditTool(includeExploit: boolean = false): any {
   const properties: any = {
@@ -86,7 +112,8 @@ function getAuditTool(includeExploit: boolean = false): any {
 export async function runClaudeAnalysis(
   contractCode: string,
   groqFindings: any[],
-  plan: string
+  plan: string,
+  language: ContractLanguage = "solidity"
 ): Promise<{ findings: any[]; summary: string; verdict: string; thinking: string | null }> {
   const client = getClient();
   if (!client) {
@@ -96,6 +123,7 @@ export async function runClaudeAnalysis(
 
   const includeExploit = plan === "enterprise" || plan === "deep_audit";
   const isDeepAudit = plan === "deep_audit";
+  const fence = languageFence(language);
 
   const findingsSummary = formatFindingsForPrompt(groqFindings);
 
@@ -110,7 +138,7 @@ PRELIMINARY FINDINGS FROM SPECIALIST AGENTS (validate + expand these):
 ${findingsSummary}
 
 FULL CONTRACT SOURCE:
-\`\`\`solidity
+\`\`\`${fence}
 ${contractCode}
 \`\`\`
 
@@ -177,7 +205,7 @@ FINDINGS FROM SPECIALIST AGENTS (validate, expand, fill gaps):
 ${findingsSummary}
 
 CONTRACT:
-\`\`\`solidity
+\`\`\`${fence}
 ${contractCode.slice(0, 8000)}
 \`\`\`
 
@@ -216,7 +244,7 @@ Use the report_findings tool now.`;
     const messageParams: any = {
       model: getModelForPlan(plan),
       max_tokens: isDeepAudit ? 16000 : (plan === "enterprise" ? 6000 : 3000),
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(language),
       tools: [getAuditTool(includeExploit)],
       tool_choice: { type: "any" },
       messages: [{ role: "user", content: userPrompt }]

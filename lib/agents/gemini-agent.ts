@@ -1,6 +1,11 @@
 // lib/agents/gemini-agent.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { config } from "../config";
+import {
+  languageDisplayName,
+  languageFence,
+  type ContractLanguage,
+} from "../contract-language";
 
 export interface GeminiFinding {
   type: string;
@@ -22,14 +27,17 @@ function getClient(): GoogleGenerativeAI | null {
   return _genAI;
 }
 
-function buildPrompt(contractCode: string): string {
-  return `You are an elite Solidity smart contract security auditor. You have deep expertise in EVM internals, DeFi exploit mechanics, and every major smart contract vulnerability class. You have studied all major real-world exploits: The DAO reentrancy ($60M), Parity Wallet access control ($150M), Poly Network privilege escalation ($611M), Euler Finance flash loan ($197M), and dozens more.
+function buildPrompt(contractCode: string, language: ContractLanguage): string {
+  const langName = languageDisplayName(language);
+  const fence = languageFence(language);
 
-Your task is to perform a COMPREHENSIVE security audit of the smart contract below and identify every real, exploitable vulnerability.
+  return `You are an elite ${langName} smart contract security auditor. You have deep expertise in this platform's internals, exploit mechanics, and every major vulnerability class.
+
+Your task is to perform a COMPREHENSIVE security audit of the contract below and identify every real, exploitable vulnerability. The checklist below is EVM/Solidity-shaped — translate each category to the equivalent ${langName} concern (e.g. for Solana: signer/owner checks, PDA collisions, CPI safety, close-account re-init; for TON: bounce handling, sender auth, op-code uniqueness; for Bitcoin inscriptions: protocol validity, payload safety, fee/postage). Only report findings with DIRECT evidence in the code.
 
 ════════════════════════════════════════════════════════════════════════
 CONTRACT TO AUDIT:
-\`\`\`solidity
+\`\`\`${fence}
 ${contractCode.slice(0, 8000)}
 \`\`\`
 ════════════════════════════════════════════════════════════════════════
@@ -173,7 +181,8 @@ function parseResponse(raw: string): GeminiFinding[] {
 }
 
 export async function runGeminiAnalysis(
-  contractCode: string
+  contractCode: string,
+  language: ContractLanguage = "solidity"
 ): Promise<GeminiFinding[]> {
   const client = getClient();
   if (!client) return [];
@@ -188,7 +197,7 @@ export async function runGeminiAnalysis(
       },
     });
 
-    const generatePromise = model.generateContent(buildPrompt(contractCode));
+    const generatePromise = model.generateContent(buildPrompt(contractCode, language));
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error("Timeout")),

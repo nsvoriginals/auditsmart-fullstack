@@ -9,6 +9,8 @@ import {
   Copy, Download, Loader2, FileCode, AlertCircle, Clock,
   CheckCircle2, Circle,
 } from "lucide-react";
+import { CHAINS, getChain } from "@/lib/chains";
+import { standardsForChain } from "@/lib/standards";
 
 interface Finding {
   type: string; severity: string; description: string;
@@ -50,6 +52,84 @@ contract VulnerableVault {
         balances[msg.sender] -= amount;
     }
 }`;
+
+// Per-chain placeholder samples shown in the code textarea when the user
+// switches chains. Each is a tiny, recognizable starter contract / payload
+// so the user knows the platform actually expects that language as input.
+const SAMPLE_BY_CHAIN: Record<string, string> = {
+  ethereum: SAMPLE_CONTRACT,
+  bsc: SAMPLE_CONTRACT,
+  polygon: SAMPLE_CONTRACT,
+  avalanche: SAMPLE_CONTRACT,
+  arbitrum: SAMPLE_CONTRACT,
+  optimism: SAMPLE_CONTRACT,
+  base: SAMPLE_CONTRACT,
+  tron: SAMPLE_CONTRACT,
+  ton: `;; TON FunC Jetton master (TEP-74) — minimal example
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) { return (); }
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+    if (op == 0x178d4519) { ;; op::internal_transfer
+        ;; ... handle transfer
+    }
+}`,
+  solana: `// Solana / Anchor program — minimal SPL token mint
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Mint, Token, TokenAccount, MintTo};
+
+declare_id!("Fg6PaFpoGXkYsidMpWxqSWBDgKpKxKMUcDqXQAEXKxLb");
+
+#[program]
+pub mod my_token {
+    use super::*;
+    pub fn mint_to(ctx: Context<MintToCtx>, amount: u64) -> Result<()> {
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.mint.to_account_info(),
+            to:   ctx.accounts.to.to_account_info(),
+            authority: ctx.accounts.authority.to_account_info(),
+        };
+        token::mint_to(CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts), amount)?;
+        Ok(())
+    }
+}`,
+  bitcoin: `{
+  "p": "brc-20",
+  "op": "deploy",
+  "tick": "AUDT",
+  "max": "21000000",
+  "lim": "1000"
+}`,
+  cosmos: `// CosmWasm contract entry-points (Rust)
+use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response, StdResult};
+
+#[entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+    match msg {
+        ExecuteMsg::Transfer { recipient, amount } => {
+            // ... transfer logic
+            Ok(Response::default())
+        }
+    }
+}`,
+  polkadot: `// ink! PSP-22 token (Polkadot)
+#[ink::contract]
+mod my_token {
+    #[ink(storage)]
+    pub struct MyToken {
+        total_supply: Balance,
+        balances: ink::storage::Mapping<AccountId, Balance>,
+    }
+
+    impl MyToken {
+        #[ink(constructor)]
+        pub fn new(total_supply: Balance) -> Self { /* ... */ Self { total_supply, balances: Default::default() } }
+
+        #[ink(message)]
+        pub fn transfer(&mut self, to: AccountId, value: Balance) -> bool { /* ... */ true }
+    }
+}`,
+};
 
 /* ── severity / verdict helpers ── */
 const SEV_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -94,28 +174,28 @@ const BASE_AUDIT_STEPS = [
   { id: "report",      label: "Generating report..." },
 ];
 
-const ERC_STANDARDS = [
-  { id: "erc20",   label: "ERC-20",        desc: "Fungible Token" },
-  { id: "erc721",  label: "ERC-721",       desc: "NFT" },
-  { id: "erc1155", label: "ERC-1155",      desc: "Multi-Token" },
-  { id: "erc4626", label: "ERC-4626",      desc: "Tokenized Vault" },
-  { id: "erc1967", label: "ERC-1967/UUPS", desc: "Upgradeable Proxy" },
-  { id: "erc1271", label: "ERC-1271",      desc: "Contract Signatures" },
-] as const;
-
-type ErcStandardId = typeof ERC_STANDARDS[number]["id"];
-
 export default function ScanPage() {
   const { data: session, update } = useSession();
   const [code, setCode]                 = useState("");
   const [name, setName]                 = useState("");
   const [chain, setChain]               = useState("ethereum");
-  const [ercStandards, setErcStandards] = useState<ErcStandardId[]>([]);
-  const [ercOpen, setErcOpen]           = useState(false);
+  const [standards, setStandards]       = useState<string[]>([]);
+  const [stdOpen, setStdOpen]           = useState(false);
   const [scanning, setScanning]         = useState(false);
 
-  const toggleErc = (id: ErcStandardId) =>
-    setErcStandards(prev =>
+  // Standards available on the currently-selected chain. Resets when chain changes.
+  const availableStandards = React.useMemo(() => standardsForChain(chain), [chain]);
+  const chainConfig = getChain(chain);
+
+  // When the chain changes, drop any previously-selected standards that don't
+  // apply to the new chain (e.g. ERC-20 if the user switches to TON).
+  useEffect(() => {
+    setStandards(prev => prev.filter(id => availableStandards.some(s => s.id === id)));
+    setStdOpen(false);
+  }, [chain, availableStandards]);
+
+  const toggleStandard = (id: string) =>
+    setStandards(prev =>
       prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     );
   const [result, setResult]       = useState<AuditResult | null>(null);
@@ -132,12 +212,12 @@ export default function ScanPage() {
   const pollCountRef = React.useRef(0);
 
   const AUDIT_STEPS = React.useMemo(() => {
-    const ercSteps = ercStandards.map(id => ({
+    const stdSteps = standards.map(id => ({
       id,
-      label: `Checking ${ERC_STANDARDS.find(s => s.id === id)?.label ?? id} compliance...`,
+      label: `Checking ${availableStandards.find(s => s.id === id)?.label ?? id} compliance...`,
     }));
-    return [...BASE_AUDIT_STEPS.slice(0, 8), ...ercSteps, ...BASE_AUDIT_STEPS.slice(8)];
-  }, [ercStandards]);
+    return [...BASE_AUDIT_STEPS.slice(0, 8), ...stdSteps, ...BASE_AUDIT_STEPS.slice(8)];
+  }, [standards, availableStandards]);
 
   useEffect(() => { fetchLimits(); }, []);
 
@@ -150,11 +230,11 @@ export default function ScanPage() {
   };
 
   const runScan = async () => {
-    if (!code.trim()) { setError("Please paste your Solidity contract code first."); return; }
+    if (!code.trim()) { setError(`Please paste your ${chainConfig?.label ?? "contract"} code first.`); return; }
     if (userPlan === "free" && auditsLeft !== null && auditsLeft <= 0) {
       setError("You've reached your audit limit. Upgrade your plan to continue."); return;
     }
-    
+
     setError("");
     setResult(null);
     setScanning(true);
@@ -163,16 +243,16 @@ export default function ScanPage() {
     setCurrentStep(0);
     setSlowWarning(false);
     pollCountRef.current = 0;
-    
+
     try {
       const res = await fetch("/api/audit/scan", {
-        method: "POST", 
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contract_code: code,
           contract_name: name || "Smart Contract",
           chain,
-          erc_standards: ercStandards,
+          standards,
         }),
       });
       
@@ -381,7 +461,7 @@ export default function ScanPage() {
           Scan Contract
         </h1>
         <p style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
-          Paste Solidity source code and run an AI-powered security audit.
+          Paste contract source code and run an AI-powered security audit. Supports EVM (Solidity), TON (FunC/Tact), Solana (Rust), Bitcoin (inscriptions), TRON, Cosmos (CosmWasm), and Polkadot (ink!).
         </p>
       </div>
 
@@ -426,44 +506,49 @@ export default function ScanPage() {
           <div>
             <label style={{ display: "block", fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", marginBottom: 6, fontFamily: "'Satoshi', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>Blockchain Network</label>
             <select style={{ ...inputBase, cursor: "pointer" }} value={chain} onChange={e => setChain(e.target.value)}>
-              {["ethereum","polygon","arbitrum","optimism","bsc","avalanche","base"].map(c => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              {CHAINS.map(c => (
+                <option key={c.id} value={c.id}>{c.label}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* ERC Standard Selector */}
+        {/* Contract Standards Selector — populated based on selected chain */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", marginBottom: 6, fontFamily: "'Satoshi', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            ERC Standards
+            Contract Standards{chainConfig ? ` · ${chainConfig.label}` : ""}
           </label>
           <button
             type="button"
-            onClick={() => setErcOpen(o => !o)}
+            onClick={() => setStdOpen(o => !o)}
+            disabled={availableStandards.length === 0}
             style={{
               ...inputBase,
               display: "flex", alignItems: "center", justifyContent: "space-between",
-              cursor: "pointer", textAlign: "left",
-              borderColor: ercOpen ? "var(--brand)" : "var(--border)",
+              cursor: availableStandards.length === 0 ? "not-allowed" : "pointer",
+              textAlign: "left",
+              opacity: availableStandards.length === 0 ? 0.6 : 1,
+              borderColor: stdOpen ? "var(--brand)" : "var(--border)",
             }}
           >
-            <span style={{ color: ercStandards.length ? "var(--text-primary)" : "var(--text-disabled)" }}>
-              {ercStandards.length === 0
-                ? "None — select standards to enable specialist agents"
-                : ercStandards.map(id => ERC_STANDARDS.find(s => s.id === id)?.label).join(", ")}
+            <span style={{ color: standards.length ? "var(--text-primary)" : "var(--text-disabled)" }}>
+              {availableStandards.length === 0
+                ? "No standards available for this chain"
+                : standards.length === 0
+                  ? "None — select standards to enable specialist agents"
+                  : standards.map(id => availableStandards.find(s => s.id === id)?.label).join(", ")}
             </span>
-            <ChevronDown className="h-4 w-4" style={{ color: "var(--text-muted)", flexShrink: 0, transform: ercOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+            <ChevronDown className="h-4 w-4" style={{ color: "var(--text-muted)", flexShrink: 0, transform: stdOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
           </button>
 
-          {ercOpen && (
+          {stdOpen && availableStandards.length > 0 && (
             <div style={{
               marginTop: 4, background: "var(--card)", border: "1px solid var(--border)",
               borderRadius: "var(--radius)", overflow: "hidden",
               boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
             }}>
-              {ERC_STANDARDS.map((std, i) => {
-                const selected = ercStandards.includes(std.id);
+              {availableStandards.map((std, i) => {
+                const selected = standards.includes(std.id);
                 return (
                   <label
                     key={std.id}
@@ -478,7 +563,7 @@ export default function ScanPage() {
                     <input
                       type="checkbox"
                       checked={selected}
-                      onChange={() => toggleErc(std.id)}
+                      onChange={() => toggleStandard(std.id)}
                       style={{ accentColor: "var(--brand)", width: 14, height: 14, flexShrink: 0 }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -497,11 +582,11 @@ export default function ScanPage() {
                   </label>
                 );
               })}
-              {ercStandards.length > 0 && (
+              {standards.length > 0 && (
                 <div style={{ padding: "8px 14px", borderTop: "1px solid var(--border)", background: "var(--elevated)" }}>
                   <button
                     type="button"
-                    onClick={() => setErcStandards([])}
+                    onClick={() => setStandards([])}
                     style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "clamp(10px, 2.5vw, 11px)", cursor: "pointer", fontFamily: "'Satoshi', sans-serif" }}
                   >
                     Clear all
@@ -514,15 +599,17 @@ export default function ScanPage() {
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-            <label style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>Solidity Source Code</label>
-            <button onClick={() => setCode(SAMPLE_CONTRACT)}
+            <label style={{ fontSize: "clamp(10px, 2.5vw, 11px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {chainConfig ? `${chainConfig.label} Source / Payload` : "Source Code"}
+            </label>
+            <button onClick={() => setCode(SAMPLE_BY_CHAIN[chain] ?? SAMPLE_CONTRACT)}
               style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--brand)", fontSize: "clamp(11px, 2.5vw, 12px)", cursor: "pointer", fontFamily: "'Satoshi', sans-serif" }}>
               <FileCode className="h-3 w-3" /> Load Sample
             </button>
           </div>
           <textarea
             rows={12}
-            placeholder={"// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract MyContract { ... }"}
+            placeholder={SAMPLE_BY_CHAIN[chain] ?? "// Paste your contract code here"}
             value={code}
             onChange={e => setCode(e.target.value)}
             style={{ ...inputBase, fontFamily: "'Satoshi', monospace", resize: "vertical", minHeight: "clamp(200px, 40vh, 240px)" }}
