@@ -81,6 +81,58 @@ export function LanguageIcon({ language, size = 20, className, style }: Props) {
         </svg>
       );
 
+    case "func":
+      // TON FunC — Toncoin-style diamond + curly braces
+      return (
+        <svg {...common}>
+          <path d="M12 2L2 12l10 10 10-10L12 2z" opacity="0.35"/>
+          <path d="M8 7l-2 5 2 5M16 7l2 5-2 5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+        </svg>
+      );
+
+    case "tact":
+      // TON Tact — diamond with a centered T
+      return (
+        <svg {...common}>
+          <path d="M12 2L2 12l10 10 10-10L12 2z" opacity="0.4"/>
+          <text x="12" y="15.5" fontSize="9" fontWeight="900" textAnchor="middle" fill="currentColor" fontFamily="ui-sans-serif,system-ui">T</text>
+        </svg>
+      );
+
+    case "ink":
+      // Polkadot ink! — Polkadot dot ring + inkpen drip
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" opacity="0.25"/>
+          <circle cx="12" cy="5" r="1.6"/>
+          <circle cx="5"  cy="9" r="1.6"/>
+          <circle cx="19" cy="9" r="1.6"/>
+          <circle cx="5"  cy="15" r="1.6"/>
+          <circle cx="19" cy="15" r="1.6"/>
+          <circle cx="12" cy="19" r="1.6"/>
+        </svg>
+      );
+
+    case "cosmwasm":
+      // CosmWasm — atom / orbit rings (Cosmos vibes)
+      return (
+        <svg {...common}>
+          <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.4"/>
+          <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.4" transform="rotate(60 12 12)"/>
+          <ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" strokeWidth="1.4" transform="rotate(-60 12 12)"/>
+          <circle cx="12" cy="12" r="1.8"/>
+        </svg>
+      );
+
+    case "json-inscription":
+      // Bitcoin inscription — Bitcoin "₿" mark inside a tag/inscription shape
+      return (
+        <svg {...common}>
+          <path d="M4 4h12l4 4v12H4V4z" opacity="0.25"/>
+          <text x="12" y="16" fontSize="10" fontWeight="900" textAnchor="middle" fill="currentColor" fontFamily="ui-sans-serif,system-ui">₿</text>
+        </svg>
+      );
+
     default:
       return <FileCode size={size} className={className} style={style} />;
   }

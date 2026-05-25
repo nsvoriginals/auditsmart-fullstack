@@ -1,10 +1,12 @@
 // app/dashboard/deep-audit/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PLAN_DETAILS } from "@/lib/plans";
+import { CHAINS, getChain } from "@/lib/chains";
+import { standardsForChain } from "@/lib/standards";
 import {
   Zap,
   Loader2,
@@ -16,6 +18,7 @@ import {
   Search,
   FileText,
   CreditCard,
+  ChevronDown,
 } from "lucide-react";
 
 declare global {
@@ -62,9 +65,22 @@ export default function DeepAuditPage() {
   const [contractCode, setContractCode] = useState("");
   const [contractName, setContractName] = useState("");
   const [chain, setChain] = useState("ethereum");
+  const [standards, setStandards] = useState<string[]>([]);
+  const [stdOpen, setStdOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState<"form" | "processing" | "complete">("form");
+
+  const availableStandards = React.useMemo(() => standardsForChain(chain), [chain]);
+  const chainConfig = getChain(chain);
+
+  useEffect(() => {
+    setStandards(prev => prev.filter(id => availableStandards.some(s => s.id === id)));
+    setStdOpen(false);
+  }, [chain, availableStandards]);
+
+  const toggleStandard = (id: string) =>
+    setStandards(prev => (prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]));
 
   const loadSample = () => {
     setContractCode(SAMPLE_CONTRACT);
@@ -113,9 +129,10 @@ export default function DeepAuditPage() {
         contract_code: contractCode,
         contract_name: contractName || "Smart Contract",
         chain,
+        standards,
       }),
     });
-    
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Audit failed");
     return data;
@@ -384,20 +401,87 @@ export default function DeepAuditPage() {
               fontSize: 13,
             }}
           >
-            <option value="ethereum">Ethereum</option>
-            <option value="polygon">Polygon</option>
-            <option value="arbitrum">Arbitrum</option>
-            <option value="optimism">Optimism</option>
-            <option value="bsc">BNB Chain</option>
-            <option value="avalanche">Avalanche</option>
-            <option value="base">Base</option>
+            {CHAINS.map(c => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
           </select>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6, color: "var(--text-secondary)" }}>
+            Contract Standards{chainConfig ? ` · ${chainConfig.label}` : ""}
+          </label>
+          <button
+            type="button"
+            onClick={() => setStdOpen(o => !o)}
+            disabled={availableStandards.length === 0}
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              background: "var(--elevated)",
+              border: `1px solid ${stdOpen ? "var(--brand)" : "var(--border)"}`,
+              borderRadius: 8,
+              color: standards.length ? "var(--text-primary)" : "var(--text-disabled)",
+              fontSize: 13,
+              textAlign: "left",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              cursor: availableStandards.length === 0 ? "not-allowed" : "pointer",
+              opacity: availableStandards.length === 0 ? 0.6 : 1,
+            }}
+          >
+            <span>
+              {availableStandards.length === 0
+                ? "No standards available for this chain"
+                : standards.length === 0
+                  ? "None — select standards to enable specialist agents"
+                  : standards.map(id => availableStandards.find(s => s.id === id)?.label).join(", ")}
+            </span>
+            <ChevronDown size={14} style={{ transform: stdOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+          </button>
+
+          {stdOpen && availableStandards.length > 0 && (
+            <div style={{
+              marginTop: 4, background: "var(--card)", border: "1px solid var(--border)",
+              borderRadius: 8, overflow: "hidden",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            }}>
+              {availableStandards.map((std, i) => {
+                const selected = standards.includes(std.id);
+                return (
+                  <label
+                    key={std.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 14px", cursor: "pointer",
+                      borderTop: i > 0 ? "1px solid var(--border)" : "none",
+                      background: selected ? "rgba(99,102,241,0.08)" : "transparent",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleStandard(std.id)}
+                      style={{ accentColor: "var(--brand)", width: 14, height: 14, flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: selected ? 600 : 400, color: selected ? "var(--brand)" : "var(--text-primary)" }}>
+                        {std.label}
+                      </span>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 8 }}>
+                        {std.desc}
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
         
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
-              Solidity Contract Code
+              {chainConfig ? `${chainConfig.label} Source / Payload` : "Contract Source"}
             </label>
             <button
               onClick={loadSample}

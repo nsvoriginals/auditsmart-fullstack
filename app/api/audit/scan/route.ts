@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { runAuditPipeline } from "@/lib/agents/pipeline";
 import { AgentType, FindingSeverity } from "@prisma/client";
 import { nanoid } from "nanoid";
+import { getChain } from "@/lib/chains";
+import { getStandard, standardsForChain } from "@/lib/standards";
+import { detectLanguage } from "@/lib/contract-language";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const MAX_CONTRACT_SIZE = 50_000; // B-03: 50KB limit
@@ -59,6 +62,9 @@ function generateReportId(): string {
 }
 
 // ── Type helpers ─────────────────────────────────────────────────────────
+// Non-EVM specialist agents (tep74_agent, spl_agent, brc20_agent, etc.) don't
+// have dedicated AgentType enum values — they all bucket into SECURITY. Only
+// agents that already have a Prisma enum get a precise mapping.
 function mapAgentType(agentName: string): AgentType {
   const mapping: Record<string, AgentType> = {
     reentrancy_agent: AgentType.REENTRANCY_AGENT,
@@ -147,8 +153,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       contract_code,
       contract_name = "Smart Contract",
       chain = "ethereum",
-      erc_standards = [],
-    } = body as { contract_code?: string; contract_name?: string; chain?: string; erc_standards?: string[] };
+      // `standards` is the new multi-chain field. `erc_standards` is kept as a
+      // backward-compatible alias for old clients still posting the old name.
+      standards: rawStandards,
+      erc_standards: legacyStandards,
+    } = body as {
+      contract_code?: string;
+      contract_name?: string;
+      chain?: string;
+      standards?: string[];
+      erc_standards?: string[];
+    };
+    const standards: string[] = Array.isArray(rawStandards) && rawStandards.length
+      ? rawStandards
+      : (Array.isArray(legacyStandards) ? legacyStandards : []);
 
     // Validation
     if (!contract_code || contract_code.trim().length === 0) {
@@ -156,6 +174,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { error: "Contract code is required" },
         { status: 400 }
       );
+    }
+
+    // Validate chain — reject unknown chains explicitly instead of silently
+    // coercing them to ETHEREUM (the old behavior caused TON/Solana audits to
+    // be saved as Ethereum, confusing users).
+    const chainConfig = getChain(chain);
+    if (!chainConfig) {
+      return NextResponse.json({
+        error: "UNSUPPORTED_CHAIN",
+        message: `Chain "${chain}" is not supported.`,
+      }, { status: 400 });
+    }
+
+    // Validate that every selected standard exists AND is available on this chain.
+    const allowedStandardIds = new Set(standardsForChain(chain).map(s => s.id));
+    const invalidStandards = standards.filter(id => !allowedStandardIds.has(id) || !getStandard(id));
+    if (invalidStandards.length) {
+      return NextResponse.json({
+        error: "INVALID_STANDARDS",
+        message: `These standards are not valid for ${chainConfig.label}: ${invalidStandards.join(", ")}`,
+      }, { status: 400 });
     }
 
     // C-05: Test file detection - BLOCK IMMEDIATELY (cheap, no DB round-trip)
@@ -274,8 +313,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // H-05: Generate random report ID
     const reportId = generateReportId();
 
-    const chainUpper = chain.toUpperCase() as
-      | "ETHEREUM" | "BSC" | "POLYGON" | "AVALANCHE" | "ARBITRUM" | "OPTIMISM" | "BASE";
+    const language = detectLanguage(chain, contract_code);
 
     // Create audit record — store reportId at creation so public lookups use the index
     const audit = await prisma.audit.create({
@@ -283,7 +321,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         userId,
         contractName: contract_name,
         contractCode: contract_code.slice(0, 10000),
-        chain: chainUpper,
+        chain: chainConfig.enumValue,
+        contractStandard: standards.length ? standards.join(",") : null,
+        language,
         status: "PROCESSING",
         score: 0,
         reportId,
@@ -293,7 +333,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // B-02: Run pipeline asynchronously (don't await)
     const runAuditAsync = async () => {
       try {
-        const result = await runAuditPipeline(contract_code, contract_name, plan.toLowerCase(), erc_standards);
+        const result = await runAuditPipeline(contract_code, contract_name, plan.toLowerCase(), standards, chain);
 
         // Update audit with results
         await prisma.audit.update({

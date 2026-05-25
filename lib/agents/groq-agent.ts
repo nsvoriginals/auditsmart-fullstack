@@ -1,6 +1,11 @@
 // lib/agents/groq-agent.ts
 import Groq from "groq-sdk";
 import { config } from "../config";
+import {
+  languageDisplayName,
+  languageFence,
+  type ContractLanguage,
+} from "../contract-language";
 
 export interface GroqFinding {
   type: string;
@@ -25,7 +30,27 @@ function getClient(): Groq | null {
   return _client;
 }
 
-const SYSTEM_PROMPT = `You are an elite Solidity smart contract security auditor with deep expertise in EVM internals, DeFi exploit mechanics, and adversarial Solidity analysis. You have reviewed hundreds of contracts that have been exploited in the wild — Reentrancy (The DAO), Flash Loan attacks (PancakeBunny, Euler), Integer Overflows (BEC token), and Access Control failures (Parity Wallet). You know exactly what real exploits look like in code.
+function buildSystemPrompt(language: ContractLanguage): string {
+  const langName = languageDisplayName(language);
+
+  // Language-specific exemplar exploits keep the auditor anchored in real
+  // attacks for the right ecosystem.
+  const exploitLore: Record<ContractLanguage, string> = {
+    solidity:           "Reentrancy (The DAO), Flash Loan attacks (PancakeBunny, Euler), Integer Overflows (BEC token), Access Control failures (Parity Wallet)",
+    vyper:              "Reentrancy via raw_call, init-order issues, the Curve Vyper compiler reentrancy lock bug (Jul 2023, $70M+)",
+    rust:               "Solana CPI confusion (Wormhole $325M), missing signer checks on Anchor instructions, PDA collisions, close-account re-init attacks",
+    func:               "TON Jetton sender-spoofing on recv_internal, missing bounce-handling causing permanent fund loss, op-code collisions across standards",
+    tact:               "Tact/FunC compilation pitfalls, missing self.requireOwner() in receive() handlers, message-value vs storage-rent miscalculation",
+    ink:                "ink! transfer_acceptor reentrancy, set_code_hash storage-layout corruption, Substrate runtime upgrade pitfalls",
+    cosmwasm:           "CosmWasm reply-handler reentrancy (Astroport reorg bug), missing reply_on filter, sudo/migrate authorization gaps, IBC packet replay across channels",
+    "json-inscription": "BRC-20 tick squatting/homograph attacks, malformed runestone causing cenotaph burns, ordinal HTML payloads executing wallet-draining JS in marketplaces, inscribed private keys",
+    move:               "Aptos/Sui resource-safety violations, public(friend) abuse, capability leaks via global storage",
+    cairo:              "StarkNet account abstraction signature replay, missing felt-range checks, storage-var collision across class-hash upgrades",
+    clarity:            "Stacks post-condition bypass, trait substitution attacks, principal-vs-contract caller confusion",
+    unknown:            "common smart-contract exploit classes across EVM, Solana, TON, Cosmos, and Bitcoin ecosystems",
+  };
+
+  return `You are an elite ${langName} smart contract security auditor. You have deep expertise in this platform's internals, exploit mechanics, and adversarial analysis. You have reviewed hundreds of contracts that have been exploited in the wild — ${exploitLore[language] ?? exploitLore.unknown}. You know exactly what real exploits look like in code.
 
 ABSOLUTE RULES:
 1. Only report vulnerabilities with DIRECT, CONCRETE evidence in the provided contract code.
@@ -33,14 +58,18 @@ ABSOLUTE RULES:
 3. Assign severity based on real exploitability — can funds actually be stolen?
 4. Return ONLY a valid JSON array. No markdown, no prose, no explanations outside the JSON.
 5. Return [] if the contract has no issues matching the audit focus.`;
+}
 
-function buildPrompt(contractCode: string, focus: string): string {
+function buildPrompt(contractCode: string, focus: string, language: ContractLanguage): string {
+  const langName = languageDisplayName(language);
+  const fence = languageFence(language);
+
   return `════════════════════════════════════════════════════════════
-SOLIDITY SECURITY AUDIT — SPECIALIST FOCUS: ${focus}
+${langName.toUpperCase()} SECURITY AUDIT — SPECIALIST FOCUS: ${focus}
 ════════════════════════════════════════════════════════════
 
 CONTRACT UNDER REVIEW:
-\`\`\`solidity
+\`\`\`${fence}
 ${contractCode.slice(0, 12000)}
 \`\`\`
 
@@ -125,7 +154,8 @@ function parseResponse(raw: string): GroqFinding[] {
 export async function runGroqAnalysis(
   contractCode: string,
   focus: string,
-  agentName: string
+  agentName: string,
+  language: ContractLanguage = "solidity"
 ): Promise<GroqFinding[]> {
   const client = getClient();
   if (!client) return [];
@@ -134,8 +164,8 @@ export async function runGroqAnalysis(
     const completionPromise = client.chat.completions.create({
       model: config.GROQ_MODEL,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user",   content: buildPrompt(contractCode, focus) },
+        { role: "system", content: buildSystemPrompt(language) },
+        { role: "user",   content: buildPrompt(contractCode, focus, language) },
       ],
       max_tokens: config.GROQ_MAX_TOKENS,
       temperature: 0.05,

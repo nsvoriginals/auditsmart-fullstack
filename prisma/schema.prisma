@@ -97,6 +97,8 @@ model Audit {
   contractAddress    String?
   contractCode       String?
   chain              ChainType           @default(ETHEREUM)
+  contractStandard   String?
+  language           String?
   status             AuditStatus         @default(PENDING)
   score              Int?
   report             String?
@@ -293,4 +295,10 @@ enum ChainType {
   ARBITRUM
   OPTIMISM
   BASE
+  TON
+  SOLANA
+  BITCOIN
+  TRON
+  COSMOS
+  POLKADOT
 }

@@ -8,6 +8,9 @@ import { runAuditPipeline } from "@/lib/agents/pipeline";
 import { nanoid } from "nanoid";
 import { AgentType, FindingSeverity } from "@prisma/client";
 import crypto from "crypto";
+import { getChain } from "@/lib/chains";
+import { getStandard, standardsForChain } from "@/lib/standards";
+import { detectLanguage } from "@/lib/contract-language";
 
 function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string): boolean {
   const secret = process.env.RAZORPAY_KEY_SECRET;
@@ -38,7 +41,9 @@ export async function POST(req: NextRequest) {
       contract_code,
       contract_name = "Contract",
       chain = "ethereum",
+      standards: rawStandards,
     } = body;
+    const standards: string[] = Array.isArray(rawStandards) ? rawStandards : [];
     // Note: demo_mode field is intentionally ignored — signature is always verified.
 
     // Validate required fields
@@ -65,8 +70,20 @@ export async function POST(req: NextRequest) {
     console.log(`✅ Deep Audit payment verified: ${razorpay_payment_id}`);
     console.log(`🚀 Starting Deep Audit for: ${contract_name}`);
 
-    const validChains = ["ETHEREUM", "BSC", "POLYGON", "AVALANCHE", "ARBITRUM", "OPTIMISM", "BASE"];
-    const chainEnum = validChains.includes(chain.toUpperCase()) ? chain.toUpperCase() : "ETHEREUM";
+    // Reject unknown chains explicitly — no more silent ETHEREUM fallback.
+    const chainConfig = getChain(chain);
+    if (!chainConfig) {
+      return NextResponse.json({ detail: `Chain "${chain}" is not supported` }, { status: 400 });
+    }
+    const allowedStandardIds = new Set(standardsForChain(chain).map(s => s.id));
+    const invalidStandards = standards.filter(id => !allowedStandardIds.has(id) || !getStandard(id));
+    if (invalidStandards.length) {
+      return NextResponse.json({
+        detail: `These standards are not valid for ${chainConfig.label}: ${invalidStandards.join(", ")}`,
+      }, { status: 400 });
+    }
+
+    const language = detectLanguage(chain, contract_code);
     const reportId = `AS-DEEP-${nanoid(10)}`;
 
     // Create audit record immediately — return 202 so the client can poll
@@ -75,7 +92,9 @@ export async function POST(req: NextRequest) {
         userId: session.user.id,
         contractName: contract_name,
         contractCode: contract_code.trim().slice(0, 10000),
-        chain: chainEnum as any,
+        chain: chainConfig.enumValue,
+        contractStandard: standards.length ? standards.join(",") : null,
+        language,
         status: "PROCESSING",
         score: 0,
         reportId,
@@ -101,7 +120,7 @@ export async function POST(req: NextRequest) {
     // exceed Vercel's serverless function timeout if awaited synchronously.
     const runDeepAsync = async () => {
       try {
-        const result = await runAuditPipeline(contract_code.trim(), contract_name, "deep_audit");
+        const result = await runAuditPipeline(contract_code.trim(), contract_name, "deep_audit", standards, chain);
 
         await prisma.audit.update({
           where: { id: audit.id },

@@ -27,6 +27,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { CHAINS, getChain } from "@/lib/chains";
 
 interface MonitorEvent {
   id: string;
@@ -106,11 +107,18 @@ export default function MonitorPage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const isValidAddress = /^0x[0-9a-fA-F]{40}$/.test(address.trim());
+  const chainConfig = getChain(chain);
+  const isValidAddress = chainConfig
+    ? chainConfig.addressRegex.test(address.trim())
+    : false;
 
   const startMonitor = () => {
     if (!isValidAddress) {
-      setError("Enter a valid EVM contract address (0x...)");
+      setError(
+        chainConfig
+          ? `Enter a valid ${chainConfig.label} contract address (e.g. ${chainConfig.addressExample.slice(0, 24)}...)`
+          : "Enter a valid contract address"
+      );
       return;
     }
     setError("");
@@ -201,7 +209,7 @@ export default function MonitorPage() {
               <Label htmlFor="contract-address" className="text-xs sm:text-sm">Contract Address</Label>
               <Input
                 id="contract-address"
-                placeholder="0x742d35Cc6634C0532925a3b8D4C9C5f2..."
+                placeholder={chainConfig?.addressExample ?? "Contract address"}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 disabled={active}
@@ -215,9 +223,9 @@ export default function MonitorPage() {
                   <SelectValue placeholder="Select network" />
                 </SelectTrigger>
                 <SelectContent>
-                  {["ethereum", "polygon", "arbitrum", "optimism", "bsc", "base"].map((c) => (
-                    <SelectItem key={c} value={c} className="text-xs sm:text-sm">
-                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                  {CHAINS.map((c) => (
+                    <SelectItem key={c.id} value={c.id} className="text-xs sm:text-sm">
+                      {c.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -252,7 +260,7 @@ export default function MonitorPage() {
                   <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                 </div>
                 <span className="text-xs sm:text-sm text-green-600 dark:text-green-400">
-                  Live · {chain.charAt(0).toUpperCase() + chain.slice(1)}
+                  Live · {chainConfig?.label ?? chain}
                 </span>
               </div>
             )}
