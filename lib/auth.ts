@@ -6,6 +6,8 @@ import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
+import { attributeTeamReferral, TEAM_REFERRAL_COOKIE } from "@/lib/teams";
 
 declare module "next-auth" {
   interface User {
@@ -139,6 +141,21 @@ export const authOptions: NextAuthOptions = {
             user.id = newUser.id;
             user.role = newUser.role;
             (user as any).plan = newUser.subscription?.plan;
+
+            // Attribute team referral if a team_referral_code cookie is present
+            // from /r/[code]. OAuth signups don't go through /api/auth/register,
+            // so attribution happens here for Google/GitHub paths.
+            try {
+              const teamCode = cookies().get(TEAM_REFERRAL_COOKIE)?.value;
+              if (teamCode) {
+                await attributeTeamReferral(newUser.id, teamCode);
+                // NOTE: Can't clear cookies from NextAuth callbacks — they fire
+                // before the response is sealed. The cookie will expire naturally
+                // (30 days) and `attributeTeamReferral` is idempotent.
+              }
+            } catch (err) {
+              console.error("OAuth team referral attribution failed:", err);
+            }
           } else {
             // Existing user — enrich token fields
             user.id = existingUser.id;

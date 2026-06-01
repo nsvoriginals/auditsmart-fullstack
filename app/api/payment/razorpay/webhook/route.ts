@@ -1,7 +1,8 @@
 // app/api/payment/razorpay/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { mapPublicPlanToUserPlan, isPublicPlan } from "@/lib/plans";
+import { mapPublicPlanToUserPlan, isPublicPlan, PLAN_DETAILS } from "@/lib/plans";
+import { recordTeamCommission } from "@/lib/teams";
 import crypto from "crypto";
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
@@ -104,6 +105,11 @@ async function handlePaymentCaptured(payment: any) {
   const userRole = isPublicPlan(plan) ? mapPublicPlanToUserPlan(plan) : "PREMIUM";
   const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+  // Was this the user's first paid upgrade? Determines if a referrer gets credited.
+  const hadPriorPaidPayment = (await prisma.payment.count({
+    where: { userId, status: "paid" },
+  })) > 0;
+
   // Update everything in a transaction
   await prisma.$transaction([
     // Update/create subscription
@@ -160,6 +166,31 @@ async function handlePaymentCaptured(payment: any) {
       },
     }),
   ]);
+
+  // Team commission — only on the user's first paid upgrade.
+  // recordTeamCommission is idempotent via unique paymentId; safe to run on
+  // both webhook and verify paths.
+  if (!hadPriorPaidPayment) {
+    try {
+      const fullAmount = isPublicPlan(plan)
+        ? PLAN_DETAILS[plan].amountInPaise
+        : amount;
+      const paymentRow = await prisma.payment.findUnique({
+        where:  { razorpayOrderId: order_id },
+        select: { id: true },
+      });
+      if (paymentRow) {
+        await recordTeamCommission({
+          userId,
+          paymentId:          paymentRow.id,
+          plan:               userRole,
+          paymentAmountPaise: fullAmount,
+        });
+      }
+    } catch (err) {
+      console.error("Webhook team commission record failed:", err);
+    }
+  }
 
   console.log(`✅ Webhook processed payment for user ${userId}`);
 }
