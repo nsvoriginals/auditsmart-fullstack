@@ -22,6 +22,11 @@ model User {
   totalAudits        Int                 @default(0)
   currentMonthAudits Int                 @default(0)
   lastAuditReset     DateTime            @default(now())
+
+  // Team-referral attribution: set at signup, immutable thereafter.
+  referredByTeamId String?
+  referredByTeam   Team?   @relation(fields: [referredByTeamId], references: [id], onDelete: SetNull)
+
   accounts           Account[]
   apiKeys            ApiKey[]
   audits             Audit[]
@@ -32,8 +37,51 @@ model User {
   sessions           Session[]
   subscription       Subscription?
   webhooks           Webhook[]
+  teamCommissions    TeamCommission[]
 
   @@index([email])
+  @@index([referredByTeamId])
+}
+
+// Marketing / branding partners that earn a commission on referred subscriptions.
+// Seeded via scripts/seed-team.ts — not user-managed.
+model Team {
+  id              String           @id @default(cuid())
+  name            String
+  code            String           @unique
+  commissionRate  Float            @default(0.20) // e.g. 0.20 = 20% of first paid month
+  contactEmail    String?
+  payoutDetails   String?          // free-form: UPI ID, bank ref, etc.
+  isActive        Boolean          @default(true)
+  clickCount      Int              @default(0)
+  signupCount     Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  referredUsers   User[]
+  commissions     TeamCommission[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+// One row per qualifying first-paid-upgrade. The audit trail used by the
+// monthly payout report.
+model TeamCommission {
+  id                 String   @id @default(cuid())
+  teamId             String
+  userId             String
+  paymentId          String   @unique // 1 row per payment, prevents double-credit
+  plan               UserRole
+  paymentAmountPaise Int
+  commissionPaise    Int
+  createdAt          DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([teamId, createdAt])
+  @@index([createdAt])
 }
 
 model Account {

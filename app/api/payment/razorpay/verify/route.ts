@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_DETAILS, mapPublicPlanToUserPlan, isPublicPlan } from "@/lib/plans";
+import { recordTeamCommission } from "@/lib/teams";
 import crypto from "crypto";
 
 // B-07: Verify Razorpay signature
@@ -109,10 +110,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get plan details from single source of truth
+    // Get plan details from single source of truth.
     const planDetails = PLAN_DETAILS[plan as keyof typeof PLAN_DETAILS];
     const userRole = mapPublicPlanToUserPlan(plan as any);
     const amount = planDetails.amountInPaise;
+
+    // Was this user's first paid upgrade? Determines team commission eligibility.
+    const hadPriorPaidPayment = (await prisma.payment.count({
+      where: { userId: session.user.id, status: "paid" },
+    })) > 0;
 
     // Calculate subscription end date
     const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -166,6 +172,22 @@ export async function POST(req: NextRequest) {
         userAgent: req.headers.get("user-agent") || "unknown",
       },
     }).catch(() => {});
+
+    // Team commission — only on the user's FIRST paid upgrade.
+    // recordTeamCommission is idempotent via unique paymentId, so a race with
+    // the webhook is safe.
+    if (!hadPriorPaidPayment) {
+      try {
+        await recordTeamCommission({
+          userId:             session.user.id,
+          paymentId:          payment.id,
+          plan:               userRole,
+          paymentAmountPaise: amount,
+        });
+      } catch (err) {
+        console.error("Team commission record failed (non-blocking):", err);
+      }
+    }
 
     console.log(`✅ Payment verified: ${razorpay_payment_id} | User: ${session.user.id} | Plan: ${plan}`);
 

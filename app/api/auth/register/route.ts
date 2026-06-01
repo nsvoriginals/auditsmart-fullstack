@@ -1,9 +1,10 @@
 // app/api/auth/register/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { attributeTeamReferral, TEAM_REFERRAL_COOKIE } from "@/lib/teams";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { name, email, password } = await req.json();
 
@@ -61,13 +62,25 @@ export async function POST(req: Request) {
       return newUser;
     });
 
+    // Attribute team referral if a code cookie is present. Best-effort —
+    // never block account creation on attribution failure.
+    const teamCode = req.cookies.get(TEAM_REFERRAL_COOKIE)?.value;
+    if (teamCode) {
+      await attributeTeamReferral(user.id, teamCode).catch(err =>
+        console.error("team referral attribution failed:", err)
+      );
+    }
+
     // Never return password hash to client
     const { password: _pw, ...userWithoutPassword } = user;
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       { user: userWithoutPassword, message: "Account created successfully" },
       { status: 201 }
     );
+    // Clear the cookie after use so a returning user can't re-attribute themselves.
+    if (teamCode) res.cookies.set(TEAM_REFERRAL_COOKIE, "", { maxAge: 0, path: "/" });
+    return res;
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(

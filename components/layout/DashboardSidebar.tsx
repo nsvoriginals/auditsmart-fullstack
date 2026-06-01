@@ -21,12 +21,12 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Overview",      href: "/dashboard",          icon: LayoutDashboard },
-  { label: "Scan Contract", href: "/dashboard/scan",      icon: PlusCircle     },
-  { label: "Monitor",       href: "/dashboard/monitor",   icon: Activity       },
-  { label: "Audit History", href: "/dashboard/history",   icon: History        },
-  { label: "Billing",       href: "/dashboard/billing",   icon: CreditCard     },
-  { label: "Settings",      href: "/dashboard/settings",  icon: Settings       },
+  { label: "Overview",      href: "/dashboard",            icon: LayoutDashboard },
+  { label: "Scan Contract", href: "/dashboard/scan",       icon: PlusCircle     },
+  { label: "Monitor",       href: "/dashboard/monitor",    icon: Activity       },
+  { label: "Audit History", href: "/dashboard/history",    icon: History        },
+  { label: "Billing",       href: "/dashboard/billing",    icon: CreditCard     },
+  { label: "Settings",      href: "/dashboard/settings",   icon: Settings       },
 ];
 
 interface SidebarProps {
