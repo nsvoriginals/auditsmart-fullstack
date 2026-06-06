@@ -39,42 +39,42 @@ const FEATURES = [
   {
     icon: Link2,
     color: "var(--brand)",
-    bg: "rgba(0,212,255,0.08)",
+    bg: "var(--brand-faint)",
     title: "Multi-Agent Pipeline",
     desc: "8 Groq LLaMA 3.3 70B specialists + Gemini cross-validator + Slither. Each agent targets one vulnerability class in parallel.",
   },
   {
     icon: Sparkles,
-    color: "var(--brand-purple)",
-    bg: "rgba(123,47,255,0.08)",
+    color: "var(--brand)",
+    bg: "var(--brand-faint)",
     title: "Dedup Engine",
     desc: "Removes false positives, merges duplicates, auto-corrects severity. Clean actionable findings, not noise.",
   },
   {
     icon: DoorOpen,
-    color: "var(--brand-pink)",
-    bg: "rgba(255,61,154,0.08)",
+    color: "var(--brand)",
+    bg: "var(--brand-faint)",
     title: "Backdoor Detection",
     desc: "Dedicated agent hunts selfdestruct, delegatecall, and governance rug-pull vectors other scanners miss.",
   },
   {
     icon: FileText,
     color: "var(--brand)",
-    bg: "rgba(0,212,255,0.08)",
+    bg: "var(--brand-faint)",
     title: "PDF Audit Reports",
     desc: "Branded encrypted PDF with executive summary, severity breakdown, exploit paths, and fix code. Shareable public link.",
   },
   {
     icon: Zap,
-    color: "var(--brand-green)",
-    bg: "rgba(0,255,148,0.08)",
+    color: "var(--brand)",
+    bg: "var(--brand-faint)",
     title: "Under 60 Seconds",
     desc: "Full multi-agent analysis in under a minute. Paste your Solidity code and get professional results instantly.",
   },
   {
     icon: Lock,
-    color: "var(--brand-purple)",
-    bg: "rgba(123,47,255,0.08)",
+    color: "var(--brand)",
+    bg: "var(--brand-faint)",
     title: "Zero Code Storage",
     desc: "Your contract is never stored. Only SHA256 hash retained for report verification. Privacy by design.",
   },
@@ -230,54 +230,174 @@ export default function LandingPage() {
           border-color: var(--border-strong);
         }
         .plan-card.featured {
-          border-color: rgba(123,47,255,0.35);
-          background: linear-gradient(180deg, rgba(123,47,255,0.05), var(--surface-1));
+          border-color: rgba(99,102,241,0.40);
+          background: var(--brand-faint);
         }
         .plan-card.deep {
-          border-color: rgba(255,61,154,0.25);
-          background: linear-gradient(180deg, rgba(255,61,154,0.04), var(--surface-1));
+          border-color: var(--border-strong);
+          background: var(--surface-2);
         }
         .btn-primary {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 13px 28px;
-          border-radius: var(--radius);
-          background: linear-gradient(135deg, var(--brand-purple), var(--brand));
-          color: #fff;
-          font-weight: 700;
-          font-size: 14px;
+          padding: 0 26px;
+          height: 48px;
+          border-radius: var(--radius-md);
+          background: var(--primary);
+          color: var(--primary-foreground);
+          font-weight: 600;
+          font-size: 15px;
           font-family: 'Satoshi', sans-serif;
           border: none;
           cursor: pointer;
-          transition: opacity var(--base), transform var(--base), box-shadow var(--base);
+          transition: background var(--fast), transform var(--fast), box-shadow var(--fast);
           text-decoration: none;
-          letter-spacing: 0.01em;
         }
         .btn-primary:hover {
-          opacity: 0.9;
+          background: var(--brand-hover);
           transform: translateY(-1px);
-          box-shadow: var(--shadow-purple);
+          box-shadow: var(--shadow-brand);
         }
         .btn-ghost {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 13px 28px;
-          border-radius: var(--radius);
+          padding: 0 24px;
+          height: 48px;
+          border-radius: var(--radius-md);
           background: transparent;
           border: 1px solid var(--border-strong);
-          color: var(--text-secondary);
+          color: var(--text-primary);
           font-weight: 600;
-          font-size: 14px;
+          font-size: 15px;
           font-family: 'Satoshi', sans-serif;
           cursor: pointer;
-          transition: border-color var(--base), color var(--base);
+          transition: border-color var(--fast), background var(--fast);
           text-decoration: none;
         }
         .btn-ghost:hover {
-          border-color: var(--brand);
-          color: var(--brand);
+          border-color: var(--text-muted);
+          background: var(--surface-2);
+        }
+        /* Editorial section kicker */
+        .sec-kicker {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-family: 'DM Mono', monospace;
+          font-size: 12px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          color: var(--text-muted);
+          margin-bottom: 18px;
+        }
+        .sec-kicker b { color: var(--brand); font-weight: 500; }
+        .sec-kicker::before {
+          content: "";
+          width: 28px; height: 1px;
+          background: var(--brand);
+          display: inline-block;
+        }
+        /* Live scan preview panel */
+        .scan-panel {
+          background: var(--surface-1);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-lg);
+          overflow: hidden;
+          box-shadow: var(--shadow-lg);
+        }
+        .scan-head {
+          display: flex; align-items: center; gap: 8px;
+          padding: 14px 18px;
+          border-bottom: 1px solid var(--border);
+          background: var(--surface-2);
+        }
+        .scan-row {
+          display: flex; align-items: flex-start; gap: 12px;
+          padding: 14px 18px;
+          border-bottom: 1px solid var(--border);
+          opacity: 0;
+          animation: slideUp 0.5s ease-out forwards;
+        }
+        .sev-chip {
+          flex-shrink: 0;
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          padding: 3px 8px;
+          border-radius: 6px;
+          border: 1px solid;
+          text-transform: uppercase;
+        }
+        /* Bento feature grid */
+        .bento {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          grid-auto-rows: minmax(176px, auto);
+          gap: 14px;
+        }
+        .bento-tile {
+          position: relative;
+          background: var(--surface-1);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-lg);
+          padding: 28px;
+          display: flex;
+          flex-direction: column;
+          transition: border-color var(--base), background var(--base), transform var(--base);
+        }
+        .bento-tile:hover {
+          border-color: var(--border-strong);
+          background: var(--surface-2);
+          transform: translateY(-3px);
+        }
+        .bento-tile.big  { grid-column: span 2; grid-row: span 2; }
+        .bento-tile.wide { grid-column: span 2; }
+        /* Agent manifest roster */
+        .manifest {
+          border-top: 1px solid var(--border-strong);
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          column-gap: 56px;
+        }
+        .manifest-row {
+          display: flex;
+          align-items: baseline;
+          gap: 16px;
+          padding: 16px 8px;
+          border-bottom: 1px solid var(--border);
+          transition: background var(--fast), padding-left var(--fast);
+        }
+        .manifest-row:hover { background: var(--surface-1); padding-left: 16px; }
+        .manifest-row:hover .m-idx { color: var(--brand); }
+        .m-idx {
+          font-family: 'DM Mono', monospace;
+          font-size: 12px;
+          color: var(--text-disabled);
+          width: 24px; flex-shrink: 0;
+          transition: color var(--fast);
+        }
+        /* Process big numerals */
+        .proc-num {
+          font-family: 'DM Mono', monospace;
+          font-size: 60px; font-weight: 500; line-height: 1;
+          color: transparent;
+          -webkit-text-stroke: 1.2px var(--border-strong);
+          margin-bottom: 20px;
+          transition: -webkit-text-stroke-color var(--base);
+        }
+        .proc-step:hover .proc-num { -webkit-text-stroke-color: var(--brand); }
+        @media (max-width: 860px) {
+          .bento { grid-template-columns: 1fr 1fr; }
+          .bento-tile.big  { grid-column: span 2; grid-row: span 1; }
+          .bento-tile.wide { grid-column: span 2; }
+          .manifest { grid-template-columns: 1fr; column-gap: 0; }
+        }
+        @media (max-width: 560px) {
+          .bento { grid-template-columns: 1fr; }
+          .bento-tile.big, .bento-tile.wide { grid-column: span 1; }
         }
         .ticker-track {
           display: flex;
@@ -304,6 +424,10 @@ export default function LandingPage() {
           font-family: 'Satoshi', sans-serif;
           margin-bottom: 14px;
         }
+        @media (max-width: 960px) {
+          .hero-grid  { grid-template-columns: 1fr !important; gap: 48px !important; }
+          .hero-panel { order: 2; }
+        }
         @media (max-width: 768px) {
           .hero-stats { gap: 24px !important; }
           .grid-3     { grid-template-columns: 1fr !important; }
@@ -323,133 +447,174 @@ export default function LandingPage() {
       <section
         style={{
           position: "relative",
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          padding: "100px 40px 80px",
+          padding: "152px 40px 96px",
           overflow: "hidden",
         }}
       >
-        {/* Glow blobs */}
+        {/* Single toned accent glow, upper-right */}
         <div
           className="hero-glow"
           style={{
-            width: 700, height: 500,
-            top: -200, left: "20%",
-            background: "rgba(123,47,255,0.10)",
+            width: 620, height: 480,
+            top: -160, right: "-4%",
+            background: "rgba(99,102,241,0.10)",
           }}
         />
-        <div
-          className="hero-glow"
-          style={{
-            width: 500, height: 400,
-            top: 100, right: "10%",
-            background: "rgba(0,212,255,0.06)",
-          }}
-        />
-        {/* Grid bg */}
+        {/* Subtle grid bg */}
         <div
           className="bg-grid"
-          style={{ position: "absolute", inset: 0, opacity: 0.6, pointerEvents: "none" }}
+          style={{
+            position: "absolute", inset: 0, pointerEvents: "none",
+            maskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%)",
+          }}
         />
 
-        <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
-          {/* Badge */}
-          <div className="badge badge-green animate-slide-up" style={{ marginBottom: 32 }}>
-            <span className="live-dot" />
-            10 AI Agents · Live · Under 60 Seconds
-          </div>
+        <div
+          className="hero-grid"
+          style={{
+            maxWidth: 1180,
+            margin: "0 auto",
+            width: "100%",
+            position: "relative",
+            zIndex: 1,
+            display: "grid",
+            gridTemplateColumns: "1.05fr 0.95fr",
+            gap: 72,
+            alignItems: "center",
+          }}
+        >
+          {/* ── Left: editorial copy ── */}
+          <div className="animate-slide-up">
+            <div className="sec-kicker">
+              <span className="live-dot" />
+              MULTI-AGENT SECURITY ENGINE
+            </div>
 
-          {/* Headline */}
-          <h1
-            style={{
-              fontSize: "clamp(42px, 6vw, 80px)",
-              fontWeight: 800,
-              lineHeight: 1.05,
-              letterSpacing: "-0.025em",
-              marginBottom: 24,
-              color: "var(--text-primary)",
-            }}
-          >
-            Find Vulnerabilities<br />
-            Before{" "}
-            <span className="text-gradient">Hackers Do.</span>
-          </h1>
-
-          <p
-            style={{
-              fontSize: 17,
-              color: "var(--text-secondary)",
-              maxWidth: 520,
-              lineHeight: 1.75,
-              marginBottom: 40,
-              fontWeight: 400,
-            }}
-          >
-            Multi-agent AI security for Solidity contracts — 10 specialist agents, dedup engine, professional PDF reports.{" "}
-            <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>Results in under 60 seconds.</strong>
-          </p>
-
-          {/* CTAs */}
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 64 }}>
-            <Link href={isAuthed ? "/dashboard/scan" : "/register"} className="btn-primary">
-              {isAuthed ? "Go to Dashboard" : "Start Free Audit"}
-              <ArrowRight size={15} />
-            </Link>
-            <a
-              href="#how"
-              className="btn-ghost"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById("how")?.scrollIntoView({ behavior: "smooth" });
+            <h1
+              style={{
+                fontSize: "clamp(46px, 6.4vw, 92px)",
+                fontWeight: 700,
+                lineHeight: 0.96,
+                letterSpacing: "-0.04em",
+                marginBottom: 28,
+                color: "var(--text-primary)",
               }}
             >
-              How It Works
-              <ChevronRight size={15} />
-            </a>
+              Break your<br />
+              contract{" "}
+              <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>—</span><br />
+              <span className="text-gradient">before they do.</span>
+            </h1>
+
+            <p
+              style={{
+                fontSize: 18,
+                color: "var(--text-secondary)",
+                maxWidth: 500,
+                lineHeight: 1.65,
+                marginBottom: 36,
+                fontWeight: 450,
+              }}
+            >
+              Ten specialist AI agents stress-test your Solidity in parallel, strip the
+              false positives, and hand back a professional verdict —{" "}
+              <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>in under 60 seconds.</strong>
+            </p>
+
+            {/* CTAs */}
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 40 }}>
+              <Link href={isAuthed ? "/dashboard/scan" : "/register"} className="btn-primary">
+                {isAuthed ? "Go to Dashboard" : "Start free audit"}
+                <ArrowRight size={16} />
+              </Link>
+              <a
+                href="#how"
+                className="btn-ghost"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("how")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                See how it works
+              </a>
+            </div>
+
+            {/* Inline trust strip */}
+            <div
+              style={{
+                display: "flex",
+                gap: 22,
+                flexWrap: "wrap",
+                alignItems: "center",
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 12.5,
+                color: "var(--text-muted)",
+              }}
+            >
+              {STATS.map((s, i) => (
+                <span key={s.label} style={{ display: "inline-flex", alignItems: "center", gap: 22 }}>
+                  <span>
+                    <strong style={{ color: "var(--text-primary)", fontWeight: 600 }}>{s.value}</strong>{" "}
+                    {s.label}
+                  </span>
+                  {i < STATS.length - 1 && (
+                    <span style={{ width: 3, height: 3, borderRadius: "50%", background: "var(--text-disabled)" }} />
+                  )}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Stats */}
-          <div
-            className="hero-stats"
-            style={{ display: "flex", gap: 48, flexWrap: "wrap", alignItems: "center" }}
-          >
-            {STATS.map((s, i) => (
-              <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 48 }}>
-                <div>
-                  <p
-                    style={{
-                      fontSize: 36,
-                      fontWeight: 800,
-                      fontFamily: "'Satoshi', sans-serif",
-                      letterSpacing: "-0.02em",
-                      lineHeight: 1,
-                      background: "linear-gradient(135deg, var(--text-primary), var(--brand))",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {s.value}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 11,
-                      color: "var(--text-disabled)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.12em",
-                      marginTop: 4,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {s.label}
-                  </p>
-                </div>
-                {i < STATS.length - 1 && (
-                  <div style={{ width: 1, height: 40, background: "var(--border)" }} />
-                )}
+          {/* ── Right: live scan panel ── */}
+          <div className="hero-panel scan-panel animate-fade-in" style={{ animationDelay: "0.15s" }}>
+            {/* Window head */}
+            <div className="scan-head">
+              <span style={{ display: "flex", gap: 6 }}>
+                <i style={{ width: 11, height: 11, borderRadius: "50%", background: "#e5484d", opacity: 0.7 }} />
+                <i style={{ width: 11, height: 11, borderRadius: "50%", background: "#f5a524", opacity: 0.7 }} />
+                <i style={{ width: 11, height: 11, borderRadius: "50%", background: "#2ebd6b", opacity: 0.7 }} />
+              </span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12.5, color: "var(--text-secondary)", marginLeft: 6 }}>
+                VaultV2.sol
+              </span>
+              <span
+                className="badge badge-brand"
+                style={{ marginLeft: "auto", fontSize: 10 }}
+              >
+                <span className="live-dot" /> SCAN COMPLETE
+              </span>
+            </div>
+
+            {/* Findings */}
+            {[
+              { sev: "critical", title: "Reentrancy in withdraw()", meta: "line 84 · Reentrancy Agent" },
+              { sev: "high", title: "Unchecked external call", meta: "line 112 · Logic Agent" },
+              { sev: "medium", title: "Missing zero-address check", meta: "line 47 · Access Agent" },
+            ].map((r, i) => (
+              <div key={r.title} className={`scan-row sev-${r.sev}`} style={{ animationDelay: `${0.3 + i * 0.14}s`, background: "transparent", color: "inherit" }}>
+                <span className={`sev-chip sev-${r.sev}`}>{r.sev}</span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                    {r.title}
+                  </span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11.5, color: "var(--text-muted)" }}>
+                    {r.meta}
+                  </span>
+                </span>
               </div>
             ))}
+
+            {/* Verdict footer */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px", background: "var(--surface-2)" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 32, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1 }}>72</span>
+                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>/100 risk</span>
+              </div>
+              <span className="sev-chip sev-critical" style={{ fontSize: 11, padding: "6px 12px" }}>
+                Do not deploy
+              </span>
+            </div>
           </div>
         </div>
       </section>
@@ -457,11 +622,11 @@ export default function LandingPage() {
       {/* ── TICKER ── */}
       <div
         style={{
-          background: "rgba(0,212,255,0.03)",
+          background: "var(--surface-1)",
           borderTop: "1px solid var(--border)",
           borderBottom: "1px solid var(--border)",
           overflow: "hidden",
-          padding: "10px 0",
+          padding: "11px 0",
         }}
       >
         <div className="ticker-track">
@@ -571,16 +736,17 @@ export default function LandingPage() {
       {/* ── FEATURES ── */}
       <section style={{ padding: "100px 40px" }} id="features">
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <span className="sec-label">Capabilities</span>
+          <div className="sec-kicker"><b>01</b>&nbsp;&nbsp;CAPABILITIES</div>
           <h2
             style={{
-              fontSize: "clamp(28px, 4vw, 48px)",
-              fontWeight: 800,
-              letterSpacing: "-0.025em",
+              fontSize: "clamp(32px, 4.5vw, 56px)",
+              fontWeight: 700,
+              letterSpacing: "-0.035em",
+              lineHeight: 1.0,
               marginBottom: 16,
             }}
           >
-            Every Angle Covered
+            Every angle covered.
           </h2>
           <p
             style={{
@@ -594,49 +760,70 @@ export default function LandingPage() {
             Not another basic scanner. 10 parallel agents, dedup engine, and actionable results with fix code in seconds.
           </p>
 
-          <div
-            className="grid-3"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3,1fr)",
-              gap: "1px",
-              background: "var(--border)",
-            }}
-          >
-            {FEATURES.map((f) => {
+          <div className="bento">
+            {FEATURES.map((f, i) => {
               const Icon = f.icon;
+              const size = i === 0 ? "big" : [1, 4, 5].includes(i) ? "wide" : "";
+              const isBig = size === "big";
               return (
-                <div
-                  key={f.title}
-                  className="feat-card"
-                  style={{ padding: 36 }}
-                >
+                <div key={f.title} className={`bento-tile ${size}`}>
                   <div
                     style={{
-                      width: 44, height: 44,
-                      borderRadius: 10,
-                      background: f.bg,
+                      width: isBig ? 52 : 44,
+                      height: isBig ? 52 : 44,
+                      borderRadius: 12,
+                      background: "var(--brand-faint)",
+                      border: "1px solid rgba(99,102,241,0.18)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      marginBottom: 20,
+                      marginBottom: isBig ? 24 : 18,
                     }}
                   >
-                    <Icon size={20} style={{ color: f.color }} />
+                    <Icon size={isBig ? 24 : 20} style={{ color: "var(--brand)" }} />
                   </div>
                   <h3
                     style={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      marginBottom: 10,
+                      fontSize: isBig ? 24 : 17,
+                      fontWeight: isBig ? 700 : 600,
+                      letterSpacing: isBig ? "-0.02em" : "-0.01em",
+                      marginBottom: isBig ? 14 : 9,
                       color: "var(--text-primary)",
                     }}
                   >
                     {f.title}
                   </h3>
-                  <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.75 }}>
+                  <p
+                    style={{
+                      fontSize: isBig ? 16 : 14.5,
+                      color: "var(--text-secondary)",
+                      lineHeight: 1.7,
+                      maxWidth: isBig ? 420 : "none",
+                    }}
+                  >
                     {f.desc}
                   </p>
+
+                  {/* Decorative agent strip in the big tile */}
+                  {isBig && (
+                    <div style={{ marginTop: "auto", paddingTop: 28, display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 5 }}>
+                        {Array.from({ length: 8 }).map((_, k) => (
+                          <span
+                            key={k}
+                            style={{
+                              width: 7, height: 22, borderRadius: 3,
+                              background: "var(--brand)",
+                              opacity: 0.25 + k * 0.09,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "var(--text-muted)" }}>
+                        8 specialists · parallel
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -647,59 +834,39 @@ export default function LandingPage() {
       {/* ── AGENTS ── */}
       <section style={{ padding: "0 40px 100px" }} id="agents">
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <span className="sec-label">AI Arsenal</span>
+          <div className="sec-kicker"><b>02</b>&nbsp;&nbsp;AI ARSENAL</div>
           <h2
             style={{
-              fontSize: "clamp(28px, 4vw, 48px)",
-              fontWeight: 800,
-              letterSpacing: "-0.025em",
+              fontSize: "clamp(32px, 4.5vw, 56px)",
+              fontWeight: 700,
+              letterSpacing: "-0.035em",
+              lineHeight: 1.0,
               marginBottom: 48,
             }}
           >
-            10 Agents. Every Angle.
+            Ten agents. One pass.
           </h2>
-          <div
-            className="grid-5"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5,1fr)",
-              gap: 12,
-            }}
-          >
-            {AGENTS.map((a) => {
+          <div className="manifest">
+            {AGENTS.map((a, i) => {
               const Icon = a.icon;
               return (
-                <div key={a.label} className="agent-card">
-                  <Icon
-                    size={24}
+                <div key={a.label} className="manifest-row">
+                  <span className="m-idx">{String(i + 1).padStart(2, "0")}</span>
+                  <Icon size={16} style={{ color: "var(--brand)", flexShrink: 0, alignSelf: "center" }} />
+                  <span
                     style={{
-                      color: "var(--brand)",
-                      marginBottom: 10,
-                      display: "block",
-                      margin: "0 auto 10px",
-                    }}
-                  />
-                  <p
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "var(--text-secondary)",
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                      marginBottom: 4,
+                      flex: 1,
+                      fontSize: 16,
+                      fontWeight: 600,
+                      letterSpacing: "-0.01em",
+                      color: "var(--text-primary)",
                     }}
                   >
                     {a.label}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 10,
-                      color: "var(--text-disabled)",
-                      fontFamily: "monospace",
-                    }}
-                  >
+                  </span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                     {a.model}
-                  </p>
+                  </span>
                 </div>
               );
             })}
@@ -713,69 +880,45 @@ export default function LandingPage() {
         id="how"
       >
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <span className="sec-label">Process</span>
+          <div className="sec-kicker"><b>03</b>&nbsp;&nbsp;PROCESS</div>
           <h2
             style={{
-              fontSize: "clamp(28px, 4vw, 48px)",
-              fontWeight: 800,
-              letterSpacing: "-0.025em",
+              fontSize: "clamp(32px, 4.5vw, 56px)",
+              fontWeight: 700,
+              letterSpacing: "-0.035em",
+              lineHeight: 1.0,
               marginBottom: 48,
             }}
           >
-            Audit in 4 Steps
+            Audit in four steps.
           </h2>
           <div
             className="steps-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(4,1fr)",
-              gap: 24,
-              position: "relative",
+              gap: 32,
             }}
           >
-            {/* connector line */}
-            <div
-              style={{
-                position: "absolute",
-                top: 32,
-                left: "10%",
-                right: "10%",
-                height: 1,
-                background:
-                  "linear-gradient(90deg, transparent, rgba(0,212,255,0.25), var(--brand), rgba(0,212,255,0.25), transparent)",
-              }}
-            />
             {STEPS.map((s) => (
-              <div key={s.num} className="step-card">
-                <div
-                  style={{
-                    width: 56, height: 56,
-                    borderRadius: "50%",
-                    background: "rgba(0,212,255,0.06)",
-                    border: "1px solid rgba(0,212,255,0.20)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 20,
-                    fontWeight: 800,
-                    color: "var(--brand)",
-                    margin: "0 auto 20px",
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {s.num}
-                </div>
+              <div
+                key={s.num}
+                className="proc-step"
+                style={{ borderTop: "1px solid var(--border-strong)", paddingTop: 28 }}
+              >
+                <div className="proc-num">{s.num}</div>
                 <h3
                   style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    marginBottom: 8,
+                    fontSize: 18,
+                    fontWeight: 600,
+                    letterSpacing: "-0.01em",
+                    marginBottom: 10,
                     color: "var(--text-primary)",
                   }}
                 >
                   {s.title}
                 </h3>
-                <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                <p style={{ fontSize: 14.5, color: "var(--text-secondary)", lineHeight: 1.65 }}>
                   {s.desc}
                 </p>
               </div>
@@ -788,12 +931,13 @@ export default function LandingPage() {
       {/* ── PRICING ── */}
       <section style={{ padding: "100px 40px" }} id="pricing">
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <span className="sec-label">Pricing</span>
+          <div className="sec-kicker"><b>04</b>&nbsp;&nbsp;PRICING</div>
           <h2
             style={{
-              fontSize: "clamp(28px, 4vw, 48px)",
-              fontWeight: 800,
-              letterSpacing: "-0.025em",
+              fontSize: "clamp(32px, 4.5vw, 56px)",
+              fontWeight: 700,
+              letterSpacing: "-0.035em",
+              lineHeight: 1.0,
               marginBottom: 16,
             }}
           >

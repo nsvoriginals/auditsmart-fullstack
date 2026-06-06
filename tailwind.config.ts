@@ -92,6 +92,7 @@ const config: Config = {
       fontFamily: {
         sans:    ["Satoshi", "-apple-system", "sans-serif"],
         display: ["Satoshi", "sans-serif"],
+        heading: ["Satoshi", "sans-serif"],
         mono:    ["DM Mono", "'Courier New'", "monospace"],
       },
 
@@ -106,7 +107,7 @@ const config: Config = {
         md:  "var(--radius-md)",
         lg:  "var(--radius-lg)",
         xl:  "var(--radius-xl)",
-        "2xl":"24px",
+        "2xl":"20px",
       },
 
       // ── Shadows ─────────────────────────────────────────────────────

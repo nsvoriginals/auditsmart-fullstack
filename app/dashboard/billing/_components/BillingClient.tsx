@@ -189,7 +189,7 @@ export default function BillingClient({ initialData }: { initialData: BillingSta
 
       {/* Page header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: "clamp(22px, 5vw, 28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 6 }}>
+        <h1 style={{ fontSize: "clamp(30px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--text-primary)", marginBottom: 6 }}>
           Billing &amp; Subscription
         </h1>
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
