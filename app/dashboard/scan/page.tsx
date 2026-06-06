@@ -133,30 +133,30 @@ mod my_token {
 
 /* ── severity / verdict helpers ── */
 const SEV_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  critical: { bg: "rgba(239,68,68,0.1)",  text: "#ef4444", border: "rgba(239,68,68,0.25)" },
-  high:     { bg: "rgba(249,115,22,0.1)", text: "#f97316", border: "rgba(249,115,22,0.25)" },
-  medium:   { bg: "rgba(234,179,8,0.1)",  text: "#ca8a04", border: "rgba(234,179,8,0.25)" },
-  low:      { bg: "rgba(59,130,246,0.1)", text: "#3b82f6", border: "rgba(59,130,246,0.25)" },
-  info:     { bg: "rgba(107,114,128,0.1)",text: "var(--text-muted)", border: "rgba(107,114,128,0.2)" },
+  critical: { bg: "rgba(229,72,77,0.12)",  text: "#f47174", border: "rgba(229,72,77,0.28)" },
+  high:     { bg: "rgba(245,165,36,0.12)", text: "#f5a524", border: "rgba(245,165,36,0.26)" },
+  medium:   { bg: "rgba(234,179,8,0.10)",  text: "#eab308", border: "rgba(234,179,8,0.24)" },
+  low:      { bg: "rgba(99,102,241,0.12)", text: "#6366f1", border: "rgba(99,102,241,0.28)" },
+  info:     { bg: "rgba(141,145,153,0.12)",text: "var(--text-muted)", border: "rgba(141,145,153,0.22)" },
 };
 const sevStyle = (s: string) => SEV_STYLES[s?.toLowerCase()] ?? SEV_STYLES.info;
 
 const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  SAFE:    { bg: "rgba(16,185,129,0.1)", text: "#10b981", border: "rgba(16,185,129,0.25)" },
-  CAUTION: { bg: "rgba(234,179,8,0.1)",  text: "#ca8a04", border: "rgba(234,179,8,0.25)" },
+  SAFE:    { bg: "rgba(46,189,107,0.12)", text: "#2ebd6b", border: "rgba(46,189,107,0.28)" },
+  CAUTION: { bg: "rgba(245,165,36,0.12)", text: "#f5a524", border: "rgba(245,165,36,0.26)" },
 };
 const verdictStyle = (v: string) =>
-  VERDICT_STYLES[v?.toUpperCase()] ?? { bg: "rgba(239,68,68,0.1)", text: "#ef4444", border: "rgba(239,68,68,0.25)" };
+  VERDICT_STYLES[v?.toUpperCase()] ?? { bg: "rgba(229,72,77,0.12)", text: "#f47174", border: "rgba(229,72,77,0.28)" };
 
 /* ── inline style helpers ── */
 const inputBase: React.CSSProperties = {
-  width: "100%", padding: "10px 12px",
-  background: "var(--elevated)",
-  border: "1px solid var(--border)",
-  borderRadius: "var(--radius)",
+  width: "100%", padding: "12px 14px",
+  background: "var(--background)",
+  border: "1px solid var(--input)",
+  borderRadius: "var(--radius-md)",
   color: "var(--text-primary)",
   fontFamily: "'Satoshi', sans-serif",
-  fontSize: "clamp(12px, 3vw, 13px)",
+  fontSize: "14px",
   outline: "none",
   transition: "border-color 0.15s",
 };
@@ -364,12 +364,12 @@ export default function ScanPage() {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         <div className="scan-header">
-          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(22px, 6vw, 28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>
-            Scanning Contract
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.06em", color: "var(--brand)" }}>
+            ● RUNNING
+          </span>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
+            Scanning…
           </h1>
-          <p style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
-            AI agents are analyzing your smart contract...
-          </p>
         </div>
 
         {/* Slow-audit soft warning — shown after ~90s, does NOT stop polling */}
@@ -393,13 +393,13 @@ export default function ScanPage() {
 
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "clamp(20px, 5vw, 32px)", boxShadow: "var(--shadow-card)" }}>
           {/* Progress bar */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "clamp(11px, 2.5vw, 12px)", color: "var(--text-muted)", marginBottom: 8, fontFamily: "'Satoshi', sans-serif" }}>
-              <span>Audit in progress</span>
-              <span>{progress}%</span>
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+              <span style={{ fontSize: 13, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>Audit in progress</span>
+              <span style={{ fontSize: 28, fontWeight: 500, fontFamily: "'DM Mono', monospace", color: "var(--text-primary)" }}>{progress}%</span>
             </div>
-            <div style={{ height: 4, borderRadius: 2, background: "var(--elevated)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(90deg, #3b82f6, #8b5cf6)", borderRadius: 2, transition: "width 0.3s ease" }} />
+            <div style={{ height: 6, borderRadius: 99, background: "var(--surface-3)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${progress}%`, background: "var(--primary)", borderRadius: 99, transition: "width 0.3s ease" }} />
             </div>
           </div>
 
@@ -457,12 +457,12 @@ export default function ScanPage() {
 
       {/* Header */}
       <div className="scan-header">
-        <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(22px, 6vw, 28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>
-          Scan Contract
+        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.06em", color: "var(--text-muted)" }}>
+          NEW AUDIT
+        </span>
+        <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
+          Scan a contract
         </h1>
-        <p style={{ fontSize: "clamp(12px, 3vw, 13px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
-          Paste contract source code and run an AI-powered security audit. Supports EVM (Solidity), TON (FunC/Tact), Solana (Rust), Bitcoin (inscriptions), TRON, Cosmos (CosmWasm), and Polkadot (ink!).
-        </p>
       </div>
 
       {/* Quota warning */}
@@ -493,8 +493,7 @@ export default function ScanPage() {
 
       {/* Form card */}
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "clamp(20px, 5vw, 28px)", boxShadow: "var(--shadow-card)" }}>
-        <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(14px, 4vw, 16px)", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 4 }}>Audit Configuration</h3>
-        <p style={{ fontSize: "clamp(11px, 3vw, 12px)", color: "var(--text-muted)", marginBottom: 20, fontFamily: "'Satoshi', sans-serif" }}>Configure your contract audit settings</p>
+        <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: 20 }}>Configuration</h3>
 
         <div className="config-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 16 }}>
           <div>
@@ -642,16 +641,16 @@ export default function ScanPage() {
           onClick={runScan}
           disabled={scanning || limitReached || code.length > 50000}
           style={{
-            width: "100%", padding: "clamp(10px, 3vw, 12px) 0",
-            background: scanning || limitReached || code.length > 50000 ? "var(--elevated)" : "var(--brand)",
-            color: scanning || limitReached || code.length > 50000 ? "var(--text-disabled)" : "#fff",
-            border: "none", borderRadius: "var(--radius)", fontFamily: "'Satoshi', sans-serif",
-            fontSize: "clamp(13px, 3vw, 14px)", fontWeight: 600, cursor: scanning || limitReached || code.length > 50000 ? "not-allowed" : "pointer",
+            width: "100%", height: 52,
+            background: scanning || limitReached || code.length > 50000 ? "var(--surface-3)" : "var(--primary)",
+            color: scanning || limitReached || code.length > 50000 ? "var(--text-disabled)" : "var(--primary-foreground)",
+            border: "none", borderRadius: "var(--radius-md)", fontFamily: "'Satoshi', sans-serif",
+            fontSize: 16, fontWeight: 600, cursor: scanning || limitReached || code.length > 50000 ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             transition: "background 0.15s",
           }}
         >
-          {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Scanning…</> : <><Shield className="h-4 w-4" /> Run Audit</>}
+          {scanning ? <><Loader2 className="h-5 w-5 animate-spin" /> Scanning…</> : <><Shield className="h-5 w-5" /> Run Audit</>}
         </button>
       </div>
 
@@ -664,12 +663,12 @@ export default function ScanPage() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ display: "flex", gap: "clamp(12px, 3vw, 16px)", alignItems: "center", flexWrap: "wrap" }}>
                 {/* Score ring */}
-                <div style={{ width: "clamp(60px, 10vw, 72px)", height: "clamp(60px, 10vw, 72px)", borderRadius: "50%", border: "3px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: "var(--text-primary)" }}>{result.risk_score}</span>
+                <div style={{ width: 84, height: 84, borderRadius: "50%", border: `3px solid ${verdictStyle(result.deployment_verdict).border}`, background: verdictStyle(result.deployment_verdict).bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 32, fontWeight: 500, color: verdictStyle(result.deployment_verdict).text }}>{result.risk_score}</span>
                 </div>
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                    <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(16px, 4vw, 20px)", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>{result.contract_name}</h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                    <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(20px, 4vw, 26px)", fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>{result.contract_name}</h3>
                     <span style={{ padding: "2px 10px", borderRadius: 6, fontSize: "clamp(10px, 2.5vw, 11px)", fontWeight: 600, fontFamily: "'Satoshi', sans-serif", ...verdictStyle(result.deployment_verdict), border: `1px solid ${verdictStyle(result.deployment_verdict).border}` }}>
                       {result.deployment_verdict}
                     </span>
@@ -713,8 +712,9 @@ export default function ScanPage() {
           {result.findings && Array.isArray(result.findings) && result.findings.length > 0 && (
             <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
               <div className="findings-header" style={{ padding: "clamp(14px, 4vw, 18px) clamp(16px, 4vw, 24px)", borderBottom: "1px solid var(--border)" }}>
-                <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(14px, 4vw, 16px)", fontWeight: 700, letterSpacing: "-0.025em", color: "var(--text-primary)", marginBottom: 2 }}>Findings</h3>
-                <p style={{ fontSize: "clamp(11px, 3vw, 12px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>{result.total_findings} security issues detected</p>
+                <h3 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
+                  Findings <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>· {result.total_findings}</span>
+                </h3>
               </div>
               <div style={{ padding: "clamp(16px, 4vw, 24px)", display: "flex", flexDirection: "column", gap: 10 }}>
                 {result.findings.map((finding, idx) => {

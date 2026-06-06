@@ -9,7 +9,6 @@ import {
   FaShieldAlt, FaClock, FaCheckCircle, FaBolt,
   FaArrowRight, FaTelegram, FaDiscord,
 } from "react-icons/fa";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 
@@ -103,79 +102,108 @@ export function Footer() {
 
   return (
     <footer
-      className="mt-auto"
+      className="mt-auto relative overflow-hidden"
       style={{
         borderTop: "1px solid var(--border)",
-        background: "var(--sidebar)",
+        background: "var(--surface-1)",
       }}
     >
-      {/* Newsletter */}
-      <div style={{ borderBottom: "1px solid var(--border)" }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-center">
-            <div>
-              <h3
-                className="text-xl md:text-2xl font-bold mb-2"
-                style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}
-              >
-                Stay ahead of threats
-              </h3>
-              <p
-                className="text-sm"
-                style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--text-muted)" }}
-              >
-                Get the latest vulnerability reports and security best practices.
-              </p>
-            </div>
+      {/* ── CTA band ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 md:pt-24 pb-12 md:pb-16">
+        <div className="grid lg:grid-cols-[1.3fr_1fr] gap-10 lg:gap-16 items-end">
+          <div>
+            <span
+              className="inline-flex items-center gap-2.5 mb-5"
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.06em", color: "var(--text-muted)" }}
+            >
+              <span style={{ width: 28, height: 1, background: "var(--brand)" }} />
+              START NOW · FREE
+            </span>
+            <h2
+              className="font-bold"
+              style={{
+                fontFamily: "'Satoshi', sans-serif",
+                fontSize: "clamp(30px, 4.5vw, 56px)",
+                fontWeight: 700,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.02,
+                color: "var(--text-primary)",
+              }}
+            >
+              Ship contracts the
+              <br />
+              adversary <span className="text-gradient">can&apos;t break.</span>
+            </h2>
+          </div>
+
+          {/* Newsletter, compact */}
+          <div className="w-full">
+            <p className="text-sm mb-3" style={{ color: "var(--text-secondary)" }}>
+              Monthly vulnerability briefings &amp; security best practices. No spam.
+            </p>
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
               <Input
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 h-10 text-sm border-[var(--border)] bg-[var(--elevated)] focus-visible:ring-[var(--brand)]"
-                style={{ color: "var(--text-primary)", fontFamily: "'Satoshi', sans-serif" }}
+                className="flex-1 h-11 text-sm bg-[var(--background)]"
+                style={{ color: "var(--text-primary)" }}
               />
-              <Button
+              <button
                 type="submit"
                 disabled={subscribing}
-                className="h-10 gap-2 text-white shrink-0"
-                style={{ background: "var(--brand)" }}
+                className="h-11 px-5 inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium shrink-0 transition-all duration-150 disabled:opacity-60"
+                style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
               >
-                {subscribing ? "Subscribing..." : "Subscribe"}
+                {subscribing ? "Subscribing…" : "Subscribe"}
                 <FaArrowRight className="h-3 w-3" />
-              </Button>
+              </button>
             </form>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-4">
+              {BADGES.map((b) => {
+                const Icon = b.icon;
+                return (
+                  <span
+                    key={b.label}
+                    className="inline-flex items-center gap-1.5 text-[11px]"
+                    style={{ fontFamily: "'DM Mono', monospace", color: "var(--text-muted)" }}
+                  >
+                    <Icon className="h-3 w-3" style={{ color: "var(--brand)" }} />
+                    {b.label}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14">
-        {/* Link grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:gap-10 mb-10 md:mb-12">
+      {/* ── Links ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+        <div
+          className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:gap-10 pt-10"
+          style={{ borderTop: "1px solid var(--border)" }}
+        >
           {FOOTER_SECTIONS.map((section) => (
             <div key={section.title}>
               <h4
-                className="text-[10px] md:text-xs font-bold uppercase tracking-wider mb-3 md:mb-4"
+                className="text-[11px] uppercase mb-4"
                 style={{
-                  fontFamily: "'Satoshi', sans-serif",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
+                  fontFamily: "'DM Mono', monospace",
+                  letterSpacing: "0.08em",
                   color: "var(--text-disabled)",
                 }}
               >
                 {section.title}
               </h4>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {section.links.map((link) => (
                   <li key={link.name}>
                     <Link
                       href={link.href}
-                      className="text-xs md:text-[13px] transition-colors hover:text-[var(--brand)]"
-                      style={{
-                        color: "var(--text-muted)",
-                        fontFamily: "'Satoshi', sans-serif",
-                      }}
+                      className="text-[13px] transition-colors hover:text-[var(--brand)]"
+                      style={{ color: "var(--text-secondary)" }}
                     >
                       {link.name}
                     </Link>
@@ -185,78 +213,32 @@ export function Footer() {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Security badges */}
+      {/* ── Bottom bar ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div
-          className="flex flex-wrap items-center justify-center md:justify-between gap-3 rounded-xl px-4 md:px-6 py-4 mb-8 md:mb-10"
-          style={{
-            background: "var(--elevated)",
-            border: "1px solid var(--border)",
-          }}
+          className="flex flex-col md:flex-row items-center justify-between gap-4 py-7"
+          style={{ borderTop: "1px solid var(--border)" }}
         >
-          <div className="flex items-center gap-2">
-            <FaShieldAlt className="h-4 w-4" style={{ color: "var(--brand)" }} />
-            <span
-              className="text-xs md:text-sm font-medium"
-              style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--text-secondary)" }}
-            >
-              Enterprise-grade security
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {BADGES.map((b) => {
-              const Icon = b.icon;
-              return (
-                <span
-                  key={b.label}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] md:text-xs rounded-full"
-                  style={{
-                    fontFamily: "'Satoshi', sans-serif",
-                    color: "var(--text-muted)",
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <Icon className="h-3 w-3" style={{ color: "var(--brand)" }} />
-                  <span className="hidden sm:inline">{b.label}</span>
-                  <span className="sm:hidden">{b.label.split(" ")[0]}</span>
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ borderTop: "1px solid var(--border)", paddingTop: "2rem" }} />
-
-        {/* Bottom bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-5">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group shrink-0">
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-lg"
-              style={{ background: "var(--brand-faint)" }}
-            >
+          <Link href="/" className="flex items-center gap-2 group shrink-0 order-1">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: "var(--brand-faint)" }}>
               <FaShieldAlt className="h-3.5 w-3.5" style={{ color: "var(--brand)" }} />
             </div>
-            <span
-              className="text-sm md:text-base font-extrabold tracking-tight"
-              style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 800, color: "var(--text-primary)" }}
-            >
-              Audit<span style={{ color: "var(--brand)" }}>Smart</span>
+            <span className="text-sm font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
+              AuditSmart
             </span>
           </Link>
 
-          {/* Copyright */}
           <p
             suppressHydrationWarning
-            className="text-[11px] md:text-xs text-center order-3 md:order-2"
-            style={{ color: "var(--text-disabled)", fontFamily: "'Satoshi', sans-serif" }}
+            className="text-[11px] order-3 md:order-2"
+            style={{ color: "var(--text-disabled)", fontFamily: "'DM Mono', monospace" }}
           >
-            © {year} AuditSmart. All rights reserved.
+            © {year} AuditSmart — all rights reserved
           </p>
 
-          {/* Social links - ONLY 4 required */}
-          <div className="flex gap-4 md:gap-5 order-2 md:order-3">
+          <div className="flex gap-4 order-2 md:order-3">
             {SOCIAL_LINKS.map((s) => {
               const Icon = s.icon;
               return (
@@ -266,17 +248,40 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.name}
-                  className="transition-all duration-200 hover:scale-110"
-                  style={{ color: "var(--text-disabled)" }}
+                  className="transition-all duration-200 hover:-translate-y-0.5"
+                  style={{ color: "var(--text-muted)" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "var(--brand)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-disabled)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
                 >
-                  <Icon className="h-4 w-4 md:h-4.5 md:w-4.5" />
+                  <Icon className="h-4 w-4" />
                 </Link>
               );
             })}
           </div>
         </div>
+      </div>
+
+      {/* ── Giant ghost wordmark signature ── */}
+      <div
+        aria-hidden
+        className="select-none pointer-events-none w-full overflow-hidden"
+        style={{ lineHeight: 0.78 }}
+      >
+        <span
+          className="block text-center"
+          style={{
+            fontFamily: "'Satoshi', sans-serif",
+            fontWeight: 700,
+            fontSize: "clamp(72px, 19vw, 280px)",
+            letterSpacing: "-0.05em",
+            color: "transparent",
+            WebkitTextStroke: "1px var(--border-strong)",
+            transform: "translateY(22%)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          AuditSmart
+        </span>
       </div>
     </footer>
   );

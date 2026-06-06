@@ -31,44 +31,30 @@ interface Audit {
 
 // Risk colors with light theme support
 const riskColors = (level: string, score: number, isLight: boolean) => {
-  if (level === "critical" || score >= 70) return { 
-    color: "#ef4444", 
-    border: "rgba(239,68,68,0.25)", 
-    bg: isLight ? "rgba(239,68,68,0.06)" : "rgba(239,68,68,0.08)" 
+  if (level === "critical" || score >= 70) return {
+    color: "#f47174", border: "rgba(229,72,77,0.28)", bg: "rgba(229,72,77,0.12)"
   };
-  if (level === "high" || score >= 50) return { 
-    color: "#f97316", 
-    border: "rgba(249,115,22,0.25)", 
-    bg: isLight ? "rgba(249,115,22,0.06)" : "rgba(249,115,22,0.08)" 
+  if (level === "high" || score >= 50) return {
+    color: "#f5a524", border: "rgba(245,165,36,0.26)", bg: "rgba(245,165,36,0.12)"
   };
-  if (level === "medium" || score >= 30) return { 
-    color: "#ca8a04", 
-    border: "rgba(234,179,8,0.25)", 
-    bg: isLight ? "rgba(234,179,8,0.06)" : "rgba(234,179,8,0.08)" 
+  if (level === "medium" || score >= 30) return {
+    color: "#eab308", border: "rgba(234,179,8,0.24)", bg: "rgba(234,179,8,0.10)"
   };
-  return { 
-    color: "#10b981", 
-    border: "rgba(16,185,129,0.25)", 
-    bg: isLight ? "rgba(16,185,129,0.06)" : "rgba(16,185,129,0.08)" 
+  return {
+    color: "#2ebd6b", border: "rgba(46,189,107,0.28)", bg: "rgba(46,189,107,0.12)"
   };
 };
 
 const verdictColors = (verdict: string, isLight: boolean) => {
   const v = verdict?.toLowerCase() ?? "";
-  if (v.includes("safe")) return { 
-    color: "#10b981", 
-    border: "rgba(16,185,129,0.2)", 
-    bg: isLight ? "rgba(16,185,129,0.06)" : "rgba(16,185,129,0.07)" 
+  if (v.includes("safe")) return {
+    color: "#2ebd6b", border: "rgba(46,189,107,0.26)", bg: "rgba(46,189,107,0.12)"
   };
-  if (v.includes("caution")) return { 
-    color: "#ca8a04", 
-    border: "rgba(234,179,8,0.2)", 
-    bg: isLight ? "rgba(234,179,8,0.06)" : "rgba(234,179,8,0.07)" 
+  if (v.includes("caution")) return {
+    color: "#f5a524", border: "rgba(245,165,36,0.26)", bg: "rgba(245,165,36,0.12)"
   };
-  if (v.includes("not") || v.includes("deploy")) return { 
-    color: "#ef4444", 
-    border: "rgba(239,68,68,0.2)", 
-    bg: isLight ? "rgba(239,68,68,0.06)" : "rgba(239,68,68,0.07)" 
+  if (v.includes("not") || v.includes("deploy")) return {
+    color: "#f47174", border: "rgba(229,72,77,0.26)", bg: "rgba(229,72,77,0.12)"
   };
   return { color: "var(--text-disabled)", border: "var(--border)", bg: "transparent" };
 };
@@ -204,24 +190,18 @@ export default function HistoryPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.06em", color: "var(--text-muted)" }}>
+            ARCHIVE
+          </span>
           <h1 style={{
             fontFamily: "'Satoshi', sans-serif",
-            fontSize: "clamp(24px, 6vw, 30px)",
-            fontWeight: 800,
-            letterSpacing: "-0.025em",
+            fontSize: "clamp(30px, 4vw, 44px)",
+            fontWeight: 700,
+            letterSpacing: "-0.03em",
             color: "var(--text-primary)",
-            marginBottom: 6
           }}>
-            Audit History
+            Audit history
           </h1>
-          <p style={{
-            fontSize: "clamp(13px, 3vw, 14px)",
-            color: "var(--text-muted)",
-            fontFamily: "'Satoshi', sans-serif",
-            fontWeight: 500,
-          }}>
-            View and manage all your past smart contract security audits
-          </p>
         </div>
         <Link href="/dashboard/scan"
           prefetch={true}
@@ -229,18 +209,19 @@ export default function HistoryPage() {
             display: "inline-flex",
             alignItems: "center",
             gap: 8,
-            padding: "11px 22px",
-            background: "var(--brand)",
-            color: "#fff",
+            height: 44,
+            padding: "0 20px",
+            background: "var(--primary)",
+            color: "var(--primary-foreground)",
             border: "none",
-            borderRadius: "var(--radius)",
+            borderRadius: "var(--radius-md)",
             fontFamily: "'Satoshi', sans-serif",
-            fontSize: "clamp(13px, 3vw, 14px)",
-            fontWeight: 700,
+            fontSize: 14,
+            fontWeight: 600,
             textDecoration: "none",
             whiteSpace: "nowrap"
           }}>
-          <Plus size={15} /> New Audit
+          <Plus size={16} /> New Audit
         </Link>
       </div>
 
@@ -267,38 +248,37 @@ export default function HistoryPage() {
               gap: 12 
             }}>
               {[
-                { label: "Total Audits", value: audits.length, color: "var(--text-primary)" },
-                { label: "Critical Issues", value: audits.reduce((s, a) => s + (a.critical_count || 0), 0), color: "#ef4444" },
-                { label: "Avg Risk Score", value: Math.round(audits.reduce((s, a) => s + (a.risk_score || 0), 0) / (audits.length || 1)), color: "var(--text-primary)" },
-                { label: "PDF Reports", value: audits.filter(a => a.pdf_available).length, color: "var(--text-primary)" },
+                { label: "Total", value: audits.length, color: "var(--text-primary)" },
+                { label: "Critical", value: audits.reduce((s, a) => s + (a.critical_count || 0), 0), color: "#f47174" },
+                { label: "Avg score", value: Math.round(audits.reduce((s, a) => s + (a.risk_score || 0), 0) / (audits.length || 1)), color: "var(--text-primary)" },
+                { label: "Reports", value: audits.filter(a => a.pdf_available).length, color: "var(--text-primary)" },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{
                   background: "var(--card)",
                   border: "1px solid var(--border)",
                   borderRadius: "var(--radius-md)",
-                  padding: "clamp(16px, 3vw, 20px)",
-                  textAlign: "center",
+                  padding: "20px",
                   boxShadow: "var(--shadow-card)"
                 }}>
                   <div style={{
-                    fontFamily: "'Satoshi', sans-serif",
-                    fontSize: "clamp(26px, 5vw, 30px)",
-                    fontWeight: 800,
-                    color,
-                    marginBottom: 6,
-                    letterSpacing: "-0.02em",
-                  }}>
-                    {value}
-                  </div>
-                  <div style={{
-                    fontSize: "clamp(11px, 2vw, 12px)",
+                    fontSize: 12,
                     color: "var(--text-muted)",
                     textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    fontFamily: "'Satoshi', sans-serif",
-                    fontWeight: 600,
+                    letterSpacing: "0.06em",
+                    fontFamily: "'DM Mono', monospace",
+                    marginBottom: 10,
                   }}>
                     {label}
+                  </div>
+                  <div style={{
+                    fontFamily: "'Satoshi', sans-serif",
+                    fontSize: "clamp(36px, 5vw, 48px)",
+                    fontWeight: 700,
+                    color,
+                    lineHeight: 1,
+                    letterSpacing: "-0.03em",
+                  }}>
+                    {value}
                   </div>
                 </div>
               ))}
@@ -420,10 +400,10 @@ export default function HistoryPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
                         <span style={{
                           fontFamily: "'Satoshi', sans-serif",
-                          fontSize: "clamp(15px, 3.5vw, 17px)",
-                          fontWeight: 700,
+                          fontSize: "clamp(16px, 3.5vw, 19px)",
+                          fontWeight: 600,
                           color: "var(--text-primary)",
-                          letterSpacing: "-0.01em",
+                          letterSpacing: "-0.015em",
                         }}>
                           {audit.contract_name}
                         </span>
@@ -483,7 +463,7 @@ export default function HistoryPage() {
                           padding: "4px 10px",
                           borderRadius: 6,
                           background: isLight ? "rgba(239,68,68,0.10)" : "rgba(239,68,68,0.12)",
-                          color: "#ef4444",
+                          color: "#f47174",
                           fontFamily: "'Satoshi', sans-serif",
                           fontWeight: 700,
                         }}>
@@ -496,7 +476,7 @@ export default function HistoryPage() {
                           padding: "4px 10px",
                           borderRadius: 6,
                           background: isLight ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.12)",
-                          color: "#f97316",
+                          color: "#f5a524",
                           fontFamily: "'Satoshi', sans-serif",
                           fontWeight: 700,
                         }}>
@@ -509,7 +489,7 @@ export default function HistoryPage() {
                           padding: "4px 10px",
                           borderRadius: 6,
                           background: isLight ? "rgba(234,179,8,0.10)" : "rgba(234,179,8,0.12)",
-                          color: "#ca8a04",
+                          color: "#eab308",
                           fontFamily: "'Satoshi', sans-serif",
                           fontWeight: 700,
                         }}>

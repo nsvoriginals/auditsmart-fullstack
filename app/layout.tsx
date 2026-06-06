@@ -2,23 +2,15 @@
 import type { Metadata } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
-import { Syne, DM_Mono } from "next/font/google";
+import { DM_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { getCachedSession } from "@/lib/session";
 
-// Self-hosted via next/font — eliminates external Google Fonts network request,
-// removes FOUT (flash of unstyled text), and improves privacy.
-const syne = Syne({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-  variable: "--font-syne",
-  preload: true,
-});
-
+// Satoshi is the single UI typeface (loaded via @font-face in globals.css).
+// DM Mono is self-hosted via next/font and reserved for code / numerals only.
 const dmMono = DM_Mono({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
@@ -69,9 +61,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = await getCachedSession();
 
   return (
-    <html lang="en" suppressHydrationWarning className={`${syne.variable} ${dmMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${dmMono.variable}`}>
       <head>
-        {/* Satoshi loaded via @font-face in globals.css; Syne + DM Mono are self-hosted via next/font above */}
+        {/* Satoshi loaded via @font-face in globals.css; DM Mono self-hosted via next/font (code/numerals only) */}
         <script
           src="https://analytics.ahrefs.com/analytics.js"
           data-key="CWDu0DcX0aQfQV90hPlbgQ"

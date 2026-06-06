@@ -289,8 +289,8 @@ export default function ReportPage() {
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-white text-sm transition-all hover:opacity-90"
                 style={{
                   background: isSecurityReport
-                    ? "linear-gradient(135deg, #ef4444, #ff3d9a)"
-                    : "linear-gradient(135deg, var(--brand-purple), var(--brand))",
+                    ? "var(--destructive)"
+                    : "var(--primary)",
                   opacity: submitting ? 0.7 : 1,
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}

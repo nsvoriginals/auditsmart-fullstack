@@ -75,25 +75,14 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
   return (
     <aside className="flex flex-col h-full bg-surface-1 border-r border-border font-sans">
       {/* Logo */}
-      <div className="flex h-14 md:h-16 items-center gap-2 px-4 md:px-5 flex-shrink-0 border-b border-border">
+      <div className="flex h-16 items-center gap-2.5 px-5 flex-shrink-0 border-b border-border">
         <div
-          className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
-          style={{
-            background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(123,47,255,0.12))",
-            border: "1px solid rgba(0,212,255,0.20)",
-          }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center bg-brand-faint border"
+          style={{ borderColor: "rgba(99,102,241,0.22)" }}
         >
-          <Shield size={16} className="text-brand" />
+          <Shield size={18} className="text-brand" />
         </div>
-        <span
-          className="text-sm md:text-base font-extrabold tracking-tight"
-          style={{
-            background: "linear-gradient(90deg, var(--text-primary) 60%, var(--brand))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
+        <span className="text-base font-semibold tracking-tight text-text-primary">
           AuditSmart
         </span>
       </div>
@@ -104,18 +93,17 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
           href="/dashboard/scan"
           prefetch={true}
           onClick={handleLinkClick}
-          className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-lg text-white font-bold text-xs md:text-sm transition-opacity hover:opacity-85"
-          style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
+          className="flex items-center justify-center gap-2 w-full h-10 rounded-lg bg-primary text-primary-foreground font-medium text-sm shadow-sm hover:bg-[var(--brand-hover)] hover:shadow-brand transition-all duration-150"
         >
-          <PlusCircle size={14} />
+          <PlusCircle size={16} />
           <span className="hidden sm:inline">New Audit</span>
           <span className="sm:hidden">Scan</span>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 md:px-3">
-        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2 text-text-disabled">
+      <nav className="flex-1 overflow-y-auto px-3">
+        <p className="text-[11px] font-mono uppercase tracking-wider px-3 mb-2 text-text-disabled">
           Workspace
         </p>
 
@@ -131,24 +119,25 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
               href={item.href}
               prefetch={true}
               onClick={handleLinkClick}
-              className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all mb-0.5
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-all duration-150 mb-0.5
                 ${isActive
-                  ? "bg-[rgba(0,212,255,0.07)] border border-[rgba(0,212,255,0.12)] text-brand"
-                  : "border border-transparent text-text-secondary"}`}
+                  ? "bg-brand-faint text-brand"
+                  : "text-text-secondary hover:text-text-primary hover:bg-[var(--surface-2)]"}`}
             >
+              {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-brand" />}
               <Icon
-                size={16}
-                className={isActive ? "text-brand" : "text-text-disabled"}
+                size={18}
+                className={isActive ? "text-brand" : "text-text-muted"}
               />
               <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
 
-        <div className="h-px my-3 bg-border" />
+        <div className="h-px my-4 bg-border" />
 
         {/* ── Quantum section ── */}
-        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2 text-text-disabled">
+        <p className="text-[11px] font-mono uppercase tracking-wider px-3 mb-2 text-text-disabled">
           Quantum
         </p>
 
@@ -160,38 +149,27 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
               href="/dashboard/quantum"
               prefetch={true}
               onClick={handleLinkClick}
-              className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all mb-0.5
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-all duration-150 mb-0.5
                 ${isQuantumActive
-                  ? "bg-[rgba(168,85,247,0.07)] border border-[rgba(168,85,247,0.15)] text-purple-400"
-                  : "border border-transparent text-text-secondary"}`}
+                  ? "bg-[rgba(139,92,246,0.1)] text-purple"
+                  : "text-text-secondary hover:text-text-primary hover:bg-[var(--surface-2)]"}`}
             >
+              {isQuantumActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-[var(--brand-purple)]" />}
               <Atom
-                size={16}
-                className={isQuantumActive ? "text-purple-400" : isPaid ? "text-purple-400/70" : "text-text-disabled"}
+                size={18}
+                className={isQuantumActive || isPaid ? "text-purple" : "text-text-muted"}
               />
               <span className="truncate">Quantum Audit</span>
-              {isPaid ? (
-                <span
-                  className="ml-auto flex-shrink-0"
-                  style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}
-                >
-                  Beta
-                </span>
-              ) : (
-                <span
-                  className="ml-auto flex-shrink-0"
-                  style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(0,212,255,0.08)", color: "var(--brand)", border: "1px solid rgba(0,212,255,0.15)" }}
-                >
-                  Pro+
-                </span>
-              )}
+              <span className={`ml-auto flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${isPaid ? "badge-purple" : "badge-brand"}`}>
+                {isPaid ? "Beta" : "Pro+"}
+              </span>
             </Link>
           );
         })()}
 
-        <div className="h-px my-3 bg-border" />
+        <div className="h-px my-4 bg-border" />
 
-        <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider px-2 mb-2 text-text-disabled">
+        <p className="text-[11px] font-mono uppercase tracking-wider px-3 mb-2 text-text-disabled">
           Actions
         </p>
 
@@ -199,9 +177,9 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
           href="/dashboard/billing"
           prefetch={true}
           onClick={handleLinkClick}
-          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5 text-text-secondary"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-all duration-150 text-text-secondary hover:text-text-primary hover:bg-[var(--surface-2)]"
         >
-          <TrendingUp size={16} className="text-text-disabled" />
+          <TrendingUp size={18} className="text-text-muted" />
           <span>Upgrade Plan</span>
         </Link>
 
@@ -209,39 +187,36 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
           href="/dashboard/deep-audit"
           prefetch={true}
           onClick={handleLinkClick}
-          className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border border-transparent hover:bg-white/5 text-text-secondary"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-all duration-150 text-text-secondary hover:text-text-primary hover:bg-[var(--surface-2)]"
         >
-          <Zap size={16} className="text-brand-pink" />
-          <span>Deep Audit · ${PLAN_DETAILS.deep_audit.displayPrice}</span>
+          <Zap size={18} className="text-brand" />
+          <span>Deep Audit</span>
         </Link>
       </nav>
 
       {/* Plan usage card */}
       <div className="p-3 md:p-4 flex-shrink-0">
-        <div className="rounded-xl p-3 md:p-4 bg-surface-2 border border-border">
-          <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider mb-1 text-brand">
-            {planLabel} Plan
+        <div className="rounded-xl p-4 bg-surface-2 border border-border">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-brand">
+              {planLabel}
+            </span>
+            <span className="text-[11px] font-mono text-text-muted tabular-nums">{left}/{maxAudits}</span>
           </div>
-          <div className="text-xl md:text-2xl font-extrabold tracking-tight text-text-primary">
-            {left}
+          <div className="flex items-baseline gap-1.5 mb-3">
+            <span className="text-3xl font-bold tracking-tight tabular-nums text-text-primary leading-none">{left}</span>
+            <span className="text-xs text-text-muted">left</span>
           </div>
-          <div className="text-[10px] md:text-[11px] mb-2 text-text-disabled">
-            audits remaining
-          </div>
-          <div className="h-1 rounded-full overflow-hidden mb-2 bg-white/5">
+          <div className="h-1.5 rounded-full overflow-hidden mb-4 bg-[var(--surface-3)]">
             <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${pct}%`,
-                background: "linear-gradient(90deg, var(--brand), var(--brand-green))",
-              }}
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${pct}%` }}
             />
           </div>
           <Link
             href="/dashboard/billing"
             onClick={handleLinkClick}
-            className="block w-full py-2 rounded-md text-center text-xs font-bold transition-opacity hover:opacity-85 text-white"
-            style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
+            className="flex items-center justify-center w-full h-9 rounded-lg text-center text-sm font-medium bg-primary text-primary-foreground shadow-sm hover:bg-[var(--brand-hover)] transition-all duration-150"
           >
             Upgrade →
           </Link>

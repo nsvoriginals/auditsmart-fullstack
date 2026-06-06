@@ -189,10 +189,10 @@ export default function MonitorPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Contract Monitor</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Enter any deployed contract address to watch for suspicious activity in real time.
-        </p>
+        <span className="font-mono text-[12px] tracking-wider text-text-muted">REAL-TIME</span>
+        <h1 className="font-bold tracking-tight text-text-primary" style={{ fontSize: "clamp(30px, 4vw, 44px)", letterSpacing: "-0.03em" }}>
+          Monitor
+        </h1>
       </div>
 
       {/* Configuration Card */}
@@ -278,7 +278,7 @@ export default function MonitorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="text-xl sm:text-2xl font-bold text-foreground">
+              <div className="text-3xl sm:text-4xl font-bold tracking-tight tabular-nums text-foreground">
                 {alertCount.total}
               </div>
             </CardContent>
@@ -291,7 +291,7 @@ export default function MonitorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+              <div className="text-3xl sm:text-4xl font-bold tracking-tight tabular-nums text-yellow-600 dark:text-yellow-400">
                 {alertCount.warning}
               </div>
             </CardContent>
@@ -304,7 +304,7 @@ export default function MonitorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+              <div className="text-3xl sm:text-4xl font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">
                 {alertCount.critical}
               </div>
             </CardContent>

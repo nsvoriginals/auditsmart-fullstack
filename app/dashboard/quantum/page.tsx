@@ -90,7 +90,7 @@ function UpgradeGate() {
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <Atom size={22} style={{ color: "#a855f7" }} />
-          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(22px,6vw,28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,4vw,42px)", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
             Quantum Audit
           </h1>
           <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}>
@@ -260,7 +260,7 @@ export default function QuantumPage() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <Atom size={20} style={{ color: "#a855f7" }} />
-            <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(22px,6vw,28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+            <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,4vw,42px)", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
               Quantum Audit Running
             </h1>
           </div>
@@ -323,7 +323,7 @@ export default function QuantumPage() {
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <Atom size={20} style={{ color: "#a855f7" }} />
-          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(22px,6vw,28px)", fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
+          <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,4vw,42px)", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
             Quantum Audit
           </h1>
           <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "rgba(168,85,247,0.12)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.2)" }}>

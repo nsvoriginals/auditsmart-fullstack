@@ -1,31 +1,30 @@
 "use client";
 // app/dashboard/page.tsx — Client-rendered dashboard overview
 // Page shell renders INSTANTLY from JS bundle. Data hydrates via Jotai atoms
-// backed by localStorage, so repeat visits show last-known values immediately
-// and refresh in the background. No server roundtrip blocks navigation.
+// backed by localStorage, so repeat visits show last-known values immediately.
 
 import React from "react";
 import Link from "next/link";
 import {
-  Shield, AlertTriangle, Clock, Plus, Eye, Star, Zap,
-  ArrowRight, CheckCircle, XCircle, Calendar, TrendingUp, FileText,
+  Shield, Clock, Plus, ArrowRight, CheckCircle, XCircle,
+  TrendingUp, FileText, Zap, Eye, Star,
 } from "lucide-react";
 import { useDashboard } from "@/lib/state/dashboard";
 
 const riskColors = (score: number) => {
-  if (score >= 80) return { color: "#ef4444", border: "rgba(239,68,68,0.25)", bg: "rgba(239,68,68,0.08)", text: "Critical" };
-  if (score >= 60) return { color: "#f97316", border: "rgba(249,115,22,0.25)", bg: "rgba(249,115,22,0.08)", text: "High" };
-  if (score >= 35) return { color: "#ca8a04", border: "rgba(234,179,8,0.25)", bg: "rgba(234,179,8,0.08)", text: "Medium" };
-  if (score >= 10) return { color: "#3b82f6", border: "rgba(59,130,246,0.25)", bg: "rgba(59,130,246,0.08)", text: "Low" };
-  return { color: "#10b981", border: "rgba(16,185,129,0.25)", bg: "rgba(16,185,129,0.08)", text: "Good" };
+  if (score >= 80) return { color: "#f47174", bg: "rgba(229,72,77,0.12)", text: "Critical" };
+  if (score >= 60) return { color: "#f5a524", bg: "rgba(245,165,36,0.12)", text: "High" };
+  if (score >= 35) return { color: "#eab308", bg: "rgba(234,179,8,0.12)", text: "Medium" };
+  if (score >= 10) return { color: "#6366f1", bg: "rgba(99,102,241,0.12)", text: "Low" };
+  return { color: "#2ebd6b", bg: "rgba(46,189,107,0.12)", text: "Healthy" };
 };
 
 const getStatusConfig = (status: string) => {
   switch (status) {
-    case "COMPLETED":  return { label: "Complete",   color: "#10b981", bg: "rgba(16,185,129,0.08)" };
-    case "PROCESSING": return { label: "Processing", color: "#f59e0b", bg: "rgba(245,158,11,0.08)" };
-    case "FAILED":     return { label: "Failed",     color: "#ef4444", bg: "rgba(239,68,68,0.08)" };
-    default:           return { label: "Pending",    color: "#6b7280", bg: "rgba(107,114,128,0.08)" };
+    case "COMPLETED":  return { label: "Complete",   color: "#2ebd6b", bg: "rgba(46,189,107,0.12)" };
+    case "PROCESSING": return { label: "Processing", color: "#f5a524", bg: "rgba(245,165,36,0.12)" };
+    case "FAILED":     return { label: "Failed",     color: "#f47174", bg: "rgba(229,72,77,0.12)" };
+    default:           return { label: "Pending",    color: "#8d9199", bg: "rgba(141,145,153,0.12)" };
   }
 };
 
@@ -33,67 +32,53 @@ const relTime = (iso: string) => {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   if (diff === 0) return "Today";
   if (diff === 1) return "Yesterday";
-  if (diff < 7) return `${diff} days ago`;
+  if (diff < 7) return `${diff}d ago`;
   return new Date(iso).toLocaleDateString();
 };
 
-function StatCard({ label, value, suffix, Icon, scoreColor, scoreBg, scoreText, score }: {
-  label: string; value: React.ReactNode; suffix?: string; Icon: any;
-  scoreColor?: string; scoreBg?: string; scoreText?: string; score?: number;
+const today = () =>
+  new Date().toLocaleDateString("en-US", { weekday: "short", day: "2-digit", month: "short" }).toUpperCase();
+
+/* Big-number stat tile */
+function StatTile({ label, value, suffix, color, className = "" }: {
+  label: string; value: React.ReactNode; suffix?: string; color?: string; className?: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 shadow-card">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-text-muted font-sans">
-          {label}
-        </span>
-        <Icon size={14} className="text-text-muted" />
-      </div>
+    <div className={`bg-card border border-border rounded-xl p-5 shadow-card flex flex-col justify-between min-h-[140px] ${className}`}>
+      <span className="text-[11px] uppercase tracking-wider text-text-muted font-mono">{label}</span>
       <div
-        className="text-2xl sm:text-3xl font-extrabold tracking-tight font-sans mb-1"
-        style={{ color: scoreColor ?? "var(--text-primary)" }}
+        className="font-bold leading-none tracking-tight tabular-nums"
+        style={{ fontSize: "clamp(40px, 5vw, 60px)", color: color ?? "var(--text-primary)" }}
       >
-        {value}{suffix || ""}
+        {value}
+        {suffix && <span className="text-base font-medium text-text-muted ml-1">{suffix}</span>}
       </div>
-      {scoreText && score! > 0 && (
-        <div className="mt-3">
-          <div className="h-1 bg-border rounded-full overflow-hidden">
-            <div className="h-full rounded-full" style={{ width: `${score}%`, background: scoreColor }} />
-          </div>
-          <span
-            className="inline-block mt-2 text-[10px] px-2 py-0.5 rounded font-semibold font-sans"
-            style={{ background: scoreBg, color: scoreColor }}
-          >
-            {scoreText} Risk
-          </span>
-        </div>
-      )}
     </div>
+  );
+}
+
+/* Circular gauge for the featured avg-score tile */
+function Ring({ score, color }: { score: number; color: string }) {
+  const r = 38, c = 2 * Math.PI * r;
+  const off = c - (Math.min(100, Math.max(0, score)) / 100) * c;
+  return (
+    <svg width="96" height="96" viewBox="0 0 96 96" className="flex-shrink-0">
+      <circle cx="48" cy="48" r={r} fill="none" stroke="var(--surface-3)" strokeWidth="8" />
+      <circle
+        cx="48" cy="48" r={r} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 48 48)"
+        style={{ transition: "stroke-dashoffset 0.9s cubic-bezier(0.16,1,0.3,1)" }}
+      />
+      <text x="48" y="48" textAnchor="middle" dominantBaseline="central"
+        style={{ fontFamily: "'DM Mono', monospace", fontSize: 26, fontWeight: 500, fill: "var(--text-primary)" }}>
+        {Math.round(score)}
+      </text>
+    </svg>
   );
 }
 
 function StatSkeleton() {
-  return <div className="bg-card border border-border rounded-xl p-4 h-[104px] animate-pulse" />;
-}
-
-function RecentAuditSkeleton() {
-  return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-border">
-        <div className="h-4 w-32 bg-elevated rounded animate-pulse mb-2" />
-        <div className="h-3 w-48 bg-elevated rounded animate-pulse" />
-      </div>
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="flex items-center gap-3 px-5 py-3.5 border-b border-border last:border-0">
-          <div className="w-11 h-11 rounded-full bg-elevated animate-pulse" />
-          <div className="flex-1">
-            <div className="h-4 w-40 bg-elevated rounded animate-pulse mb-2" />
-            <div className="h-3 w-20 bg-elevated rounded animate-pulse" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <div className="bg-card border border-border rounded-xl min-h-[140px] skeleton" />;
 }
 
 export default function DashboardOverview() {
@@ -108,233 +93,181 @@ export default function DashboardOverview() {
   const remainingAudits = stats?.remainingAudits ?? null;
   const totalAudits     = stats?.totalAudits ?? 0;
   const currentMonth    = stats?.currentMonthAudits ?? 0;
-
-  const statCards = [
-    { label: "Total Audits", value: totalAudits,                          Icon: Shield      },
-    { label: "Completed",    value: stats?.completedAudits ?? 0,          Icon: CheckCircle },
-    { label: "Pending",      value: stats?.pendingAudits ?? 0,            Icon: Clock       },
-  ];
+  const usagePct        = plan === "FREE" ? Math.min((currentMonth / 3) * 100, 100) : Math.min(currentMonth, 100);
 
   const showSkeleton = loading && !data;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary mb-1 font-sans">
-            Dashboard
+          <span className="text-[12px] font-mono tracking-wider text-text-muted">{today()}</span>
+          <h1 className="font-bold tracking-tight text-text-primary" style={{ fontSize: "clamp(30px, 4vw, 44px)", letterSpacing: "-0.03em" }}>
+            Overview
           </h1>
-          <p className="text-xs sm:text-sm text-text-muted font-sans">
-            Your security audit overview and recent activity.
-          </p>
         </div>
         <Link
           href="/dashboard/scan"
           prefetch
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold font-sans whitespace-nowrap transition-opacity hover:opacity-90"
+          className="inline-flex items-center gap-2 px-5 h-11 rounded-lg bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:bg-[var(--brand-hover)] hover:shadow-brand transition-all duration-150"
         >
-          <Plus size={13} /> New Audit
+          <Plus size={16} /> New Audit
         </Link>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Metric row — featured gauge + big numbers */}
+      <div className="grid grid-cols-2 lg:[grid-template-columns:1.5fr_1fr_1fr_1fr] gap-3">
         {showSkeleton ? (
-          <>
-            <StatSkeleton /><StatSkeleton /><StatSkeleton /><StatSkeleton />
-          </>
+          <><StatSkeleton /><StatSkeleton /><StatSkeleton /><StatSkeleton /></>
         ) : (
           <>
-            {statCards.map(({ label, value, Icon }) => (
-              <StatCard key={label} label={label} value={value} Icon={Icon} />
-            ))}
-            <StatCard
-              label="Avg Score"
-              value={averageScore.toFixed(0)}
-              suffix="/100"
-              Icon={TrendingUp}
-              scoreColor={riskInfo.color}
-              scoreBg={riskInfo.bg}
-              scoreText={riskInfo.text}
-              score={averageScore}
-            />
+            {/* Featured: avg score */}
+            <div className="col-span-2 lg:col-span-1 bg-card border border-border rounded-xl p-5 shadow-card flex items-center gap-5 min-h-[140px]">
+              <Ring score={averageScore} color={riskInfo.color} />
+              <div className="min-w-0">
+                <span className="text-[11px] uppercase tracking-wider text-text-muted font-mono">Avg risk score</span>
+                <div className="text-2xl font-bold tracking-tight mt-1" style={{ color: riskInfo.color }}>
+                  {riskInfo.text}
+                </div>
+                <span className="text-xs text-text-muted font-mono">across {totalAudits} audits</span>
+              </div>
+            </div>
+
+            <StatTile label="Total" value={totalAudits} />
+            <StatTile label="Completed" value={stats?.completedAudits ?? 0} color="#2ebd6b" />
+            <StatTile label="Pending" value={stats?.pendingAudits ?? 0} color={(stats?.pendingAudits ?? 0) > 0 ? "#f5a524" : undefined} />
           </>
         )}
       </div>
 
-      {/* Two-column section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Recent Audits */}
-        {showSkeleton ? <RecentAuditSkeleton /> : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between flex-wrap gap-2 px-5 py-4 border-b border-border">
-              <div>
-                <h3 className="text-sm font-bold tracking-tight text-text-primary font-sans">Recent Audits</h3>
-                <p className="text-[11px] text-text-muted font-sans">Your most recent security audit reports</p>
-              </div>
-              {recentAudits.length > 0 && (
-                <Link href="/dashboard/history" prefetch className="text-[11px] text-brand font-sans">
-                  View all →
-                </Link>
-              )}
-            </div>
-
-            <div>
-              {recentAudits.length === 0 ? (
-                <div className="py-12 px-6 text-center">
-                  <div className="w-12 h-12 rounded-xl bg-[rgba(99,102,241,0.08)] border border-[rgba(99,102,241,0.15)] flex items-center justify-center mx-auto mb-4">
-                    <FileText size={22} className="text-brand" />
-                  </div>
-                  <p className="text-sm text-text-muted mb-4 font-sans">No audits yet. Run your first scan.</p>
-                  <Link
-                    href="/dashboard/scan"
-                    prefetch
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold font-sans"
-                  >
-                    <Plus size={12} /> Start First Audit
-                  </Link>
-                </div>
-              ) : (
-                recentAudits.map((audit, idx) => {
-                  const score = audit.score ?? 0;
-                  const risk = riskColors(score);
-                  const status = getStatusConfig(audit.status);
-                  const StatusDot = audit.status === "COMPLETED" ? CheckCircle : audit.status === "FAILED" ? XCircle : Clock;
-                  return (
-                    <Link
-                      key={audit.id}
-                      href={`/dashboard/audit/results/${audit.id}`}
-                      prefetch
-                      className={`flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-elevated ${
-                        idx < recentAudits.length - 1 ? "border-b border-border" : ""
-                      }`}
-                    >
-                      <div
-                        className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ border: `2px solid ${risk.border}`, background: risk.bg }}
-                      >
-                        <span className="text-sm font-extrabold font-sans" style={{ color: risk.color }}>{score}</span>
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="text-xs sm:text-sm font-bold tracking-tight text-text-primary font-sans truncate">
-                            {audit.contractName}
-                          </span>
-                          <span
-                            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-sans"
-                            style={{ background: status.bg, color: status.color }}
-                          >
-                            <StatusDot size={10} />
-                            {status.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] text-text-muted font-sans">
-                          <Calendar size={9} />
-                          {relTime(audit.createdAt)}
-                        </div>
-                      </div>
-
-                      <ArrowRight size={14} className="text-text-muted flex-shrink-0" />
-                    </Link>
-                  );
-                })
-              )}
-            </div>
+      {/* Recent audits + side rail */}
+      <div className="grid grid-cols-1 lg:[grid-template-columns:1.6fr_1fr] gap-5">
+        {/* Recent audits */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+            <h3 className="text-lg font-semibold tracking-tight text-text-primary">Recent audits</h3>
+            {recentAudits.length > 0 && (
+              <Link href="/dashboard/history" prefetch className="text-[13px] text-brand hover:underline">
+                View all →
+              </Link>
+            )}
           </div>
-        )}
 
-        {/* Right column */}
-        <div className="flex flex-col gap-4">
-          {/* Plan & Usage */}
-          <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
-            <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-              <h3 className="text-sm font-bold tracking-tight text-text-primary font-sans">Plan &amp; Usage</h3>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-[rgba(99,102,241,0.1)] text-[var(--primary)] font-semibold uppercase font-sans">
+          {showSkeleton ? (
+            <div className="p-4 flex flex-col gap-3">
+              {[0, 1, 2].map((i) => <div key={i} className="h-16 rounded-lg skeleton" />)}
+            </div>
+          ) : recentAudits.length === 0 ? (
+            <div className="py-16 px-6 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-brand-faint border border-[rgba(99,102,241,0.18)] flex items-center justify-center mx-auto mb-5">
+                <FileText size={24} className="text-brand" />
+              </div>
+              <p className="text-base text-text-secondary mb-5">No audits yet.</p>
+              <Link
+                href="/dashboard/scan"
+                prefetch
+                className="inline-flex items-center gap-2 px-5 h-11 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
+              >
+                <Plus size={16} /> Run first audit
+              </Link>
+            </div>
+          ) : (
+            recentAudits.map((audit, idx) => {
+              const score = audit.score ?? 0;
+              const risk = riskColors(score);
+              const status = getStatusConfig(audit.status);
+              const StatusDot = audit.status === "COMPLETED" ? CheckCircle : audit.status === "FAILED" ? XCircle : Clock;
+              return (
+                <Link
+                  key={audit.id}
+                  href={`/dashboard/audit/results/${audit.id}`}
+                  prefetch
+                  className={`flex items-center gap-4 px-6 py-4 transition-colors hover:bg-[var(--surface-2)] ${
+                    idx < recentAudits.length - 1 ? "border-b border-border" : ""
+                  }`}
+                >
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-mono"
+                    style={{ background: risk.bg, color: risk.color, fontSize: 17, fontWeight: 500 }}
+                  >
+                    {score}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-[15px] font-semibold tracking-tight text-text-primary truncate">
+                      {audit.contractName}
+                    </span>
+                    <span className="text-xs text-text-muted font-mono">{relTime(audit.createdAt)}</span>
+                  </div>
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md flex-shrink-0"
+                    style={{ background: status.bg, color: status.color }}
+                  >
+                    <StatusDot size={12} />
+                    {status.label}
+                  </span>
+                  <ArrowRight size={16} className="text-text-muted flex-shrink-0" />
+                </Link>
+              );
+            })
+          )}
+        </div>
+
+        {/* Side rail */}
+        <div className="flex flex-col gap-5">
+          {/* Usage */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-semibold tracking-tight text-text-primary">Usage</h3>
+              <span className="text-[11px] px-2.5 py-1 rounded-md bg-brand-faint text-brand font-medium uppercase font-mono">
                 {plan}
               </span>
             </div>
 
-            <div className="mb-4">
-              <div className="flex justify-between text-[11px] text-text-muted font-sans mb-1.5 flex-wrap gap-1">
-                <span>Audits this month</span>
-                <span className="text-text-primary">
-                  {currentMonth}
-                  {plan === "FREE" && <span className="text-text-muted"> / 3</span>}
-                </span>
-              </div>
-              <div className="h-1 bg-border rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{
-                    width: `${
-                      plan === "FREE"
-                        ? Math.min((currentMonth / 3) * 100, 100)
-                        : Math.min((currentMonth / 100) * 100, 100)
-                    }%`,
-                  }}
-                />
-              </div>
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="font-bold tabular-nums tracking-tight" style={{ fontSize: "clamp(36px, 5vw, 52px)" }}>
+                {plan === "FREE" && remainingAudits !== null ? remainingAudits : currentMonth}
+              </span>
+              <span className="text-sm text-text-muted">
+                {plan === "FREE" ? "audits left" : "this month"}
+              </span>
             </div>
-
-            {plan === "FREE" && remainingAudits !== null && (
-              <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2.5 rounded-lg bg-elevated mb-4">
-                <span className="text-[10px] text-text-muted font-sans">Remaining free audits</span>
-                <span className="text-base font-bold text-text-primary font-sans">{remainingAudits}</span>
-              </div>
-            )}
+            <div className="h-2 bg-[var(--surface-3)] rounded-full overflow-hidden mt-3 mb-5">
+              <div className="h-full bg-primary rounded-full transition-all duration-700" style={{ width: `${usagePct}%` }} />
+            </div>
 
             {plan === "FREE" ? (
               <Link
                 href="/dashboard/billing"
                 prefetch
-                className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-lg bg-primary text-white text-xs font-semibold font-sans"
+                className="flex items-center justify-center gap-2 w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-[var(--brand-hover)] transition-all duration-150"
               >
-                <Zap size={12} /> Upgrade for more audits
+                <Zap size={15} /> Upgrade
               </Link>
             ) : (
-              <p className="text-[10px] text-text-muted text-center font-sans">
-                Renews on {subscription?.currentPeriodEnd
-                  ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
-                  : "N/A"}
+              <p className="text-xs text-text-muted font-mono text-center">
+                Renews {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "—"}
               </p>
             )}
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
-            <h3 className="text-sm font-bold tracking-tight text-text-primary font-sans mb-3">Quick Actions</h3>
-            <div className="flex flex-col gap-1.5">
-              {[
-                { Icon: Shield, label: "New Security Audit",  href: "/dashboard/scan"    },
-                { Icon: Eye,    label: "View Audit History",  href: "/dashboard/history" },
-                { Icon: Star,   label: "Upgrade Plan",        href: "/dashboard/billing" },
-              ].map(({ Icon, label, href }) => (
-                <Link
-                  key={label}
-                  href={href}
-                  prefetch
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-text-secondary text-xs font-sans transition-colors hover:bg-elevated"
-                >
-                  <Icon size={14} className="text-brand" />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Security tip */}
-          <div className="rounded-xl border border-[rgba(99,102,241,0.15)] bg-[rgba(99,102,241,0.04)] p-4">
-            <div className="flex gap-3">
-              <Shield size={18} className="text-brand flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold tracking-tight text-text-primary font-sans mb-1">Security Tip</h4>
-                <p className="text-[11px] text-text-muted leading-relaxed font-sans">
-                  Regular audits are crucial for contract security. Run audits after every major update.
-                </p>
-              </div>
-            </div>
+          {/* Quick actions */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { Icon: Shield, label: "Scan", href: "/dashboard/scan" },
+              { Icon: Eye, label: "History", href: "/dashboard/history" },
+              { Icon: Star, label: "Upgrade", href: "/dashboard/billing" },
+            ].map(({ Icon, label, href }) => (
+              <Link
+                key={label}
+                href={href}
+                prefetch
+                className="bg-card border border-border rounded-xl p-4 flex flex-col items-center justify-center gap-2.5 text-text-secondary hover:text-text-primary hover:border-strong hover:bg-[var(--surface-2)] transition-all duration-150"
+              >
+                <Icon size={20} className="text-brand" />
+                <span className="text-[13px] font-medium">{label}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

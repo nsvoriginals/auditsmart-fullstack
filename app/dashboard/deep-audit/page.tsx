@@ -317,7 +317,7 @@ export default function DeepAuditPage() {
             Premium Feature
           </span>
         </div>
-        <h1 style={{ fontSize: "clamp(24px, 6vw, 32px)", fontWeight: 800, letterSpacing: "-0.025em", marginBottom: 8 }}>
+        <h1 style={{ fontSize: "clamp(30px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 8 }}>
           Deep Security Audit
         </h1>
         <p style={{ fontSize: "clamp(13px, 3vw, 15px)", color: "var(--text-muted)" }}>
