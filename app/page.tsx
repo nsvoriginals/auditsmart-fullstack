@@ -132,7 +132,7 @@ const PLANS = [
     period: "/ month",
     desc: "20 audits / month",
     feats: ["Everything in Pro"],
-    extras: ["Claude Sonnet (stronger)", "Full exploit scenarios", "Patched code in PDF", "API access"],
+    extras: ["Claude Sonnet (stronger)", "Full exploit scenarios", "Patched code in PDF", "Quantum API"],
     featured: false,
     action: "Upgrade Now",
     href: "/register",
@@ -1216,7 +1216,7 @@ export default function LandingPage() {
                     { feature: "PDF Report", free: "Yes", pro: "Yes", enterprise: "Yes", deep: "Yes" },
                     { feature: "Fix Suggestions", free: "No", pro: "Yes", enterprise: "Yes", deep: "Yes" },
                     { feature: "Exploit Scenarios", free: "No", pro: "No", enterprise: "Yes", deep: "Yes" },
-                    { feature: "API Access", free: "No", pro: "No", enterprise: "Yes", deep: "No" },
+                    { feature: "Quantum API", free: "No", pro: "No", enterprise: "Yes", deep: "No" },
                     { feature: "Priority Support", free: "No", pro: "No", enterprise: "Yes", deep: "No" },
                   ].map((row, idx) => (
                     <tr

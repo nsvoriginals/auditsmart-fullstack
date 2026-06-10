@@ -38,7 +38,7 @@ const PLANS = [
   {
     id: "enterprise", name: "Enterprise", price: "$29", period: "/month",
     description: "For teams shipping to mainnet", icon: Crown,
-    features: ["50 audits / month", "Groq + Claude Sonnet", "PDF audit reports", "Fix suggestions with code", "Full exploit scenarios", "Deployment verdict", "API access", "Priority support"],
+    features: ["50 audits / month", "Groq + Claude Sonnet", "PDF audit reports", "Fix suggestions with code", "Full exploit scenarios", "Deployment verdict", "Quantum API", "Priority support"],
     missing: [], cta: "Upgrade to Enterprise", featured: false, trialEligible: true,
   },
 ];

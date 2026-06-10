@@ -44,10 +44,19 @@ const SECTIONS = [
     icon: PlayCircle,
     color: "var(--brand)",
     bg: "rgba(0,212,255,0.08)",
-    title: "Quick Start",
-    desc: "Get your first audit running in under 5 minutes.",
-    articles: ["Running your first audit", "Understanding scan results", "Downloading PDF reports", "Sharing audit links"],
-    href: "#quickstart",
+    title: "Standard Audit Guide",
+    desc: "Step-by-step: run your first multi-agent audit and read the findings.",
+    articles: ["Running your first audit", "Understanding scan results", "Severity reference", "Downloading PDF reports"],
+    href: "/docs/guide",
+  },
+  {
+    icon: Zap,
+    color: "var(--brand-purple)",
+    bg: "rgba(168,85,247,0.08)",
+    title: "Quantum Audit Guide",
+    desc: "How the IBM + Braket quantum circuits work and how to read the risk score.",
+    articles: ["What is a Quantum Audit", "Providing bytecode & tx data", "Reading the risk score", "Standard vs Quantum"],
+    href: "/docs/guide",
   },
   {
     icon: Shield,
@@ -161,7 +170,7 @@ export default function DocsPage() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="#quickstart"
+                  href="/docs/guide"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
                   style={{ background: "linear-gradient(135deg, var(--brand-purple), var(--brand))" }}
                 >
