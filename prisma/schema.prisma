@@ -31,6 +31,16 @@ model User {
   referredByTeamId String?
   referredByTeam   Team?   @relation(fields: [referredByTeamId], references: [id], onDelete: SetNull)
 
+  // Individual (user-to-user) referral attribution: set at signup, immutable.
+  referredById          String?
+  referredBy            User?                @relation("UserReferral", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals             User[]               @relation("UserReferral")
+  // Accrued referral earnings the user chose to take as account credit (paise).
+  referralCreditPaise   Int                  @default(0)
+  // How the user wants qualified referral earnings paid out, + their details.
+  referralPayoutMethod  ReferralPayoutMethod @default(CREDIT)
+  referralPayoutDetails String?
+
   accounts           Account[]
   apiKeys            ApiKey[]
   audits             Audit[]
@@ -42,9 +52,47 @@ model User {
   subscription       Subscription?
   webhooks           Webhook[]
   teamCommissions    TeamCommission[]
+  referralCode       ReferralCode?
+  referralsMade      Referral[]          @relation("ReferralReferrer")
+  referralReceived   Referral?           @relation("ReferralReferred")
 
   @@index([email])
   @@index([referredByTeamId])
+  @@index([referredById])
+}
+
+// One shareable referral code per user. Lazily created the first time the user
+// opens their referral dashboard. Drives the public /ref/[code] entry point.
+model ReferralCode {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  code        String   @unique
+  clickCount  Int      @default(0)
+  signupCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+}
+
+// One row per referred signup. Starts PENDING; flips to QUALIFIED on the
+// referred user's first paid upgrade, at which point the referrer is rewarded.
+model Referral {
+  id              String         @id @default(cuid())
+  referrerId      String
+  referredUserId  String         @unique
+  status          ReferralStatus @default(PENDING)
+  firstPaymentId  String?
+  commissionPaise Int            @default(0)
+  qualifiedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  referrer        User           @relation("ReferralReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser    User           @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([status])
+  @@index([referrerId, status])
 }
 
 // Marketing / branding partners that earn a commission on referred subscriptions.
@@ -299,6 +347,17 @@ enum SubscriptionStatus {
   ACTIVE
   CANCELLED
   EXPIRED
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REJECTED
+}
+
+enum ReferralPayoutMethod {
+  CREDIT
+  CASH
 }
 
 enum AuditStatus {

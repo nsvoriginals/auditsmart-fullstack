@@ -18,6 +18,7 @@ import {
   X,
   TrendingUp,
   Atom,
+  Gift,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -59,7 +60,7 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
     const routes = [
       "/dashboard", "/dashboard/scan", "/dashboard/history", "/dashboard/audit",
       "/dashboard/billing", "/dashboard/monitor", "/dashboard/settings",
-      "/dashboard/deep-audit", "/dashboard/quantum",
+      "/dashboard/deep-audit", "/dashboard/quantum", "/dashboard/referrals",
     ];
     const idle = (window as any).requestIdleCallback ?? ((cb: any) => setTimeout(cb, 200));
     idle(() => routes.forEach((r) => router.prefetch(r)));
@@ -192,6 +193,28 @@ function SidebarContent({ user, onClose }: SidebarProps & { onClose?: () => void
           <Zap size={18} className="text-brand" />
           <span>Deep Audit</span>
         </Link>
+
+        {(() => {
+          const isReferActive = pathname?.startsWith("/dashboard/referrals");
+          return (
+            <Link
+              href="/dashboard/referrals"
+              prefetch={true}
+              onClick={handleLinkClick}
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-all duration-150
+                ${isReferActive
+                  ? "bg-[rgba(16,185,129,0.1)] text-[#10b981]"
+                  : "text-text-secondary hover:text-text-primary hover:bg-[var(--surface-2)]"}`}
+            >
+              {isReferActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-[#10b981]" />}
+              <Gift size={18} style={{ color: "#10b981" }} />
+              <span>Refer &amp; Earn</span>
+              <span className="ml-auto flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981" }}>
+                20%
+              </span>
+            </Link>
+          );
+        })()}
       </nav>
 
       {/* Plan usage card */}

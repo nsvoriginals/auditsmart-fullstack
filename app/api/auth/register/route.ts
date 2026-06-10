@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { attributeTeamReferral, TEAM_REFERRAL_COOKIE } from "@/lib/teams";
+import { attributeReferral, REFERRAL_COOKIE } from "@/lib/referrals";
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,6 +72,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Attribute individual (user-to-user) referral if a code cookie is present.
+    // Best-effort — never block account creation on attribution failure.
+    const referralCode = req.cookies.get(REFERRAL_COOKIE)?.value;
+    if (referralCode) {
+      await attributeReferral(user.id, referralCode).catch(err =>
+        console.error("individual referral attribution failed:", err)
+      );
+    }
+
     // Never return password hash to client
     const { password: _pw, ...userWithoutPassword } = user;
 
@@ -78,8 +88,9 @@ export async function POST(req: NextRequest) {
       { user: userWithoutPassword, message: "Account created successfully" },
       { status: 201 }
     );
-    // Clear the cookie after use so a returning user can't re-attribute themselves.
-    if (teamCode) res.cookies.set(TEAM_REFERRAL_COOKIE, "", { maxAge: 0, path: "/" });
+    // Clear the cookies after use so a returning user can't re-attribute themselves.
+    if (teamCode)     res.cookies.set(TEAM_REFERRAL_COOKIE, "", { maxAge: 0, path: "/" });
+    if (referralCode) res.cookies.set(REFERRAL_COOKIE, "",      { maxAge: 0, path: "/" });
     return res;
   } catch (error) {
     console.error("Registration error:", error);

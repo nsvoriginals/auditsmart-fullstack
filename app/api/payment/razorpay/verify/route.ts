@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_DETAILS, mapPublicPlanToUserPlan, isPublicPlan } from "@/lib/plans";
 import { recordTeamCommission } from "@/lib/teams";
+import { recordReferralReward } from "@/lib/referrals";
 import crypto from "crypto";
 
 // B-07: Verify Razorpay signature
@@ -184,8 +185,14 @@ export async function POST(req: NextRequest) {
           plan:               userRole,
           paymentAmountPaise: amount,
         });
+        // Individual referral reward — idempotent via the PENDING-status guard.
+        await recordReferralReward({
+          userId:             session.user.id,
+          paymentId:          payment.id,
+          paymentAmountPaise: amount,
+        });
       } catch (err) {
-        console.error("Team commission record failed (non-blocking):", err);
+        console.error("Commission/referral record failed (non-blocking):", err);
       }
     }
 

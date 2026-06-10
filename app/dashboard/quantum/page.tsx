@@ -341,7 +341,10 @@ export default function QuantumPage() {
         <p style={{ fontSize: "clamp(11px,2.5vw,12px)", color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif", lineHeight: 1.6 }}>
           Grover&apos;s algorithm scans bytecode for reentrancy and access-control patterns.
           The VQC risk scorer maps transaction data to rotation angles and measures qubit-majority probability.
-          All circuits run on free simulators — no cloud costs incurred.
+          All circuits run on free simulators — no cloud costs incurred.{" "}
+          <Link href="/docs/guide" style={{ color: "#a855f7", fontWeight: 600 }}>
+            Read the quantum guide →
+          </Link>
         </p>
       </div>
 

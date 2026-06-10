@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import { cookies } from "next/headers";
 import { attributeTeamReferral, TEAM_REFERRAL_COOKIE } from "@/lib/teams";
+import { attributeReferral, REFERRAL_COOKIE } from "@/lib/referrals";
 
 declare module "next-auth" {
   interface User {
@@ -155,6 +156,17 @@ export const authOptions: NextAuthOptions = {
               }
             } catch (err) {
               console.error("OAuth team referral attribution failed:", err);
+            }
+
+            // Individual (user-to-user) referral attribution for OAuth signups.
+            try {
+              const referralCode = cookies().get(REFERRAL_COOKIE)?.value;
+              if (referralCode) {
+                await attributeReferral(newUser.id, referralCode);
+                // Same cookie-clearing caveat as above; attributeReferral is idempotent.
+              }
+            } catch (err) {
+              console.error("OAuth individual referral attribution failed:", err);
             }
           } else {
             // Existing user — enrich token fields

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { mapPublicPlanToUserPlan, isPublicPlan, PLAN_DETAILS } from "@/lib/plans";
 import { recordTeamCommission } from "@/lib/teams";
+import { recordReferralReward } from "@/lib/referrals";
 import crypto from "crypto";
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
@@ -186,9 +187,15 @@ async function handlePaymentCaptured(payment: any) {
           plan:               userRole,
           paymentAmountPaise: fullAmount,
         });
+        // Individual referral reward — idempotent via the PENDING-status guard.
+        await recordReferralReward({
+          userId,
+          paymentId:          paymentRow.id,
+          paymentAmountPaise: fullAmount,
+        });
       }
     } catch (err) {
-      console.error("Webhook team commission record failed:", err);
+      console.error("Webhook commission/referral record failed:", err);
     }
   }
 
