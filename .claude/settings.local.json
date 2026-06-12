@@ -41,7 +41,12 @@
       "Bash(tasklist)",
       "Bash(findstr node.exe)",
       "PowerShell(Stop-Process *)",
-      "Bash(pnpm add *)"
+      "Bash(pnpm add *)",
+      "Bash(Get-ChildItem -Path \"E:\\\\test\\\\auditsmart\" -Recurse -Filter \".env*\" -ErrorAction SilentlyContinue)",
+      "Bash(grep -iE '\\\\.env$|\\\\.env\\\\.|test\\\\.js|check_migration')",
+      "Bash(ls node_modules/.bin/tsx)",
+      "Bash(ls ../../services/worker/node_modules/.bin/tsx*)",
+      "Bash(../../services/worker/node_modules/.bin/tsx --test test/correlator.test.ts test/confidence.test.ts test/golden.test.ts)"
     ]
   }
 }

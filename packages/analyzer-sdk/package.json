@@ -1,0 +1,19 @@
+{
+  "name": "@auditsmart/analyzer-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Analyzer plugin SDK — chain-agnostic interface for deterministic security analyzers",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --build --watch",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@auditsmart/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

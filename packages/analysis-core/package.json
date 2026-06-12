@@ -1,0 +1,19 @@
+{
+  "name": "@auditsmart/analysis-core",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "bench": "node --import tsx test/confidence.bench.ts"
+  },
+  "dependencies": {
+    "@auditsmart/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  }
+}

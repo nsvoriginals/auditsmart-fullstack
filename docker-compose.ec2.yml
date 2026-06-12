@@ -1,0 +1,57 @@
+# docker-compose.ec2.yml — EC2 free tier: worker + slither only
+# Next.js goes to Vercel. DB = Neon. Redis = Upstash.
+# Usage: docker compose -f docker-compose.ec2.yml up -d
+
+networks:
+  analysis:
+    driver: bridge
+    internal: true   # slither has NO outbound internet
+
+services:
+  slither:
+    build:
+      context: services/slither
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      SLITHER_TIMEOUT: "120"
+    networks: [analysis]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 20s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+      target: runner
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=384"
+      METRICS_PORT: "9090"
+      SLITHER_SERVICE_URL: "http://slither:8001"
+      SLITHER_TIMEOUT_MS: "130000"
+      SEMGREP_TIMEOUT_MS: "60000"
+    ports:
+      - "127.0.0.1:9090:9090"   # metrics — localhost only, not public
+    depends_on:
+      slither: { condition: service_healthy }
+    networks: [analysis]
+    deploy:
+      resources:
+        limits:
+          memory: 448M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"

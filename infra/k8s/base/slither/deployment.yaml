@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auditsmart-slither
+  labels:
+    app: auditsmart-slither
+    tier: analyzer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auditsmart-slither
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: auditsmart-slither
+        tier: analyzer
+    spec:
+      containers:
+        - name: slither
+          image: ghcr.io/auditsmart/slither:latest
+          imagePullPolicy: Always
+
+          resources:
+            requests:
+              cpu:    "1000m"   # Slither is CPU-bound
+              memory: "512Mi"
+            limits:
+              cpu:    "2000m"
+              memory: "1Gi"
+
+          env:
+            - name: SLITHER_TIMEOUT
+              value: "120"
+
+          ports:
+            - containerPort: 8001
+              name: http
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 20   # solc-select install takes time on first boot
+            periodSeconds: 15
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+          # No internet access — analysis network is isolated
+          securityContext:
+            readOnlyRootFilesystem: false  # solc-select writes to home dir
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auditsmart-slither
+spec:
+  selector:
+    app: auditsmart-slither
+  ports:
+    - port: 8001
+      targetPort: 8001
+      protocol: TCP
+  # ClusterIP only — never exposed externally
+  type: ClusterIP

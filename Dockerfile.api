@@ -1,0 +1,48 @@
+# Dockerfile.api — Next.js web + API service (standalone output).
+# Referenced by docker-compose.yml ( api service, target: runner ).
+
+FROM node:20-alpine AS base
+RUN npm install -g pnpm@9
+WORKDIR /app
+
+# ── deps: install workspace dependencies ──────────────────────────────
+FROM base AS deps
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY packages/shared/package.json ./packages/shared/
+RUN pnpm install --frozen-lockfile --prod=false
+
+# ── builder: generate Prisma client + build Next ──────────────────────
+FROM deps AS builder
+# Bring in the source (node_modules/.next excluded via .dockerignore).
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+# prisma generate needs DATABASE_URL defined (it does NOT connect at build).
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+RUN pnpm prisma generate
+RUN pnpm next build
+
+# ── runner: minimal standalone runtime ────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+
+# Standalone server bundles only the files it traced as needed.
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Prisma engine + generated client for runtime queries.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+USER nextjs
+EXPOSE 3000
+
+HEALTHCHECK --interval=20s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+CMD ["node", "server.js"]

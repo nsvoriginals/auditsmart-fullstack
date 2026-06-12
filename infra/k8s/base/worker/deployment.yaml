@@ -1,0 +1,80 @@
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auditsmart-worker
+  labels:
+    app: auditsmart-worker
+    tier: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auditsmart-worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0          # zero-downtime: always have at least 1 pod running
+  template:
+    metadata:
+      labels:
+        app: auditsmart-worker
+        tier: worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "9090"
+        prometheus.io/path:   "/metrics"
+    spec:
+      terminationGracePeriodSeconds: 120  # allow in-flight audits to complete
+
+      # Pull secrets from Kubernetes Secret (managed by External Secrets Operator)
+      envFrom:
+        - secretRef:
+            name: auditsmart-secrets
+
+      containers:
+        - name: worker
+          image: ghcr.io/auditsmart/worker:latest
+          imagePullPolicy: Always
+
+          resources:
+            requests:
+              cpu:    "500m"
+              memory: "512Mi"
+            limits:
+              cpu:    "2000m"
+              memory: "1Gi"
+
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: METRICS_PORT
+              value: "9090"
+            - name: SLITHER_SERVICE_URL
+              value: "http://auditsmart-slither:8001"
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=768"
+
+          ports:
+            - containerPort: 9090
+              name: metrics
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 15
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+
+      # Workers only need network access to Postgres, Redis, and the analysis sidecar.
+      # No internet egress required.

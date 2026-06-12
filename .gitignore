@@ -2,9 +2,16 @@
 
 # dependencies
 /node_modules
+node_modules/
+**/node_modules/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+
+# build output (workspace packages)
+dist/
+**/dist/
+.turbo/
 
 # testing
 /coverage
@@ -39,3 +46,19 @@ next-env.d.ts
 debug-logs/
 *.log
 debug-*.json
+
+# local / agent config
+.claude/
+
+# local databases
+prisma/dev.db
+*.sqlite
+
+# stale / non-pnpm lockfile
+package-lock.json
+
+# scratch / junk
+index-6.html
+test.js
+install.cmd
+check_migration.sql

@@ -32,6 +32,7 @@ model User {
   sessions           Session[]
   subscription       Subscription?
   webhooks           Webhook[]
+  organizations      OrganizationMember[]
 
   @@index([email])
 }
@@ -185,13 +186,33 @@ model ApiKey {
 }
 
 model Webhook {
-  id        String   @id @default(cuid())
+  id        String            @id @default(cuid())
   userId    String
   url       String
+  secret    String            // HMAC-SHA256 signing secret (stored encrypted)
   events    String[]
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  active    Boolean           @default(true)
+  isActive  Boolean           @default(true) // legacy alias — use active
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+}
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  event      String
+  statusCode Int
+  success    Boolean
+  attempt    Int
+  error      String?
+  createdAt  DateTime @default(now())
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -250,6 +271,8 @@ enum SubscriptionStatus {
 enum AuditStatus {
   PENDING
   PROCESSING
+  DETERMINISTIC_COMPLETE  // deterministic pass done, AI pass queued
+  AI_COMPLETE             // AI enrichment done, report being generated
   COMPLETED
   FAILED
 }
@@ -286,6 +309,7 @@ enum AgentType {
 }
 
 enum ChainType {
+  // EVM
   ETHEREUM
   BSC
   POLYGON
@@ -293,4 +317,235 @@ enum ChainType {
   ARBITRUM
   OPTIMISM
   BASE
+  LINEA
+  SCROLL
+  ZKSYNC
+  // Non-EVM
+  SOLANA
+  COSMWASM
+  INK
+  TON
+  STARKNET
+  NEAR
+  SUI
+  APTOS
+}
+
+// ── Multi-tenancy: Organizations ─────────────────────────────────────────────
+// Organizations group users under a single billing entity (team/enterprise).
+// All audits belong to a user; organizations share quota across members.
+
+model Organization {
+  id          String               @id @default(cuid())
+  name        String
+  slug        String               @unique   // used in API paths and reports
+  plan        UserRole             @default(FREE)
+  apiKey      String?              @unique   // org-level API key
+  webhookUrl  String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  members     OrganizationMember[]
+  installations GitHubInstallation[]
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrgMemberRole    @default(MEMBER)
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+enum OrgMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// ── GitHub App Integration ────────────────────────────────────────────────────
+
+model GitHubInstallation {
+  id              String       @id @default(cuid())
+  installationId  Int          @unique  // GitHub's installation ID
+  accountLogin    String                // GitHub org/user login
+  accountType     String                // "Organization" | "User"
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  repositories    GitHubRepo[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([installationId])
+  @@map("github_installations")
+}
+
+model GitHubRepo {
+  id             String              @id @default(cuid())
+  installationId String
+  repoId         Int                 // GitHub repo ID
+  fullName       String              // e.g. "orgname/reponame"
+  defaultBranch  String              @default("main")
+  scanEnabled    Boolean             @default(true)
+  installation   GitHubInstallation  @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  prScans        GitHubPrScan[]
+  createdAt      DateTime            @default(now())
+
+  @@unique([installationId, repoId])
+  @@index([fullName])
+  @@map("github_repos")
+}
+
+// Tracks a CI scan triggered by a GitHub PR/push event.
+model GitHubPrScan {
+  id          String      @id @default(cuid())
+  repoId      String
+  prNumber    Int?
+  commitSha   String
+  auditId     String?     // linked Audit once created
+  status      String      @default("pending")
+  checkRunId  Int?        // GitHub Check Run ID for status reporting
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  repo        GitHubRepo  @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@index([repoId])
+  @@index([commitSha])
+  @@map("github_pr_scans")
+}
+
+// ── Signed Audit Reports ──────────────────────────────────────────────────────
+// Immutable signed artifact stored separately from the mutable Audit record.
+
+model AuditReport {
+  id            String   @id @default(cuid())
+  auditId       String   @unique
+  version       Int      @default(1)
+  // Cryptographic signature of the report content (Ed25519, base64)
+  signature     String
+  // SHA256 of the canonical report JSON (hex)
+  contentHash   String
+  // Storage: local FS path or S3 key
+  storagePath   String
+  storageType   String   @default("local")  // "local" | "s3"
+  // Report formats generated
+  pdfPath       String?
+  sarifPath     String?
+  jsonPath      String?
+  // Public presigned URL (expires)
+  publicUrl     String?
+  publicUrlExp  DateTime?
+  generatedBy   String   // service version string
+  createdAt     DateTime @default(now())
+
+  @@index([auditId])
+  @@index([contentHash])
+  @@map("audit_reports")
+}
+
+// ── pgvector-backed exploit knowledge base ────────────────────────────────────
+// embedding is stored as a native PostgreSQL vector(1536) type.
+// Prisma does not natively understand this type — all vector reads/writes
+// use prisma.$queryRaw / prisma.$executeRaw with explicit ::vector casting.
+model VulnerabilityKnowledgeBase {
+  id            String   @id @default(uuid())
+  name          String
+  protocol      String?
+  date          DateTime?
+  amountLostUsd BigInt?
+  swcIds        String[]
+  category      String   @default("other")
+  severity      String   @default("critical")
+  chain         String   @default("ethereum")
+  codePattern   String
+  // embedding: vector(1536) — NOT declared here; added via raw SQL migration
+  // to avoid Prisma's Unsupported() type losing the index on re-generate.
+  description   String
+  exploitTx     String?
+  fixPattern    String?
+  sourceUrl     String?
+  embeddingAt   DateTime? // set when the vector is populated
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([category])
+  @@index([severity])
+  @@index([chain])
+  @@map("vulnerability_knowledge_base")
+}
+
+// Tracks every BullMQ audit job for observability and stuck-job recovery.
+model AuditJob {
+  id          String    @id @default(cuid())
+  auditId     String
+  queueName   String
+  jobId       String    @unique // BullMQ job ID (for idempotency)
+  status      String    @default("queued") // queued | processing | completed | failed
+  attempts    Int       @default(0)
+  lastError   String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([auditId])
+  @@index([status])
+  @@index([queueName, status])
+  @@map("audit_jobs")
+}
+
+// Runtime overlay for analysis-core's detector→category map (Phase 4).
+// Lets TPRs be re-calibrated from the validation corpus without a redeploy.
+// The in-code TABLE in packages/analysis-core/src/category-map.ts is the
+// build-time default; rows here override it by (tool, detectorName).
+model DetectorCategoryMap {
+  id           String   @id @default(cuid())
+  tool         String
+  detectorName String
+  category     String
+  swcId        String   @default("SWC-000")
+  tpr          Float    // calibrated true-positive rate, 0–1
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tool, detectorName])
+  @@index([category])
+  @@map("detector_category_map")
+}
+
+// Per-finding AI enhancements, stored separately for queryability.
+model FindingEnhancement {
+  id                   String   @id @default(cuid())
+  findingId            String   @unique
+  narrativeExplanation String
+  exploitScenario      String
+  fixRecommendation    String
+  fixCode              String?
+  businessImpact       String?
+  similarExploitIds    String[] // FK into vulnerability_knowledge_base
+  similarityScores     Float[]  // parallel array
+  generatedBy          String   // e.g. "claude-opus-4-7"
+  createdAt            DateTime @default(now())
+
+  @@map("finding_enhancements")
+}
+
+// Embedding cache — avoids re-generating identical text embeddings.
+model EmbeddingCache {
+  id        String   @id @default(cuid())
+  textHash  String   @unique // sha256 of the text, hex
+  model     String
+  // cached_embedding: vector(1536) — added via raw SQL migration
+  createdAt DateTime @default(now())
+
+  @@map("embedding_cache")
 }

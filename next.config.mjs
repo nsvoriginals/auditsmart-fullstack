@@ -28,6 +28,14 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
+  // Standalone build output for the Docker image (Dockerfile.api).
+  // Harmless on Vercel, required for the containerized API.
+  output: "standalone",
+
+  // @auditsmart/shared ships raw TypeScript (main → src/index.ts), so Next
+  // must transpile it rather than expecting pre-built JS.
+  transpilePackages: ["@auditsmart/shared"],
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
@@ -70,7 +78,7 @@ const nextConfig = {
       "@radix-ui/react-popover",
       "@radix-ui/react-accordion",
     ],
-    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs", "razorpay"],
+    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs", "razorpay", "bullmq", "ioredis"],
   },
 
   webpack: (config, { isServer }) => {

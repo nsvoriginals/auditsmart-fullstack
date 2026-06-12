@@ -1,0 +1,226 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'features/**', 'fix/**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PNPM_VERSION: '9'
+  NODE_VERSION: '20'
+  TURBO_TOKEN:  ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM:   ${{ vars.TURBO_TEAM }}
+
+jobs:
+  # ── 1. Typecheck all packages in dependency order ──────────────────────────
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ env.NODE_VERSION }}'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma generate
+        env:
+          DATABASE_URL: postgresql://x:x@localhost/x
+
+      - name: Typecheck (Turborepo)
+        run: pnpm turbo typecheck
+
+  # ── 2. Unit + integration tests ────────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER:     auditsmart_test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB:       auditsmart_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: '${{ env.PNPM_VERSION }}' }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ env.NODE_VERSION }}'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run migrations
+        run: pnpm prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://auditsmart_test:test@localhost:5432/auditsmart_test
+
+      # NOTE: no automated tests exist yet. This step runs whatever `test`
+      # scripts packages define (currently none → turbo reports "no tasks").
+      # It does NOT prove coverage. Treat a green check here as "nothing
+      # broke at install/migrate time", not "the system is tested".
+      # TODO: add real worker + API tests, then remove this disclaimer.
+      - name: Run tests (Turborepo)
+        run: pnpm turbo test || echo "::warning::No test tasks defined yet — coverage is ZERO."
+        env:
+          DATABASE_URL:  postgresql://auditsmart_test:test@localhost:5432/auditsmart_test
+          REDIS_URL:     redis://localhost:6379
+          NODE_ENV:      test
+
+  # ── 3. Analyzer validation — Slither sidecar smoke test ───────────────────
+  analyzer-smoke:
+    name: Analyzer smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Slither image
+        run: docker build -t slither-test services/slither/
+
+      - name: Start Slither container
+        run: |
+          docker run -d --name slither -p 8001:8001 slither-test
+          sleep 25   # wait for solc-select to be ready
+
+      - name: Health check
+        run: curl -sf http://localhost:8001/health
+
+      - name: Analyze test contract
+        run: |
+          curl -sf -X POST http://localhost:8001/analyze \
+            -H 'Content-Type: application/json' \
+            -d '{"code":"pragma solidity ^0.8.0;\ncontract Test { function x() public {} }","contract_name":"Test"}' \
+            | jq '.success'
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f slither || true
+
+  # ── 4. Docker builds (main branch only) ───────────────────────────────────
+  build:
+    name: Build images
+    runs-on: ubuntu-latest
+    needs: [typecheck, test]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - service: worker
+            dockerfile: services/worker/Dockerfile
+            context: .
+          - service: slither
+            dockerfile: services/slither/Dockerfile
+            context: services/slither
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/auditsmart-${{ matrix.service }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context:    ${{ matrix.context }}
+          file:       ${{ matrix.dockerfile }}
+          push:       true
+          tags:       ${{ steps.meta.outputs.tags }}
+          labels:     ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+          build-args: |
+            BUILD_SHA=${{ github.sha }}
+
+  # ── 5. Container security scan ─────────────────────────────────────────────
+  security-scan:
+    name: Security scan
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy scan — worker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref:   ghcr.io/${{ github.repository_owner }}/auditsmart-worker:latest
+          format:      sarif
+          output:      trivy-results.sarif
+          severity:    CRITICAL,HIGH
+          exit-code:   '0'   # warn only — don't block deploy on vuln scan
+
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  # ── 6. Deploy to staging ────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy staging
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url:  https://staging.auditsmart.io
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.STAGING_EC2_HOST }}
+          username: ubuntu
+          key:      ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /srv/auditsmart
+            git pull origin main
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
+            docker system prune -f
