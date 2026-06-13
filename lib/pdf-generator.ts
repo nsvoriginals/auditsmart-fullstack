@@ -179,7 +179,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
     setColor(C.blueLight);
     setFont(6.5, "normal");
     doc.text(
-      new Date(data.createdAt).toLocaleDateString("en-IN"),
+      new Date(data.createdAt).toLocaleDateString("en-US"),
       W - M - 22,
       29,
       { align: "center" }
@@ -216,7 +216,7 @@ export async function generatePDFReport(data: PDFData): Promise<Buffer> {
 
     const meta: Array<[string, string]> = [
       ["Report ID",  data.auditId.length > 24 ? data.auditId.slice(0, 22) + "…" : data.auditId],
-      ["Generated",  new Date(data.createdAt).toLocaleString("en-IN")],
+      ["Generated",  new Date(data.createdAt).toLocaleString("en-US")],
       ["Client",     `${data.userName}  ·  ${data.userEmail}`],
     ];
 

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
+import { formatPaiseAsUSD, usdFromPaise } from "@/lib/currency";
 
 interface Row {
   teamId: string;
@@ -16,8 +17,8 @@ interface Row {
   totalCommissionPaise: number;
 }
 
-const fmtINR = (paise: number) =>
-  "₹" + (paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtUSD = (paise: number) =>
+  formatPaiseAsUSD(paise, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function monthsBack(n: number): string[] {
   const out: string[] = [];
@@ -56,13 +57,13 @@ export default function PayoutsClient({
   }
 
   function downloadCsv() {
-    const header = ["Team", "Code", "Rate", "Clicks", "Signups", "Qualifying", "TotalCommissionINR", "ContactEmail", "PayoutDetails"];
+    const header = ["Team", "Code", "Rate", "Clicks", "Signups", "Qualifying", "TotalCommissionUSD", "ContactEmail", "PayoutDetails"];
     const lines = [header.join(",")];
     for (const r of rows) {
       lines.push([
         csv(r.name), csv(r.code), r.commissionRate,
         r.clickCount, r.signupCount, r.qualifyingCount,
-        (r.totalCommissionPaise / 100).toFixed(2),
+        usdFromPaise(r.totalCommissionPaise).toFixed(2),
         csv(r.contactEmail ?? ""), csv(r.payoutDetails ?? ""),
       ].join(","));
     }
@@ -119,7 +120,7 @@ export default function PayoutsClient({
         <Stat label="Month"             value={month} />
         <Stat label="Teams Earning"     value={rows.filter(r => r.qualifyingCount > 0).length.toString()} />
         <Stat label="Qualifying Events" value={totalQuals.toString()} />
-        <Stat label="Total to Pay Out"  value={fmtINR(totalOwed)} highlight />
+        <Stat label="Total to Pay Out"  value={fmtUSD(totalOwed)} highlight />
       </div>
 
       {error && (
@@ -166,7 +167,7 @@ export default function PayoutsClient({
                       <Td align="right" mono>{r.qualifyingCount}</Td>
                       <Td align="right" mono>
                         <span style={{ color: r.totalCommissionPaise > 0 ? "#6ee7b7" : "var(--text-disabled)", fontWeight: 700 }}>
-                          {fmtINR(r.totalCommissionPaise)}
+                          {fmtUSD(r.totalCommissionPaise)}
                         </span>
                       </Td>
                       <Td>

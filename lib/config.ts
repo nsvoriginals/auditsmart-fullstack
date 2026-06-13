@@ -206,11 +206,9 @@ export const ORCHESTRATOR_CONFIG = {
 export const SEVERITY_SCORES = { critical: 25, high: 12, medium: 5, low: 2, info: 0 };
 
 export function getFormattedPrice(plan: keyof typeof PLAN_PRICES_PAISE): string {
-  const paise = PLAN_PRICES_PAISE[plan];
-  if (paise === 0) return "Free";
-  const rupees = paise / 100;
-  if (!IS_PRODUCTION_PRICING) return `₹${rupees}`;
-  return `₹${rupees.toLocaleString('en-IN')}`;
+  const details = PLAN_DETAILS[plan];
+  if (!details || details.displayPrice === 0) return "Free";
+  return `$${details.displayPrice.toLocaleString('en-US')}`;
 }
 
 export function isTestMode(): boolean {

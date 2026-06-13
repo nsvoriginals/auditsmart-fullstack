@@ -1,6 +1,7 @@
 // lib/payment-helpers.ts
 import crypto from 'crypto';
 import { config } from './config';
+import { formatPaiseAsUSD } from './currency';
 
 /**
  * Verify Razorpay payment signature.
@@ -107,16 +108,11 @@ export function getRazorpayClient() {
 }
 
 /**
- * Format a paise amount as an INR string.
+ * Format a paise amount as a USD display string.
+ * (Payments are charged in INR via Razorpay; this is display only.)
  */
 export function formatAmount(paise: number): string {
-  const rupees = paise / 100;
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(rupees);
+  return formatPaiseAsUSD(paise);
 }
 
 /**

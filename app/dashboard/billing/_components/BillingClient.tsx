@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { PLAN_DETAILS, PLAN_FEATURES } from "@/lib/plans";
+import { formatUSD, usdFromRupees } from "@/lib/currency";
 import {
   Zap, Shield, Brain, Sparkles, CheckCircle, CreditCard,
   Loader2, AlertCircle, Clock, Calendar, RotateCcw,
@@ -435,7 +436,7 @@ export default function BillingClient({ initialData }: { initialData: BillingSta
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
-                      ₹{p.amount_inr.toLocaleString("en-IN")}
+                      {formatUSD(usdFromRupees(p.amount_inr))}
                     </div>
                     <div style={{
                       marginTop: 2, fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em",
