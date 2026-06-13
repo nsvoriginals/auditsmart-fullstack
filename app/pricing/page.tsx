@@ -294,7 +294,7 @@ function PricingContent() {
             <div style={{ fontFamily: "'Satoshi', sans-serif", fontSize: 38, fontWeight: 800, letterSpacing: "-0.025em", color: "var(--text-primary)" }}>
               $20 <span style={{ fontSize: 14, fontWeight: 400, color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>per audit</span>
             </div>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>≈ ₹1,699 INR · Available on any plan</p>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 24px", fontFamily: "'Satoshi', sans-serif" }}>One-time payment · Available on any plan</p>
             <Link href="/dashboard/scan" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px", background: "var(--brand)", color: "#fff", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "'Satoshi', sans-serif", fontWeight: 600, textDecoration: "none" }}>
               Request Deep Audit <ArrowRight size={13} />
             </Link>

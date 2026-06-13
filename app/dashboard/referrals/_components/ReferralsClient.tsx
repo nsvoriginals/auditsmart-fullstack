@@ -6,6 +6,7 @@ import {
   Wallet, TrendingUp, Loader2, Mail, MessageSquare, Send, Save,
   Sparkles, Trophy,
 } from "lucide-react";
+import { formatPaiseAsUSD } from "@/lib/currency";
 
 // ── Types (mirror lib/referrals.ts ReferralStats) ───────────────────────────
 interface ReferralRow {
@@ -36,8 +37,7 @@ interface Stats {
 const EMERALD = "#10b981";
 const GOLD = "#f5b945";
 
-const rupees = (paise: number) =>
-  `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const money = (paise: number) => formatPaiseAsUSD(paise);
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
   PENDING:   { bg: "rgba(234,179,8,0.12)",  text: "#ca8a04", label: "Pending" },
@@ -241,7 +241,7 @@ export default function ReferralsClient() {
             <Trophy size={16} style={{ color: GOLD }} />
             <span style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-secondary)" }}>Total Earned</span>
           </div>
-          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)", lineHeight: 1 }}>{rupees(stats.totalEarnedPaise)}</div>
+          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)", lineHeight: 1 }}>{money(stats.totalEarnedPaise)}</div>
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>Across {stats.qualifiedCount} qualified referral{stats.qualifiedCount === 1 ? "" : "s"}</div>
         </div>
         <div style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08), transparent)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: "var(--radius-md)", padding: "20px 22px" }}>
@@ -249,7 +249,7 @@ export default function ReferralsClient() {
             <Wallet size={16} style={{ color: EMERALD }} />
             <span style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-secondary)" }}>Credit Balance</span>
           </div>
-          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)", lineHeight: 1 }}>{rupees(stats.creditBalancePaise)}</div>
+          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)", lineHeight: 1 }}>{money(stats.creditBalancePaise)}</div>
           <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
             {stats.payoutMethod === "CREDIT" ? "Applied automatically at your next checkout" : "You're set to cash payout — earnings are paid out manually"}
           </div>
@@ -382,7 +382,7 @@ export default function ReferralsClient() {
                         <span style={{ padding: "2px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: st.bg, color: st.text }}>{st.label}</span>
                       </td>
                       <td style={{ padding: "12px 22px", color: r.commissionPaise > 0 ? EMERALD : "var(--text-muted)", fontWeight: r.commissionPaise > 0 ? 600 : 400 }}>
-                        {r.commissionPaise > 0 ? rupees(r.commissionPaise) : "—"}
+                        {r.commissionPaise > 0 ? money(r.commissionPaise) : "—"}
                       </td>
                       <td style={{ padding: "12px 22px", color: "var(--text-muted)" }}>
                         {new Date(r.createdAt).toLocaleDateString()}

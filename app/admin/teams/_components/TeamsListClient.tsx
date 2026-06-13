@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Copy, Check, Plus, ExternalLink, Pencil, ToggleLeft, ToggleRight } from "lucide-react";
+import { formatPaiseAsUSD } from "@/lib/currency";
 
 export interface TeamRow {
   id:                   string;
@@ -19,8 +20,8 @@ export interface TeamRow {
   totalCommissionPaise: number;
 }
 
-const fmtINR = (paise: number) =>
-  "₹" + (paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtUSD = (paise: number) =>
+  formatPaiseAsUSD(paise, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function TeamsListClient({
   initialTeams, baseUrl,
@@ -90,7 +91,7 @@ export default function TeamsListClient({
         <StatTile label="Teams"            value={teams.length.toString()} />
         <StatTile label="Active"           value={teams.filter(t => t.isActive).length.toString()} />
         <StatTile label="Total Qualifying" value={totalQuals.toString()} />
-        <StatTile label="Total Owed"       value={fmtINR(totalEarned)} highlight />
+        <StatTile label="Total Owed"       value={fmtUSD(totalEarned)} highlight />
       </div>
 
       {/* Table */}
@@ -142,7 +143,7 @@ export default function TeamsListClient({
                       <Td align="right" mono>{t.qualifyingCount}</Td>
                       <Td align="right" mono>
                         <span style={{ color: t.totalCommissionPaise > 0 ? "#6ee7b7" : "var(--text-disabled)" }}>
-                          {fmtINR(t.totalCommissionPaise)}
+                          {fmtUSD(t.totalCommissionPaise)}
                         </span>
                       </Td>
                       <Td align="center">

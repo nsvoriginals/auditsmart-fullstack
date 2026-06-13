@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Copy, Check, Loader2 } from "lucide-react";
+import { formatPaiseAsUSD } from "@/lib/currency";
 
 interface Team {
   id: string;
@@ -33,8 +34,8 @@ interface Commission {
   userName: string | null;
 }
 
-const fmtINR = (paise: number) =>
-  "₹" + (paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtUSD = (paise: number) =>
+  formatPaiseAsUSD(paise, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function TeamEditClient({
   team, stats, recent, baseUrl,
@@ -132,8 +133,8 @@ export default function TeamEditClient({
         <Stat label="Clicks"          value={team.clickCount.toString()} />
         <Stat label="Signups"         value={team.signupCount.toString()} />
         <Stat label="Qualifying"      value={stats.qualifyingCount.toString()} />
-        <Stat label="Revenue Driven"  value={fmtINR(stats.totalRevenuePaise)} />
-        <Stat label="Total Owed"      value={fmtINR(stats.totalCommissionPaise)} highlight />
+        <Stat label="Revenue Driven"  value={fmtUSD(stats.totalRevenuePaise)} />
+        <Stat label="Total Owed"      value={fmtUSD(stats.totalCommissionPaise)} highlight />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
@@ -200,8 +201,8 @@ export default function TeamEditClient({
                         {c.userName && <div style={{ fontSize: 10, color: "var(--text-disabled)" }}>{c.userEmail}</div>}
                       </Td>
                       <Td>{c.plan}</Td>
-                      <Td align="right" mono>{fmtINR(c.paymentAmountPaise)}</Td>
-                      <Td align="right" mono><span style={{ color: "#6ee7b7" }}>{fmtINR(c.commissionPaise)}</span></Td>
+                      <Td align="right" mono>{fmtUSD(c.paymentAmountPaise)}</Td>
+                      <Td align="right" mono><span style={{ color: "#6ee7b7" }}>{fmtUSD(c.commissionPaise)}</span></Td>
                       <Td align="right" mono><span suppressHydrationWarning>{new Date(c.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short" })}</span></Td>
                     </tr>
                   ))}

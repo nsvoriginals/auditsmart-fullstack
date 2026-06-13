@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { mapPublicPlanToUserPlan, isPublicPlan, PLAN_DETAILS } from "@/lib/plans";
 import { recordTeamCommission } from "@/lib/teams";
 import { recordReferralReward } from "@/lib/referrals";
+import { formatPaiseAsUSD } from "@/lib/currency";
 import crypto from "crypto";
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
@@ -163,7 +164,7 @@ async function handlePaymentCaptured(payment: any) {
       data: {
         userId,
         action: "WEBHOOK_PAYMENT_SUCCESS",
-        details: `Order: ${order_id}, Plan: ${plan}, Amount: ₹${(amount/100).toFixed(2)} INR`,
+        details: `Order: ${order_id}, Plan: ${plan}, Amount: ${formatPaiseAsUSD(amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       },
     }),
   ]);
