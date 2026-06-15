@@ -19,7 +19,7 @@ export const REFERRAL_COOKIE = "referral_code";
 export const REFERRAL_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 /** Referrer earns this fraction of the referred user's first paid month. */
-export const REFERRAL_COMMISSION_RATE = 0.2; // 20%
+export const REFERRAL_COMMISSION_RATE = 0.15; // 15%
 
 /** Public base URL used to build shareable links (server + client safe). */
 export function appBaseUrl(): string {

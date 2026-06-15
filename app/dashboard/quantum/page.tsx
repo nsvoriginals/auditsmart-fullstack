@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Atom, AlertCircle, Loader2, CheckCircle2, Circle,
-  ChevronDown, ChevronUp, Zap, Lock, TrendingUp,
-  Copy, Clock, Cpu, Layers, GitMerge, BarChart2,
+  ChevronDown, ChevronUp, Zap, Lock,
+  Copy, Clock,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -87,9 +87,10 @@ const QUANTUM_STEPS = [
 function UpgradeGate() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Same header as the main page, so the gate feels like the tool — just locked */}
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <Atom size={22} style={{ color: "#a855f7" }} />
+          <Atom size={20} style={{ color: "#a855f7" }} />
           <h1 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(30px,4vw,42px)", fontWeight: 700, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
             Quantum Audit
           </h1>
@@ -98,56 +99,22 @@ function UpgradeGate() {
           </span>
         </div>
         <p style={{ fontSize: "clamp(12px,3vw,13px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif" }}>
-          Quantum-powered vulnerability detection using IBM Qiskit and AWS Braket circuits.
+          IBM AerSimulator + AWS Braket LocalSimulator — four circuits running in parallel.
         </p>
       </div>
 
-      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
-        {/* Gradient banner */}
-        <div style={{ padding: "clamp(28px,6vw,40px) clamp(20px,5vw,32px)", background: "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(0,212,255,0.05))", borderBottom: "1px solid var(--border)", textAlign: "center" }}>
-          <div style={{ width: 72, height: 72, borderRadius: "50%", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, rgba(168,85,247,0.15), rgba(0,212,255,0.1))", border: "1px solid rgba(168,85,247,0.25)" }}>
-            <Lock size={28} style={{ color: "#a855f7" }} />
-          </div>
-          <h2 style={{ fontFamily: "'Satoshi', sans-serif", fontSize: "clamp(18px,5vw,22px)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--text-primary)", marginBottom: 8 }}>
-            Pro Plan Required
-          </h2>
-          <p style={{ fontSize: "clamp(12px,3vw,13px)", color: "var(--text-secondary)", fontFamily: "'Satoshi', sans-serif", maxWidth: 480, margin: "0 auto" }}>
-            Quantum auditing uses IBM AerSimulator and AWS Braket LocalSimulator circuits running in parallel
-            to detect vulnerabilities via Grover&apos;s algorithm and variational quantum circuits.
-          </p>
-        </div>
-
-        {/* Feature list */}
-        <div style={{ padding: "clamp(20px,5vw,28px) clamp(20px,5vw,32px)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 24 }}>
-            {[
-              { icon: Cpu,       title: "Grover's Algorithm",   desc: "Quadratic speedup for vulnerability pattern search in contract bytecode" },
-              { icon: Layers,    title: "Variational QC (VQC)", desc: "Two-layer RY/RZ circuit scores transaction risk with quantum probability" },
-              { icon: GitMerge,  title: "Dual-Backend Parallel",desc: "IBM Qiskit and AWS Braket circuits run simultaneously for consensus" },
-              { icon: BarChart2, title: "Unified Risk Score",   desc: "Weighted aggregation: 70% worst-case + 30% average across all 4 circuits" },
-            ].map((f) => {
-              const Icon = f.icon;
-              return (
-                <div key={f.title} style={{ padding: "14px 16px", borderRadius: "var(--radius)", background: "var(--elevated)", border: "1px solid var(--border)" }}>
-                  <Icon size={16} style={{ color: "#a855f7", marginBottom: 8 }} />
-                  <div style={{ fontSize: "clamp(12px,3vw,13px)", fontWeight: 600, color: "var(--text-primary)", marginBottom: 4, fontFamily: "'Satoshi', sans-serif" }}>{f.title}</div>
-                  <div style={{ fontSize: "clamp(11px,2.5vw,12px)", color: "var(--text-muted)", fontFamily: "'Satoshi', sans-serif", lineHeight: 1.55 }}>{f.desc}</div>
-                </div>
-              );
-            })}
-          </div>
-
-          <Link href="/dashboard/billing" prefetch={true}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-lg text-white font-bold text-sm transition-opacity hover:opacity-85"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}
-          >
-            <TrendingUp size={15} />
-            Upgrade to Pro
-          </Link>
-          <p style={{ textAlign: "center", fontSize: "clamp(10px,2.5vw,11px)", color: "var(--text-disabled)", marginTop: 10, fontFamily: "'Satoshi', sans-serif" }}>
-            Quantum auditing is available on Pro and Enterprise plans.
-          </p>
-        </div>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "clamp(24px,5vw,32px)", boxShadow: "var(--shadow-card)", maxWidth: 460 }}>
+        <Lock size={18} style={{ color: "var(--text-muted)", marginBottom: 14 }} />
+        <p style={{ fontSize: "clamp(13px,3.5vw,15px)", color: "var(--text-primary)", fontFamily: "'Satoshi', sans-serif", lineHeight: 1.6, marginBottom: 20 }}>
+          Quantum auditing is part of the Pro plan. Upgrade and it&apos;s yours — same workspace, nothing else changes.
+        </p>
+        <Link href="/dashboard/billing" prefetch={true}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: "var(--radius)", background: "#a855f7", color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Satoshi', sans-serif", transition: "opacity 0.15s" }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
+        >
+          View plans
+        </Link>
       </div>
     </div>
   );
@@ -251,7 +218,11 @@ export default function QuantumPage() {
     );
   }
 
-  // Plan gate disabled — available to all users for now
+  // Plan gate — Quantum is available only on Pro (PREMIUM), Enterprise, and to Admins.
+  const QUANTUM_PLANS = ["PREMIUM", "ENTERPRISE", "ADMIN"];
+  if (!QUANTUM_PLANS.includes(userPlan)) {
+    return <UpgradeGate />;
+  }
 
   // Running state — full-screen progress
   if (running) {

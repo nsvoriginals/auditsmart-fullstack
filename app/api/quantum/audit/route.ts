@@ -8,6 +8,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Quantum auditing is gated to paid plans (Pro → PREMIUM, Enterprise) and Admins.
+  const ALLOWED_PLANS = ["PREMIUM", "ENTERPRISE", "ADMIN"];
+  const effectivePlan = (session.user.plan || session.user.role || "FREE").toUpperCase();
+  if (!ALLOWED_PLANS.includes(effectivePlan) && session.user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "Quantum auditing is available on Pro and Enterprise plans." },
+      { status: 403 }
+    );
+  }
+
   const quantumUrl = process.env.QUANTUM_URL;
   if (!quantumUrl) {
     return NextResponse.json(
