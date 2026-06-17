@@ -1,6 +1,6 @@
 // app/api/audit/results/[id]/route.ts - FIXED
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth-server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -65,6 +65,16 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });
     }
 
+    // Fetch AI enhancements for the DB findings (joined by findingId). These
+    // carry the narrative, exploit scenario, fix code and business impact.
+    const dbFindingIds = (audit.findings ?? []).map((f: any) => f.id);
+    const enhancements = dbFindingIds.length
+      ? await prisma.findingEnhancement.findMany({
+          where: { findingId: { in: dbFindingIds } },
+        })
+      : [];
+    const enhById = new Map(enhancements.map((e: any) => [e.findingId, e]));
+
     // Parse report JSON
     let report: any = {};
     try {
@@ -93,17 +103,38 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     // Format findings — expose both field aliases so all pages render correctly:
     // scan page uses: type, line, function
     // results page uses: title, lineNumber
-    const formattedFindings = findings.map((f: any, index: number) => ({
-      id: f.id || `finding-${index}`,
-      type: f.type || f.title || "Unknown Issue",
-      title: f.title || f.type || "Unknown Issue",
-      severity: f.severity?.toLowerCase() || "info",
-      description: f.description || "",
-      recommendation: f.recommendation || "",
-      line: f.lineNumber || f.line || null,
-      lineNumber: f.lineNumber || f.line || null,
-      function: f.function || null,
-    }));
+    const formattedFindings = findings.map((f: any, index: number) => {
+      const enh = enhById.get(f.id);
+      return {
+        id: f.id || `finding-${index}`,
+        type: f.type || f.title || "Unknown Issue",
+        title: f.title || f.type || "Unknown Issue",
+        severity: f.severity?.toLowerCase() || "info",
+        description: f.description || "",
+        recommendation: enh?.fixRecommendation || f.recommendation || "",
+        line: f.lineNumber || f.line || null,
+        lineNumber: f.lineNumber || f.line || null,
+        function: f.function || null,
+
+        // ── v4 deterministic scoring (persisted on Finding) ──────────────
+        confidence: f.confidence ?? null,
+        confirmedBy: f.confirmedBy ?? null,
+        category: f.category ?? null,
+        swcId: f.swcId ?? null,
+        cweIds: f.cweIds ?? [],
+        exploitability: f.exploitability ?? null,
+        codeSnippet: f.codeSnippet ?? null,
+        detectors: f.detectors ?? null,
+
+        // ── AI enhancement layer (joined from FindingEnhancement) ────────
+        narrativeExplanation: enh?.narrativeExplanation ?? null,
+        exploitScenario: enh?.exploitScenario ?? null,
+        fixRecommendation: enh?.fixRecommendation ?? null,
+        fixCode: enh?.fixCode ?? null,
+        businessImpact: enh?.businessImpact ?? null,
+        aiGenerated: enh ? true : false,
+      };
+    });
 
     // ⭐ Determine risk level
     const riskScore = report.risk_score || audit.score || 0;

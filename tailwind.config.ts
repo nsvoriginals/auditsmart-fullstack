@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss"
 
 const config: Config = {
-  darkMode: ["class"],
+  darkMode: "class",
 
   content: [
     './app/**/*.{ts,tsx,js,jsx,mdx}',
@@ -92,7 +92,7 @@ const config: Config = {
       fontFamily: {
         sans:    ["Satoshi", "-apple-system", "sans-serif"],
         display: ["Satoshi", "sans-serif"],
-        mono:    ["DM Mono", "'Courier New'", "monospace"],
+        mono:    ["Satoshi", "sans-serif"],
       },
 
       fontSize: {
@@ -146,7 +146,10 @@ const config: Config = {
     },
   },
 
-  plugins: [require("tailwindcss-animate")],
+  // tailwindcss-animate (v3 plugin) is replaced by tw-animate-css, imported in
+  // app/globals.css — keep plugins empty so the v4 engine loads this config
+  // purely as a token/theme bridge.
+  plugins: [],
 }
 
 export default config

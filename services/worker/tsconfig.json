@@ -11,8 +11,9 @@
     "sourceMap":      true,
     "resolveJsonModule": true,
     "paths": {
-      "@auditsmart/shared":     ["../../packages/shared/src"],
-      "@auditsmart/embeddings": ["../../packages/embeddings/src"]
+      "@auditsmart/shared":        ["../../packages/shared/src"],
+      "@auditsmart/embeddings":    ["../../packages/embeddings/src"],
+      "@auditsmart/analysis-core": ["../../packages/analysis-core/src"]
     }
   },
   "include": ["src/**/*"],

@@ -1,9 +1,10 @@
-// middleware.ts - CREATE IN ROOT DIRECTORY
+// middleware.ts — Clerk auth + existing rate-limit/CORS/security headers.
+import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auditRateLimit, authRateLimit, memoryRateLimit } from '@/lib/rate-limit';
 
-export async function middleware(request: NextRequest) {
+export default clerkMiddleware(async (_auth, request: NextRequest) => {
   const response = NextResponse.next();
   const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? 'anonymous';
   const path = request.nextUrl.pathname;
@@ -158,24 +159,27 @@ export async function middleware(request: NextRequest) {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com https://analytics.ahrefs.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com https://analytics.ahrefs.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://analytics.ahrefs.com",
-      "frame-src https://api.razorpay.com https://checkout.razorpay.com",
+      "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://analytics.ahrefs.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com",
+      "worker-src 'self' blob:",
+      "frame-src https://api.razorpay.com https://checkout.razorpay.com https://challenges.cloudflare.com",
       "object-src 'none'",
       "base-uri 'self'",
     ].join('; ')
   );
 
   return response;
-}
+});
 
 export const config = {
-  // Only run middleware on API routes.
-  // Previously matched /dashboard/* and /checkout/* which added CORS/rate-limit
-  // overhead to every page navigation — that's what was causing the 200-400ms
-  // latency on every route change.
-  matcher: ['/api/:path*'],
+  // Run on all routes except Next internals/static assets, so Clerk auth() is
+  // available in server components/pages. The rate-limit/CORS logic inside only
+  // acts on /api/* paths; everything else just gets security headers.
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/(api|trpc)(.*)',
+  ],
 };

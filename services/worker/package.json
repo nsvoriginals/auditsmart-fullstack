@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
+    "@auditsmart/analysis-core": "workspace:*",
     "@auditsmart/embeddings": "workspace:*",
     "@auditsmart/shared": "workspace:*",
     "@google/generative-ai": "^0.21.0",

@@ -1,6 +1,6 @@
 "use client"
 
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "@/lib/use-session";
 import Link from 'next/link';
 
 export function Appbar() {

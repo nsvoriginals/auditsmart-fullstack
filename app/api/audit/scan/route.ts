@@ -4,7 +4,7 @@
 // This route: authenticates → validates → atomically creates the audit row,
 // the audit-job tracking row, and increments usage → enqueues → returns 202.
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth-server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { enqueueAudit, QUEUES } from "@/lib/queue/producer";

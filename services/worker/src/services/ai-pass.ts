@@ -1,7 +1,7 @@
 // services/worker/src/services/ai-pass.ts
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { NormalizedFinding, SimilarExploit } from '@auditsmart/shared';
+import { NormalizedFinding, SimilarExploit, sanitizeUntrustedSource } from '@auditsmart/shared';
 import { CORRELATION_SYSTEM_PROMPT, buildCorrelationUserPrompt } from '../prompts/correlation.prompt';
 import { SimilarityService } from './similarity.service';
 import { prisma } from '../lib/db';
@@ -9,6 +9,28 @@ import { childLogger } from '../lib/logger';
 import { metrics } from '../lib/metrics';
 
 const log = childLogger('ai-pass');
+
+/**
+ * Neutralize attacker-controlled contract source before it enters an LLM prompt:
+ * strip model control tokens, log + meter any injection attempt, and return the
+ * sanitized source. The LLM never receives raw, un-isolated attacker content.
+ */
+function guardContractSource(auditId: string, contractCode: string): string {
+  const guard = sanitizeUntrustedSource(contractCode);
+  if (guard.report.detected) {
+    log.warn(
+      {
+        auditId,
+        severity: guard.report.severity,
+        rules: guard.report.matches.map((m) => m.rule),
+        removedControlTokens: guard.removedControlTokens,
+      },
+      'prompt-injection attempt detected in contract source'
+    );
+    metrics.promptInjectionTotal.inc({ severity: guard.report.severity });
+  }
+  return guard.sanitized;
+}
 
 // ── Zod response schema ───────────────────────────────────────────────────────
 // Claude MUST produce output matching this schema exactly.
@@ -85,8 +107,9 @@ export async function runAICorrelationPass(
     }))
   );
 
-  // ── Step 2: Build prompt ───────────────────────────────────────────────────
-  const userPrompt = buildCorrelationUserPrompt(enhanceable, contractCode, similarMap);
+  // ── Step 2: Build prompt (sanitize attacker-controlled source first) ───────
+  const safeContractCode = guardContractSource(auditId, contractCode);
+  const userPrompt = buildCorrelationUserPrompt(enhanceable, safeContractCode, similarMap);
   const model      = getModel(plan);
   const maxTokens  = getMaxTokens(plan);
 
@@ -145,16 +168,17 @@ export async function runAICorrelationPass(
   }
 
   // ── Step 4: Persist enhancements ──────────────────────────────────────────
-  const enhancementMap = new Map(
-    response.enhancements.map((e) => [e.fingerprint, e])
-  );
-
+  // Join by fingerprint, which is now persisted on Finding. Enhancements whose
+  // fingerprint we never sent are dropped (referential guard — rejects
+  // hallucinated or prompt-injected fingerprints).
   const dbFindings = await prisma.finding.findMany({
     where:  { auditId },
-    select: { id: true, title: true },
+    select: { id: true, fingerprint: true },
   });
+  const idByFingerprint = new Map(
+    dbFindings.map((f) => [f.fingerprint || f.id, f.id]),
+  );
 
-  // We store enhancements in the FindingEnhancement table
   const rows: Array<{
     findingId:           string;
     narrativeExplanation: string;
@@ -167,28 +191,24 @@ export async function runAICorrelationPass(
     generatedBy:         string;
   }> = [];
 
-  for (const dbFinding of dbFindings) {
-    // Match by fingerprint stored in title (we use title as the fingerprint key)
-    // In a full implementation, store fingerprint in Finding table directly.
-    const enhancement = enhancementMap.get(dbFinding.id) ??
-      // Fallback: try any enhancement if fingerprint matching is imprecise
-      response.enhancements.find((e) => e.fingerprint === dbFinding.id);
+  for (const e of response.enhancements) {
+    const findingId = idByFingerprint.get(e.fingerprint);
+    if (!findingId) {
+      log.warn({ auditId, fingerprint: e.fingerprint }, 'enhancement references unknown fingerprint — dropped');
+      continue;
+    }
 
-    if (!enhancement) continue;
-
-    const similar     = similarMap.get(dbFinding.id) ?? [];
-    const exploitIds  = similar.map((s) => s.id);
-    const scores      = similar.map((s) => s.similarity);
+    const similar = similarMap.get(e.fingerprint) ?? [];
 
     rows.push({
-      findingId:            dbFinding.id,
-      narrativeExplanation: enhancement.narrative_explanation,
-      exploitScenario:      enhancement.exploit_scenario,
-      fixRecommendation:    enhancement.fix_recommendation,
-      fixCode:              enhancement.fix_code,
-      businessImpact:       enhancement.business_impact,
-      similarExploitIds:    exploitIds,
-      similarityScores:     scores,
+      findingId,
+      narrativeExplanation: e.narrative_explanation,
+      exploitScenario:      e.exploit_scenario,
+      fixRecommendation:    e.fix_recommendation,
+      fixCode:              e.fix_code,
+      businessImpact:       e.business_impact,
+      similarExploitIds:    similar.map((s) => s.id),
+      similarityScores:     similar.map((s) => s.similarity),
       generatedBy:          model,
     });
   }
@@ -222,7 +242,8 @@ export async function generateEchidnaHarness(
   const { HARNESS_SYSTEM_PROMPT, buildHarnessUserPrompt } = await import('../prompts/harness.prompt');
   const client = new Anthropic({ apiKey });
 
-  const userPrompt = buildHarnessUserPrompt(contractCode, findings, contractName);
+  const safeContractCode = guardContractSource(auditId, contractCode);
+  const userPrompt = buildHarnessUserPrompt(safeContractCode, findings, contractName);
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {

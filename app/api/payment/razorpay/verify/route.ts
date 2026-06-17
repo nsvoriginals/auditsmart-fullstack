@@ -1,6 +1,6 @@
 // app/api/payment/razorpay/verify/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth-server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_DETAILS, mapPublicPlanToUserPlan, isPublicPlan } from "@/lib/plans";

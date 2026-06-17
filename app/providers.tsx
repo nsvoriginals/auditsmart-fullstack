@@ -1,27 +1,14 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
-import type { Session } from "next-auth";
+// Auth is handled by Clerk (<ClerkProvider> in app/layout.tsx). This wrapper
+// now just mounts global client UI (TrialPopup) alongside the app.
 import { TrialPopup } from "@/components/TrialPopup";
 
-// Accept server-side session so SessionProvider pre-populates the cache.
-// Without this, every "use client" page fires GET /api/auth/session on mount
-// before it can render — that's the 3-second delay.
-export default function Providers({
-  children,
-  session,
-}: {
-  children: React.ReactNode;
-  session?: Session | null;
-}) {
+export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider
-      session={session}
-      refetchInterval={0}            // disable periodic background polling
-      refetchOnWindowFocus={false}   // don't refetch on tab focus
-    >
+    <>
       {children}
       <TrialPopup />
-    </SessionProvider>
+    </>
   );
 }

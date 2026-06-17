@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSession } from "next-auth/react";
-import { signOut } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
+import { signOut } from "@/lib/use-session";
 import {
   User, Mail, Lock, Shield, Bell, LogOut,
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff,

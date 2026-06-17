@@ -1,7 +1,7 @@
 "use client";
 // app/page.tsx — AuditSmart Marketing Homepage
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Hero }                 from "@/components/sections/home/hero";

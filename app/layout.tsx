@@ -2,31 +2,15 @@
 import type { Metadata } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
-import { Syne, DM_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { getCachedSession } from "@/lib/session";
+import { ClerkProvider } from "@clerk/nextjs";
 
-// Self-hosted via next/font — eliminates external Google Fonts network request,
-// removes FOUT (flash of unstyled text), and improves privacy.
-const syne = Syne({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-  variable: "--font-syne",
-  preload: true,
-});
-
-const dmMono = DM_Mono({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  style: ["normal", "italic"],
-  display: "swap",
-  variable: "--font-dm-mono",
-  preload: false,
-});
+// Single typeface across the whole app: Satoshi (self-hosted via @font-face in
+// globals.css). All legacy --font-* CSS variables are aliased to Satoshi in
+// globals.css :root, so inline `var(--font-syne)` etc. all render Satoshi.
 
 export const metadata: Metadata = {
   title: {
@@ -62,14 +46,9 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Pre-fetch session on the server so SessionProvider populates its cache
-  // immediately — eliminates the client-side GET /api/auth/session round-trip
-  // that was causing the ~3s blank-page delay on every navigation.
-  const session = await getCachedSession();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${syne.variable} ${dmMono.variable}`}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Satoshi loaded via @font-face in globals.css; Syne + DM Mono are self-hosted via next/font above */}
         <script
@@ -85,8 +64,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="preconnect" href="https://api.razorpay.com" />
       </head>
       <body style={{ fontFamily: "'Satoshi', 'Outfit', sans-serif" }}>
+        <ClerkProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <Providers session={session}>
+          <Providers>
             {children}
             <Toaster
               position="top-right"
@@ -112,6 +92,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
           </Providers>
         </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

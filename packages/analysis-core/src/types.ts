@@ -1,9 +1,10 @@
 // packages/analysis-core/src/types.ts
 //
 // v4 finding types. These EXTEND the canonical shapes in @auditsmart/shared
-// rather than redefining them — analysis-core is the single home for the
-// normalize → correlate → confidence logic (the three duplicate copies in
-// services/worker, packages/analyzer-sdk, and lib/agents are being merged here).
+// rather than redefining them — analysis-core is now the SINGLE home for the
+// normalize → correlate → confidence logic. The former duplicate copies
+// (services/worker's local engine and packages/analyzer-sdk) have been removed;
+// the worker maps its analyzer output (RawFinding) straight into this package.
 //
 // All imports are type-only: nothing from @auditsmart/shared is pulled in at
 // runtime, so this package's pure functions run standalone (and under tsx

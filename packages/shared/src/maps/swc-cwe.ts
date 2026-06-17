@@ -239,8 +239,15 @@ export const SWC_META: Record<string, SwcMeta> = {
   },
 };
 
+const UNCATEGORIZED_SWC: SwcMeta = SWC_META['SWC-000'] ?? {
+  title:       'Uncategorized Finding',
+  description: 'Finding does not map directly to a SWC entry.',
+  cweIds:      [],
+  owasp:       [],
+};
+
 export function getSwcMeta(swcId: string): SwcMeta {
-  return SWC_META[swcId] ?? SWC_META['SWC-000'];
+  return SWC_META[swcId] ?? UNCATEGORIZED_SWC;
 }
 
 export function swcToCweIds(swcId: string): string[] {

@@ -46,7 +46,12 @@
       "Bash(grep -iE '\\\\.env$|\\\\.env\\\\.|test\\\\.js|check_migration')",
       "Bash(ls node_modules/.bin/tsx)",
       "Bash(ls ../../services/worker/node_modules/.bin/tsx*)",
-      "Bash(../../services/worker/node_modules/.bin/tsx --test test/correlator.test.ts test/confidence.test.ts test/golden.test.ts)"
+      "Bash(../../services/worker/node_modules/.bin/tsx --test test/correlator.test.ts test/confidence.test.ts test/golden.test.ts)",
+      "PowerShell(node --import tsx --test \"packages/analysis-core/test/normalize.test.ts\" 2>&1 | Select-Object -Last 50)",
+      "PowerShell(Set-Location E:\\\\test\\\\auditsmart\\\\services\\\\worker; & ..\\\\..\\\\node_modules\\\\.bin\\\\tsc.CMD --noEmit -p tsconfig.json; \"EXITCODE=$LASTEXITCODE\")",
+      "PowerShell(Set-Location E:\\\\test\\\\auditsmart\\\\packages\\\\analysis-core; & ..\\\\..\\\\node_modules\\\\.bin\\\\tsc.CMD --noEmit -p tsconfig.json; \"TYPECHECK_EXIT=$LASTEXITCODE\")",
+      "PowerShell(Set-Location E:\\\\test\\\\auditsmart; & node_modules/.bin/tsx.CMD --test packages/analysis-core/test/normalize.test.ts packages/analysis-core/test/confidence.test.ts packages/analysis-core/test/correlator.test.ts packages/analysis-core/test/golden.test.ts 2>&1 | Select-String -Pattern \"^# \\(tests|pass|fail\\)\"; Set-Location E:\\\\test\\\\auditsmart\\\\services\\\\worker; & ..\\\\..\\\\node_modules\\\\.bin\\\\tsc.CMD --noEmit -p tsconfig.json; \"WORKER_TYPECHECK=$LASTEXITCODE\")",
+      "Bash(npx tsx *)"
     ]
   }
 }

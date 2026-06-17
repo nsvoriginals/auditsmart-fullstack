@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Suspense, useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import Script from "next/script";
 import { LoaderCircle, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";

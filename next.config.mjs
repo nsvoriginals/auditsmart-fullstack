@@ -11,12 +11,13 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com https://analytics.ahrefs.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com https://analytics.ahrefs.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://analytics.ahrefs.com",
-      "frame-src https://api.razorpay.com https://checkout.razorpay.com",
+      "connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://analytics.ahrefs.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com",
+      "worker-src 'self' blob:",
+      "frame-src https://api.razorpay.com https://checkout.razorpay.com https://challenges.cloudflare.com",
       "object-src 'none'",
       "base-uri 'self'",
     ].join("; "),
@@ -78,7 +79,7 @@ const nextConfig = {
       "@radix-ui/react-popover",
       "@radix-ui/react-accordion",
     ],
-    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs", "razorpay", "bullmq", "ioredis"],
+    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs", "razorpay", "bullmq", "ioredis", "solc"],
   },
 
   webpack: (config, { isServer }) => {

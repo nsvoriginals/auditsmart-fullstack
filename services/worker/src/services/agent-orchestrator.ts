@@ -86,6 +86,7 @@ function toRawFinding(f: AgentFinding, tool: 'groq' | 'gemini', agentName: strin
   return {
     tool,
     agentName,
+    detectorName: agentName,
     type:        f.type,
     severity:    f.severity,
     file:        f.file,

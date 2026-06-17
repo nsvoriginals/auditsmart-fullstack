@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Menu, X, Shield, Moon, Sun, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 
 const NAV_ITEMS = [
   { name: "Features", href: "/#features" },

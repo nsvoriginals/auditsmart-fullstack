@@ -93,6 +93,14 @@ export const auditStuckRecovered = new Counter({
   registers: [register],
 });
 
+// ── Security metrics ────────────────────────────────────────────────────────
+export const promptInjectionTotal = new Counter({
+  name:       'prompt_injection_detected_total',
+  help:       'Prompt-injection attempts detected in untrusted contract source',
+  labelNames: ['severity'] as const,
+  registers:  [register],
+});
+
 export const metrics = {
   queueJobsTotal,
   queueJobDuration,
@@ -106,6 +114,7 @@ export const metrics = {
   similarityCacheMisses,
   findingsTotal,
   auditStuckRecovered,
+  promptInjectionTotal,
 };
 
 // ── HTTP server to expose /metrics for Prometheus scraping ───────────────────

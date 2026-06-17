@@ -16,7 +16,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/use-session";
 import { useUserLimits } from "@/lib/state/user-limits";
 
 interface DashboardNavbarProps {

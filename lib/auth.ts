@@ -5,7 +5,7 @@ import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth-server";
 
 declare module "next-auth" {
   interface User {

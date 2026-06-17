@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import { motion } from "framer-motion";
 import { ease, dur } from "@/components/motion/config";
 import { Reveal } from "@/components/motion/primitives";

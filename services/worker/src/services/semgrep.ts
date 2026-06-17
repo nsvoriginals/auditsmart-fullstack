@@ -146,6 +146,8 @@ export async function runSemgrepAnalysis(
         return {
           tool:        'semgrep',
           agentName:   `semgrep-${ruleSlug}`,
+          // Raw rule slug (e.g. "reentrancy") for canonical category/TPR lookup.
+          detectorName: ruleSlug,
           type:        title,
           severity:    mapSeverity(impact),
           file:        path.basename(r.path),

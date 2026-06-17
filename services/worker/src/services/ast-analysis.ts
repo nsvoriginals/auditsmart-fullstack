@@ -80,6 +80,7 @@ function checkMissingReentrancyGuard(
       findings.push({
         tool:        'ast',
         agentName:   'ast-reentrancy-detector',
+        detectorName: 'ast-reentrancy-detector',
         type:        'Potential reentrancy — missing nonReentrant guard',
         severity:    'medium',
         file:        'Contract.sol',
@@ -102,6 +103,7 @@ function checkTxOriginAuth(node: any, findings: RawFinding[]): void {
         findings.push({
           tool:        'ast',
           agentName:   'ast-tx-origin-detector',
+          detectorName: 'ast-tx-origin-detector',
           type:        'tx.origin authentication',
           severity:    'high',
           file:        'Contract.sol',
@@ -125,6 +127,7 @@ function checkUncheckedLowLevelCall(node: any, findings: RawFinding[]): void {
     findings.push({
       tool:        'ast',
       agentName:   'ast-unchecked-call-detector',
+      detectorName: 'ast-unchecked-call-detector',
       type:        'Unchecked low-level call return value',
       severity:    'medium',
       file:        'Contract.sol',
@@ -153,6 +156,7 @@ function checkPublicPrivateKey(node: any, findings: RawFinding[]): void {
       findings.push({
         tool:        'ast',
         agentName:   'ast-sensitive-storage-detector',
+        detectorName: 'ast-sensitive-storage-detector',
         type:        'Sensitive data in public state variable',
         severity:    'critical',
         file:        'Contract.sol',
@@ -169,6 +173,7 @@ function recordAssemblyUsage(node: any, findings: RawFinding[]): void {
   findings.push({
     tool:        'ast',
     agentName:   'ast-assembly-detector',
+    detectorName: 'ast-assembly-detector',
     type:        'Inline assembly usage',
     severity:    'info',
     file:        'Contract.sol',

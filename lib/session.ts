@@ -1,6 +1,6 @@
 // lib/session.ts
 import { cache } from "react";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth-server";
 import { authOptions } from "@/lib/auth";
 
 // cache() deduplicates calls within a single RSC render pass.

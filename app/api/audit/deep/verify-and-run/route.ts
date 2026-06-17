@@ -1,6 +1,6 @@
 // app/api/audit/deep/verify-and-run/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth-server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_DETAILS } from "@/lib/plans";

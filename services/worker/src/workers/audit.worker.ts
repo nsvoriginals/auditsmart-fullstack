@@ -1,7 +1,8 @@
 // services/worker/src/workers/audit.worker.ts
 import { Worker, Job } from 'bullmq';
-import { AgentType } from '@prisma/client';
-import { QUEUES, QUEUE_CONCURRENCY, AuditJobData, AIEnhancementJobData } from '@auditsmart/shared';
+import { AgentType, Prisma } from '@prisma/client';
+import { QUEUES, QUEUE_CONCURRENCY, AuditJobData, AIEnhancementJobData, swcToCweIds } from '@auditsmart/shared';
+import { normalize, correlate, scoreAll, type RawDetection, type FindingV4 } from '@auditsmart/analysis-core';
 import { redisConnection } from '../lib/redis';
 import { prisma } from '../lib/db';
 import { childLogger } from '../lib/logger';
@@ -11,9 +12,7 @@ import { runAgentPipeline }     from '../services/agent-orchestrator';
 import { runASTAnalysis }       from '../services/ast-analysis';
 import { runSlitherAnalysis, isSlitherAvailable } from '../services/slither-client';
 import { runSemgrepAnalysis }   from '../services/semgrep';
-import { normalizeFindings }    from '../services/normalizer';
-import { correlateByLocation }  from '../services/correlator';
-import { computeConfidence }    from '../services/confidence';
+import type { RawFinding }      from '../services/normalizer';
 
 const log = childLogger('audit-worker');
 
@@ -58,7 +57,7 @@ export function createAuditFastWorker(): Worker {
         const [agentResult, astResult, semgrepResult, slitherResult] =
           await Promise.allSettled(analysisPromises);
 
-        const rawFindings = [
+        const rawFindings: RawFinding[] = [
           ...(agentResult.status   === 'fulfilled' ? agentResult.value.findings : []),
           ...(astResult.status     === 'fulfilled' ? astResult.value            : []),
           ...(semgrepResult.status === 'fulfilled' ? semgrepResult.value        : []),
@@ -82,22 +81,50 @@ export function createAuditFastWorker(): Worker {
           log.warn({ auditId, err: slitherResult.reason }, 'Slither partially failed');
         }
 
-        // ── Phase 2: normalise, deduplicate by location, score confidence ──
-        const normalized   = normalizeFindings(rawFindings, contractCode);
-        const correlated   = correlateByLocation(normalized);
-        const withConfidence = correlated.map(computeConfidence);
+        // ── Phase 2: v4 analysis-core — normalize → correlate → confidence ─
+        // Single canonical pipeline (replaces the three v3 service copies).
+        // Detector slugs resolve to canonical categories + calibrated TPRs;
+        // union-find collapses cross-tool overlap; confidence is Bayesian with
+        // the structural AI ceiling and proven-exploit floor enforced in code.
+        const detections: RawDetection[] = rawFindings.map((f) => ({
+          tool:         f.tool,
+          detectorName: f.detectorName ?? f.agentName,
+          agentName:    f.agentName,
+          type:         f.type,
+          severity:     f.severity,
+          file:         f.file,
+          lineStart:    f.lineStart,
+          lineEnd:      f.lineEnd,
+          description:  f.description,
+          codeSnippet:  f.codeSnippet,
+          swcId:        f.swcId,
+        }));
 
-        // ── Phase 3: persist findings to DB ───────────────────────────────
-        if (withConfidence.length > 0) {
+        const findings: FindingV4[] = scoreAll(
+          correlate(normalize(detections, { swcToCwe: swcToCweIds })),
+        );
+
+        // ── Phase 3: persist findings with full v4 scoring ────────────────
+        if (findings.length > 0) {
           await prisma.finding.createMany({
-            data: withConfidence.map((f) => ({
+            data: findings.map((f) => ({
               auditId,
               agentType:      mapAgentType(f.detectors[0]?.tool ?? 'ast') as AgentType,
               title:          f.type,
-              description:    f.codeSnippet,
+              description:    f.codeSnippet || f.type,
               severity:       f.severity.toUpperCase() as any,
               lineNumber:     f.lineStart,
+              codeSnippet:    f.codeSnippet,
               recommendation: null,
+              fingerprint:    f.fingerprint,
+              confidence:     f.confidence,
+              confirmedBy:    f.confirmedBy,
+              category:       f.category,
+              swcId:          f.swcId,
+              cweIds:         f.cweIds,
+              exploitability: f.exploitability,
+              detectors:      f.detectors as unknown as Prisma.InputJsonValue,
+              evidence:       f.evidence as unknown as Prisma.InputJsonValue,
             })),
             skipDuplicates: true,
           });
@@ -108,14 +135,16 @@ export function createAuditFastWorker(): Worker {
           where: { id: auditId },
           data:  {
             status: 'DETERMINISTIC_COMPLETE' as any,
-            score:  computeAggregateScore(withConfidence),
+            score:  computeAggregateScore(findings),
           },
         });
 
-        // Enqueue AI enhancement (non-blocking — fast path is complete)
+        // Enqueue AI enhancement (non-blocking — fast path is complete).
+        // findingIds are fingerprints, now persisted on Finding so the AI
+        // worker can join enhancements back deterministically.
         const aiJobData: AIEnhancementJobData = {
           auditId,
-          findingIds:   withConfidence.map((f) => f.fingerprint),
+          findingIds:   findings.map((f) => f.fingerprint),
           contractCode,
           plan,
         };
@@ -133,9 +162,9 @@ export function createAuditFastWorker(): Worker {
         const duration = Date.now() - start;
         metrics.queueJobsTotal.inc({ queue: QUEUES.AUDIT_FAST, status: 'completed' });
         metrics.queueJobDuration.observe({ queue: QUEUES.AUDIT_FAST }, duration / 1000);
-        log.info({ auditId, duration, findings: withConfidence.length }, 'audit fast job complete');
+        log.info({ auditId, duration, findings: findings.length }, 'audit fast job complete');
 
-        return { auditId, findingCount: withConfidence.length, duration };
+        return { auditId, findingCount: findings.length, duration };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         log.error({ auditId, err: msg }, 'audit fast job failed');

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import {
   Shield, AlertTriangle, ChevronDown, ChevronUp,
   Copy, Download, Loader2, FileCode, AlertCircle, Clock,

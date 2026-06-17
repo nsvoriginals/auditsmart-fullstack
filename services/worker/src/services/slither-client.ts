@@ -99,6 +99,9 @@ export async function runSlitherAnalysis(
     return {
       tool:        'slither',
       agentName:   f.agent_name,
+      // Keep the RAW Slither check name (e.g. "reentrancy-eth") for canonical
+      // category/TPR resolution; `type` carries the human-readable title.
+      detectorName: f.type,
       type:        meta.title,
       severity:    meta.severity !== 'info' ? meta.severity : mapSeverity(f.severity),
       file:        f.file || 'Contract.sol',

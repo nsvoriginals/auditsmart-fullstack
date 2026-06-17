@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id                 String              @id @default(cuid())
+  clerkId            String?             @unique
   email              String              @unique
   name               String?
   password           String?
@@ -33,8 +34,37 @@ model User {
   subscription       Subscription?
   webhooks           Webhook[]
   organizations      OrganizationMember[]
+  analyses           Analysis[]
 
   @@index([email])
+}
+
+// Workspace IDE analyses (ported from Sentinel OS). One row per "Analyze" run
+// in the Solidity workspace. Stores AI findings, optimized code, gas + Mantle
+// compatibility data. Distinct from the heavyweight Audit/Finding pipeline.
+model Analysis {
+  id                   String   @id @default(uuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename             String
+  originalCode         String   @db.Text
+  optimizedCode        String?  @db.Text
+  securityScore        Int?
+  severityTag          String? // CRITICAL | HIGH_RISK | MEDIUM_RISK | LOW_RISK | CRITICAL_PASS
+  vulnerabilities      Json?
+  optimizations        Json?
+  optimizationInsights Json?
+  gasSavedPercent      Decimal?
+  gasProjection        Json?
+  mantleCompatibility  Json?
+  summary              String?  @db.Text
+  address              String?
+  network              String? // "mainnet" | "testnet"
+  changedLines         Json?
+  createdAt            DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
 }
 
 model Account {
@@ -146,10 +176,31 @@ model Finding {
   codeSnippet    String?
   recommendation String?
   createdAt      DateTime        @default(now())
+
+  // ── v4 analysis-core scoring (deterministic, persisted) ──────────────────
+  /// Stable id: sha256(file:category:lineStart) — dedup key across re-runs.
+  fingerprint    String          @default("")
+  /// 0–100 Bayesian confidence from computeConfidence.
+  confidence     Int             @default(0)
+  /// Count of independent tools that confirmed this finding.
+  confirmedBy    Int             @default(1)
+  /// Canonical VulnerabilityCategory (e.g. "reentrancy").
+  category       String?
+  swcId          String?
+  cweIds         String[]        @default([])
+  /// "proven" | "likely" | "theoretical" | "unconfirmed".
+  exploitability String          @default("theoretical")
+  /// ToolDetection[] — which tools/detectors fired, with raw output/traces.
+  detectors      Json?
+  /// Evidence[] — typed evidence records (static/symbolic/fuzz/concrete).
+  evidence       Json?
+
   audit          Audit           @relation(fields: [auditId], references: [id], onDelete: Cascade)
 
+  @@unique([auditId, fingerprint])
   @@index([auditId])
   @@index([severity])
+  @@index([category])
 }
 
 model MonitoredContract {

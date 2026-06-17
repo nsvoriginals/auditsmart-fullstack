@@ -1,6 +1,6 @@
 // services/worker/src/workers/ai.worker.ts
 import { Worker, Job } from 'bullmq';
-import { QUEUES, QUEUE_CONCURRENCY, AIEnhancementJobData, NormalizedFinding } from '@auditsmart/shared';
+import { QUEUES, QUEUE_CONCURRENCY, AIEnhancementJobData, NormalizedFinding, VulnerabilityCategory, ToolDetection } from '@auditsmart/shared';
 import { redisConnection } from '../lib/redis';
 import { prisma } from '../lib/db';
 import { KnowledgeBaseRepository } from '../repositories/knowledge-base.repository';
@@ -22,13 +22,14 @@ export function createAIWorker(): Worker {
       const start = Date.now();
       log.info({ auditId, plan }, 'AI enhancement job started');
 
-      // Load the deterministic findings from the DB
+      // Load the deterministic findings (with full v4 scoring) from the DB.
       const dbFindings = await prisma.finding.findMany({
         where:  { auditId },
         select: {
           id: true, title: true, description: true,
-          severity: true, lineNumber: true, recommendation: true,
-          agentType: true,
+          severity: true, lineNumber: true, codeSnippet: true,
+          fingerprint: true, confidence: true, confirmedBy: true,
+          category: true, swcId: true, cweIds: true, detectors: true,
         },
       });
 
@@ -38,22 +39,26 @@ export function createAIWorker(): Worker {
         return;
       }
 
-      // Re-hydrate into NormalizedFinding shape for the AI pass
+      // Re-hydrate into NormalizedFinding using the REAL persisted scoring —
+      // fingerprint, category, swc, detectors — so enhancements join back
+      // deterministically and the prompt carries accurate evidence.
       const findings: NormalizedFinding[] = dbFindings.map((f) => ({
         id:          f.id,
-        fingerprint: f.id,
+        fingerprint: f.fingerprint || f.id,
         file:        'Contract.sol',
         lineStart:   f.lineNumber ?? 0,
         lineEnd:     (f.lineNumber ?? 0) + 5,
-        codeSnippet: f.description.slice(0, 500),
+        codeSnippet: (f.codeSnippet ?? f.description ?? '').slice(0, 500),
         type:        f.title,
-        swcId:       'SWC-000',
-        cweIds:      [],
-        category:    'other' as const,
+        swcId:       f.swcId ?? 'SWC-000',
+        cweIds:      f.cweIds ?? [],
+        category:    (f.category ?? 'other') as VulnerabilityCategory,
         severity:    f.severity.toLowerCase() as any,
-        confidence:  80,
-        confirmedBy: 1,
-        detectors:   [{ tool: 'groq' as const, detectorName: f.agentType ?? 'unknown' }],
+        confidence:  f.confidence ?? 0,
+        confirmedBy: f.confirmedBy ?? 1,
+        detectors:   Array.isArray(f.detectors)
+          ? (f.detectors as unknown as ToolDetection[])
+          : [{ tool: 'ai', detectorName: 'unknown' }],
       }));
 
       try {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/use-session";
 import { useRouter } from "next/navigation";
 import { PLAN_DETAILS, PLAN_FEATURES } from "@/lib/plans";
 import {

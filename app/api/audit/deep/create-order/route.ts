@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/auth-server";
 import { authOptions } from "@/lib/auth";
 import { PLAN_DETAILS, isPublicPlan } from "@/lib/plans";
 import Razorpay from "razorpay";
